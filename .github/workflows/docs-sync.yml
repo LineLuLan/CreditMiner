@@ -1,0 +1,18 @@
+name: Docs Sync Reminder
+
+on:
+  push:
+    branches: [backend, frontend]
+    paths:
+      - "docs/**.md"
+
+jobs:
+  remind:
+    name: Remind to merge docs to develop and sibling branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Branch policy reminder
+        run: |
+          echo "::warning::A docs file was changed on $GITHUB_REF_NAME."
+          echo "::warning::Per CONTRIBUTING.md, merge this commit to develop and to the sibling branch (backend<->frontend) so trackers stay in sync."
+          echo "::warning::Run scripts/sync-branches.ps1 (or its sh equivalent when added) to do it in one step."
