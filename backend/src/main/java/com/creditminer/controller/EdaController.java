@@ -1,5 +1,7 @@
 package com.creditminer.controller;
 
+import com.creditminer.dto.response.DescribeResponse;
+import com.creditminer.service.DescribeCacheService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -12,21 +14,30 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * EDA endpoints (Phase 4).
+ * EDA endpoints.
  *
  * <ul>
- *   <li>{@code GET /api/eda/distribution?col=&bins=}</li>
- *   <li>{@code GET /api/eda/correlation}</li>
- *   <li>{@code GET /api/eda/churn-by?dim=}</li>
+ *   <li>{@code GET /api/eda/describe} (Phase 1) — column stats</li>
+ *   <li>{@code GET /api/eda/distribution?col=&bins=} (Phase 4)</li>
+ *   <li>{@code GET /api/eda/correlation} (Phase 4)</li>
+ *   <li>{@code GET /api/eda/churn-by?dim=} (Phase 4)</li>
  * </ul>
  *
- * <p>See {@code docs/BE_Handoff.md §3.2 - §3.4}.</p>
+ * <p>See {@code docs/BE_Handoff.md §3.2 - §3.4, §3.13}.</p>
  */
 @RestController
 @RequestMapping("/api/eda")
 @RequiredArgsConstructor
 @Tag(name = "EDA", description = "Exploratory data analysis endpoints")
 public class EdaController {
+
+    private final DescribeCacheService describeCacheService;
+
+    @GetMapping("/describe")
+    @Operation(summary = "Phase 1 describe table — count, missing, mean/std/min/max/median per column")
+    public DescribeResponse describe() {
+        return describeCacheService.get();
+    }
 
     @GetMapping("/distribution")
     @Operation(summary = "Histogram for a single numeric column")

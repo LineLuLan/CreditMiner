@@ -44,6 +44,8 @@ springdoc:
 creditminer:
   data:
     raw-csv: ${CM_RAW_CSV:data/raw/BankChurners.csv}
+    phase1-arff: ${CM_PHASE1_ARFF:data/processed/phase1_raw.arff}
+    describe-json: ${CM_DESCRIBE_JSON:data/processed/phase1_describe.json}
     processed-arff: ${CM_PROCESSED_ARFF:data/processed/clean.arff}
     assoc-arff: ${CM_ASSOC_ARFF:data/processed/clean_assoc.arff}
   models:

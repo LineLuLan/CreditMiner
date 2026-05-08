@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: skeleton bootstrap
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 1 close-out (2026-05-08)
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -22,11 +22,11 @@
 | Metric | Value |
 |---|---|
 | Total tasks | 64 |
-| Done | 2 (BE-00, BE-M3) |
-| REVIEW | 5 (BE-01..BE-05) |
+| Done | 3 (BE-00, BE-M2, BE-M3) |
+| REVIEW | 9 (BE-01..BE-05, BE-10..BE-13) |
 | WIP | 0 |
-| Blocked | 2 (manual user steps BE-M1, BE-M2) |
-| % complete | 3.1% (10.9% incl REVIEW) |
+| Blocked | 1 (manual user step BE-M1) |
+| % complete | 4.7% (18.8% incl REVIEW) |
 
 ---
 
@@ -45,10 +45,10 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-10 | `DataLoader.loadCsv()` — read BankChurners.csv | BACKLOG | | | Use Weka CSVLoader |
-| BE-11 | `DataLoader.saveArff()` / `loadArff()` | BACKLOG | | | |
-| BE-12 | Drop trailing 2 Naive-Bayes leakage columns at load time | BACKLOG | | | Hardcode column index check |
-| BE-13 | Print describe table (mean/std/min/max/null) — `Phase1Report.java` | BACKLOG | | | Output to console + JSON |
+| BE-10 | `DataLoader.loadCsv()` — read BankChurners.csv | REVIEW | claude | _pending_ | Weka `CSVLoader`; verified against real Kaggle CSV (10127 rows × 23 raw cols → 21 after drop). |
+| BE-11 | `DataLoader.saveArff()` / `loadArff()` | REVIEW | claude | _pending_ | Both methods working; `saveArff` auto-creates parent dir. Output verified at `data/processed/phase1_raw.arff`. |
+| BE-12 | Drop trailing 2 Naive-Bayes leakage columns at load time | REVIEW | claude | _pending_ | Match by prefix `Naive_Bayes_Classifier`; uses `weka.filters.unsupervised.attribute.Remove`. Sets `Attrition_Flag` as class index post-removal. `lastDroppedColumns` getter exposes dropped names to caller. |
+| BE-13 | Print describe table (mean/std/min/max/null) — `Phase1Report.java` | REVIEW | claude | _pending_ | `com.creditminer.pipeline.Phase1Report` standalone main; runs via `mvn exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase1Report` (pom now parameterizes mainClass via `${exec.mainClass}` property). Output: console table + `data/processed/phase1_describe.json`. New `DescribeService` + `DescribeCacheService`; new endpoint `GET /api/eda/describe` (lazy in-memory cache, falls back to CSV if ARFF missing, throws `REPORT_NOT_GENERATED` 503 if both missing). DTOs: `DescribeResponse` + `ColumnStats` (`@JsonInclude(NON_NULL)`). |
 
 ## Phase 2 — Preprocessing
 
@@ -151,7 +151,7 @@
 | ID | Title | Status | Notes |
 |---|---|---|---|
 | BE-M1 | Install JDK 17 + Maven 3.9 | BLOCKED | User must verify locally; flag if missing |
-| BE-M2 | Download `BankChurners.csv` from Kaggle | BLOCKED | Place at `backend/data/raw/` |
+| BE-M2 | Download `BankChurners.csv` from Kaggle | DONE | User unzipped CSV into `backend/data/raw/BankChurners.csv` (10127 rows). Phase1Report verified read OK on 2026-05-08. |
 | BE-M3 | Provision Neon DB & apply `db/schema.sql` + `db/seed.sql` | DONE | Neon project ep-purple-smoke-aosu7szo (ap-southeast-1, PG 17). Schema fixed: `gender CHAR(1)` → `VARCHAR(1)` and `SERIAL` → `BIGSERIAL` (3 places) to match JPA entity types. 5 tables + 13 indexes + 5 insights + 4 cluster stubs seeded. Smoke test prod profile boot: PASS (Hibernate validate ok, /actuator/health UP, /api/insights returns 5 records). URL goes in env var, NOT yml. |
 
 ---

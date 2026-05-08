@@ -26,6 +26,9 @@
         <lombok.version>1.18.36</lombok.version>
         <springdoc.version>2.5.0</springdoc.version>
         <opencsv.version>5.9</opencsv.version>
+        <!-- Default mainClass for `mvn exec:java`. Override per-phase via
+             -Dexec.mainClass=com.creditminer.pipeline.PhaseNReport -->
+        <exec.mainClass>com.creditminer.pipeline.TrainPipeline</exec.mainClass>
     </properties>
 
     <dependencies>
@@ -138,7 +141,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.2.0</version>
                 <configuration>
-                    <mainClass>com.creditminer.pipeline.TrainPipeline</mainClass>
+                    <mainClass>${exec.mainClass}</mainClass>
                     <classpathScope>compile</classpathScope>
                 </configuration>
             </plugin>

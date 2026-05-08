@@ -7,7 +7,7 @@
 
 ## 0. Implementation Status
 
-> **Last updated**: 2026-05-08 (commit `3ac1d37` on `backend`).
+> **Last updated**: 2026-05-08 (Phase 1 complete on `backend`).
 > Granular per-task status lives in `docs/BE_Tracker.md`. This section is the cross-team summary.
 
 ### Phases
@@ -15,7 +15,7 @@
 | Phase | Status | What works today |
 |---|---|---|
 | **0. Infra** | ✅ DONE | Spring Boot 3.2 boots clean against Neon (PG 17, ap-southeast-1). Profiles dev/prod, CORS, OpenAPI/Swagger, structured logback, error envelope handler. `/actuator/health` UP. |
-| **1. Data Understanding** | 🔜 NEXT | DataLoader (CSV→ARFF), drop leakage cols, describe table report. See `docs/BE_Tracker.md` Phase 1 (BE-10..BE-13). FE will get a `GET /api/eda/describe` once BE-13 lands. |
+| **1. Data Understanding** | ✅ DONE | `DataLoader.loadCsv()` reads Kaggle BankChurners.csv, drops the 2 trailing `Naive_Bayes_Classifier_*` leakage columns via Weka `Remove` filter, sets `Attrition_Flag` as class index. `Phase1Report` (mvn exec:java) saves cleaned ARFF to `data/processed/phase1_raw.arff`, prints describe table to console, writes `data/processed/phase1_describe.json`. `GET /api/eda/describe` serves the describe table with lazy in-memory cache. Verified: 10127 rows × 21 cols (23 raw - 2 leakage), `Customer_Age` mean=46.33 std=8.02 min=26 max=73, `Attrition_Flag` topValue=Existing Customer count=8500. |
 | **2. Preprocessing** | ⏳ BACKLOG | Imputation, dedup, outlier flags, scaling. Needed before §3.2-3.4 EDA endpoints. |
 | **3. Feature Engineering** | ⏳ BACKLOG | 6 derived features (utilization_score, risk_score, customer_tier, etc.). |
 | **4. EDA endpoints** | ⏳ BACKLOG | `/api/eda/*` (§3.2-3.4). Currently 501-equivalent stubs. |
@@ -38,7 +38,7 @@
 | `GET /api/anomalies` | 🟡 Mock | Phase 8 (BE-89) — needs Phase 6 |
 | `POST /api/predict` | 🟡 Mock | Phase 8 (BE-90) — needs Phase 5 |
 | `GET /api/eda/distribution\|correlation\|churn-by` | 🟡 Mock | Phase 4 (BE-40..43) — needs Phase 1-2 |
-| `GET /api/eda/describe` _(NEW)_ | ❌ Not yet | Phase 1 (BE-13) |
+| `GET /api/eda/describe` | ✅ Live | (already real) — see §3.13 |
 
 ### Error envelope status
 
@@ -55,14 +55,13 @@ Neon Postgres (project `ep-purple-smoke-aosu7szo`, region `ap-southeast-1`, PG 1
 
 ### Pick-up notes for the next session
 
-When user says **"start Phase 1"** or **"làm phase 1"**:
-1. Plan file location: `~/.claude/plans/` (one per phase). Old Phase 0 plan at `b-t-u-phase-1-fizzy-bachman.md` (filename was misnamed; actual content was Phase 0).
-2. Phase 1 scope already confirmed with user:
-   - **BE-10..BE-13** in `docs/BE_Tracker.md` Phase 1 row (DataLoader CSV/ARFF, drop 2 leakage cols, `Phase1Report.java` describe table).
-   - User confirmed the describe-table output should be **console + JSON file + a new `GET /api/eda/describe` endpoint** (the endpoint is BE-13 scope, slot it into §3 of this doc when implemented).
-   - Run mode (mvn exec:java vs JUnit) was deferred — ask user when starting.
-3. Pre-reqs already satisfied: backend boots, Neon up, error envelope ready, .env.example documents env vars. User still owes BE-M1 (JDK/Maven local) and BE-M2 (download `BankChurners.csv` to `backend/data/raw/`).
-4. Source of truth for current behavior: this section + `docs/BE_Tracker.md`. Don't crawl Java stubs to infer scope (memory: `feedback_read_docs_first.md`).
+When user says **"start Phase 2"** or **"làm phase 2"**:
+1. Plan file location: `~/.claude/plans/`. Phase 1 plan: `l-m-phase-1-jaunty-cocke.md`.
+2. Phase 2 scope = Preprocessing (BE-20..BE-26 in `docs/BE_Tracker.md`): impute missing (mode/median, treat "Unknown" as missing), drop duplicates by CLIENTNUM, flag outliers (Z-score + IQR), normalize for clustering, standardize for NaiveBayes/Logistic, one-hot encode for Logistic.
+3. Pre-reqs satisfied: `data/processed/phase1_raw.arff` (Phase 1 output) is the input. Read it with `DataLoader.loadArff()`. New service `Preprocessor` lives at `com.creditminer.service.Preprocessor`. Will produce `data/processed/clean.arff` (path key already in `application.yml` as `creditminer.data.processed-arff`).
+4. Decisions to confirm with user: (a) which classifiers' preprocessed variants to materialize separately (one shared clean.arff vs per-algorithm); (b) Phase 2 endpoint shape — re-use cache pattern from `DescribeCacheService`?
+5. Phase 1 deliverables for FE: `/api/eda/describe` is live; reference §3.13 for schema. The 6 derived features (Phase 3) are NOT in describe yet — they'll appear after Phase 3.
+6. Source of truth for current behavior: this section + `docs/BE_Tracker.md`. Don't crawl Java stubs to infer scope (memory: `feedback_read_docs_first.md`).
 
 ---
 
@@ -314,6 +313,57 @@ Customers flagged as anomalous.
   { "clientNum": 715234108, "reason": "z-score, cluster-distance", "score": 4.21, "clusterId": 2 }
 ]
 ```
+
+### 3.13 `GET /api/eda/describe`
+
+Phase 1 describe table — column-by-column stats for the post-leakage-drop dataset (23 raw cols → 21).
+
+**Behavior**: Lazy cache. First call computes from `data/processed/phase1_raw.arff` (preferred — already leakage-free) or falls back to `data/raw/BankChurners.csv` if ARFF missing. Subsequent calls served from in-memory cache. If neither file exists, returns 503 `REPORT_NOT_GENERATED`.
+
+**Response 200**:
+```json
+{
+  "totalRows": 10127,
+  "totalColumns": 21,
+  "classColumn": "Attrition_Flag",
+  "leakageColumnsDropped": [
+    "Naive_Bayes_Classifier_Attrition_Flag_..._Months_Inactive_12_mon_1",
+    "Naive_Bayes_Classifier_Attrition_Flag_..._Months_Inactive_12_mon_2"
+  ],
+  "columns": [
+    {
+      "name": "Customer_Age",
+      "type": "numeric",
+      "count": 10127,
+      "missing": 0,
+      "missingPct": 0.0,
+      "mean": 46.326,
+      "std": 8.0168,
+      "min": 26.0,
+      "max": 73.0,
+      "median": 46.0
+    },
+    {
+      "name": "Attrition_Flag",
+      "type": "nominal",
+      "count": 10127,
+      "missing": 0,
+      "missingPct": 0.0,
+      "distinctCount": 2,
+      "topValue": "Existing Customer",
+      "topCount": 8500
+    }
+  ],
+  "generatedAt": "2026-05-08T19:49:51Z"
+}
+```
+
+**Notes for FE**:
+- Numeric-only fields (`mean`, `std`, `min`, `max`, `median`) and nominal-only fields (`distinctCount`, `topValue`, `topCount`) are omitted when not applicable (`@JsonInclude(NON_NULL)`). Type-discriminate on `type ∈ {"numeric", "nominal", "string", "date", "other"}` before reading those fields.
+- `leakageColumnsDropped` will be `[]` when the report is computed from a pre-cleaned ARFF (the names are not recoverable post-removal).
+- All numeric stats rounded to 4 decimals.
+
+**Response 503**: `REPORT_NOT_GENERATED` when neither raw CSV nor processed ARFF is present.
 
 ---
 
