@@ -73,7 +73,7 @@ public class Phase5Pipeline {
 
         Preprocessor pre = new Preprocessor();
         Splitter splitter = new Splitter();
-        ClassificationService cs = new ClassificationService(null, null);
+        ClassificationService cs = new ClassificationService(null, null, null, null, null);
 
         Split base = splitter.stratified(data, TRAIN_RATIO, SEED);
         Instances train = base.train();

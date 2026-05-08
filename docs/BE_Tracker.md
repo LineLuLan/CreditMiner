@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 7 Association Rules close-out (2026-05-09)
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 8 code complete (2026-05-09); seed run pending
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -23,11 +23,12 @@
 |---|---|
 | Total tasks | 64 |
 | Done | 3 (BE-00, BE-M2, BE-M3) |
-| REVIEW | 46 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-43, BE-50..BE-59, BE-60..BE-64, BE-70..BE-74) |
+| REVIEW | 58 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-43, BE-50..BE-59, BE-60..BE-64, BE-70..BE-74, BE-80..BE-91) |
 | WIP | 0 |
 | Blocked | 1 (manual user step BE-M1) |
 | Skipped | 1 (BE-65 EM bonus — optional, deprioritized) |
-| % complete | 4.7% (76.6% incl REVIEW) |
+| % complete | 4.7% (95.3% incl REVIEW) |
+| Pending | 1 (Phase 8 seed run against Neon — needs user authorization) |
 
 ---
 
@@ -123,18 +124,18 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-80 | Seed `insights.json` with 5+ Discovery/Evidence/Recommendation | BACKLOG | | | Manual content |
-| BE-81 | DB seeder: insert customers/clusters/rules/insights | BACKLOG | | | DatabaseSeeder service |
-| BE-82 | `GET /api/overview` | BACKLOG | | | Implements stub |
-| BE-83 | `GET /api/customers` (paginated) | BACKLOG | | | filter+sort |
-| BE-84 | `GET /api/customers/{id}` | BACKLOG | | | |
-| BE-85 | `GET /api/clusters` | BACKLOG | | | |
-| BE-86 | `GET /api/clusters/{id}/customers` | BACKLOG | | | |
-| BE-87 | `GET /api/rules?minLift=` | BACKLOG | | | |
-| BE-88 | `GET /api/insights` | BACKLOG | | | |
-| BE-89 | `GET /api/anomalies` | BACKLOG | | | |
-| BE-90 | `POST /api/predict` (full flow with cluster + recommendation) | BACKLOG | | | Replace stub |
-| BE-91 | Predictions logging to `predictions` table | BACKLOG | | | |
+| BE-80 | Seed `insights.json` with 5+ Discovery/Evidence/Recommendation | REVIEW | claude | _pending_ | Existing 5 in `db/seed.sql` (pre-Phase-7 baseline, hand-curated). DatabaseSeeder intentionally skips insights to avoid clobbering. Refresh as a follow-up using actual Phase 5/7 data. |
+| BE-81 | DB seeder: insert customers/clusters/rules/insights | REVIEW | claude | _pending_ | `DatabaseSeeder` service + `Phase8Seeder` Spring CLI main. Reads enriched.arff (10127 customers), phase6_pca_2d.json (cluster_id per CLIENTNUM), phase6_anomalies.json (outlier/anomaly flags), phase6_clusters.json (3 cluster summaries renamed: C0→Premium Loyal, C1→At-Risk Mid-Tier, C2→Low-Income Stable), models/rules.json (50 rules). Truncates + re-populates customers/clusters/rules. **Live run pending user authorization.** |
+| BE-82 | `GET /api/overview` | REVIEW | claude | _pending_ | Already wired via `CustomerRepository` (count, countByAttritionFlag, avgRiskScore, avgUtilization, tierBreakdown queries); fallback stubs only fire if DB empty. Goes live after seed. |
+| BE-83 | `GET /api/customers` (paginated) | REVIEW | claude | _pending_ | JPA `Page<Customer>`; filter by attritionFlag OR clusterId, sort `field,asc\|desc`. Defaults: page=1 size=20 sort=clientNum,asc. Already wired pre-Phase-8. |
+| BE-84 | `GET /api/customers/{id}` | REVIEW | claude | _pending_ | `CustomerRepository.findById()`; throws `BusinessException.notFound("Customer", id)` → 404 envelope. |
+| BE-85 | `GET /api/clusters` | REVIEW | claude | _pending_ | Replaced mock with `clusterRepo.findAll()`; centroid_json JSONB parsed into Map<String, Double> via Jackson. |
+| BE-86 | `GET /api/clusters/{id}/customers` | REVIEW | claude | _pending_ | Already wired via `customerRepo.findByClusterId(id, pageable)`. |
+| BE-87 | `GET /api/rules?minLift=` | REVIEW | claude | _pending_ | Already wired via `RuleRepository.findByMinLift` / `findByMinLiftAndCategory`; sorted by lift desc. Note: post-seed, lift threshold 1.2 returns 0 rules (max retention lift is 1.19); use minLift=1.0 to see all 50. |
+| BE-88 | `GET /api/insights` | DONE | claude | b492427 | Already live since Phase 0; 5 rows from `db/seed.sql`. |
+| BE-89 | `GET /api/anomalies` | REVIEW | claude | _pending_ | Already wired via `customerRepo.findTopAnomalies(limit)` (native query, ORDER BY risk_score DESC). After seed: 47 customers with `is_anomaly=true` (Phase 2 ∩ cluster-distance). |
+| BE-90 | `POST /api/predict` (full flow with cluster + recommendation) | REVIEW | claude | _pending_ | New `PredictInputBuilder` builds 26-attr Instance from `PredictRequest`: re-derives Phase 3 features at request time, bins Customer_Tier from training quartile cutoffs cached at startup. `ClassificationService.predict()` runs RF→churnProb, KMeans→cluster, looks up persona name from `clusters` table, derives top-3 features from `phase5_feature_importance.json`, builds rule-based recommendation. Note: PredictRequest lacks `Total_Amt_Chng_Q4_Q1` / `Total_Ct_Chng_Q4_Q1` fields so those default to 1.0 at inference. |
+| BE-91 | Predictions logging to `predictions` table | REVIEW | claude | _pending_ | Every `/api/predict` call writes a `PredictionLog` row (input as JSONB, predicted_label, churn_prob, cluster_id, model_used, ts). Failures logged but don't break the response. |
 
 ## Testing & QA
 

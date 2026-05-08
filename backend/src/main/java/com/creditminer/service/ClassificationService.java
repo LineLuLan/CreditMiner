@@ -3,47 +3,66 @@ package com.creditminer.service;
 import com.creditminer.config.ModelConfig;
 import com.creditminer.dto.request.PredictRequest;
 import com.creditminer.dto.response.PredictResponse;
+import com.creditminer.entity.Cluster;
 import com.creditminer.exception.BusinessException;
+import com.creditminer.repository.ClusterRepository;
+import com.creditminer.repository.PredictionLogRepository;
+import com.creditminer.entity.PredictionLog;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.functions.Logistic;
-import weka.classifiers.CostMatrix;
 import weka.classifiers.meta.CostSensitiveClassifier;
 import weka.classifiers.trees.J48;
 import weka.classifiers.trees.RandomForest;
+import weka.classifiers.CostMatrix;
+import weka.core.Instance;
 import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.supervised.instance.SMOTE;
 
+import java.io.File;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 /**
- * Phase 5 — train and evaluate classifiers (offline) + serve predictions (online).
+ * Phase 5/8 — train and serve classifiers.
  *
- * <p>Training methods are called by {@link com.creditminer.pipeline.Phase5Pipeline};
- * {@link #predict(PredictRequest)} is wired in Phase 8 (BE-90).</p>
+ * <p>Training methods used by {@link com.creditminer.pipeline.Phase5Pipeline}.
+ * {@link #predict(PredictRequest)} is the {@code POST /api/predict} backend.</p>
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ClassificationService {
 
-    /** Names match the keys in {@link com.creditminer.pipeline.Phase5Pipeline}'s comparison CSV. */
     public enum Algo { J48, RandomForest, NaiveBayes, Logistic }
 
     private final ModelConfig modelConfig;
     private final ClusteringService clusteringService;
+    private final PredictInputBuilder inputBuilder;
+    private final ClusterRepository clusterRepo;
+    private final PredictionLogRepository predictionLogRepo;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${creditminer.models.feature-importance-json:data/processed/phase5_feature_importance.json}")
+    private String featureImportancePath;
+
+    private List<Map.Entry<String, Double>> cachedTopFeatures;
 
     // ===== TRAIN =====
 
-    /** Build a fresh, untrained classifier with the canonical hyperparameters. */
     public Classifier build(Algo algo) {
         try {
             switch (algo) {
@@ -70,14 +89,12 @@ public class ClassificationService {
         throw new IllegalArgumentException("Unknown algo: " + algo);
     }
 
-    /** Train + cross-validate; record per-fold F1 and AUC. */
     public Evaluation crossValidate(Classifier clf, Instances train, int folds) throws Exception {
         Evaluation cv = new Evaluation(train);
         cv.crossValidateModel(clf, train, folds, new Random(42));
         return cv;
     }
 
-    /** Train on full train set then evaluate on held-out test. */
     public Evaluation evaluate(Classifier clf, Instances train, Instances test) throws Exception {
         clf.buildClassifier(train);
         Evaluation eval = new Evaluation(train);
@@ -85,7 +102,6 @@ public class ClassificationService {
         return eval;
     }
 
-    /** Apply SMOTE to a TRAIN set only (never test). */
     public Instances applySmote(Instances train) throws Exception {
         SMOTE smote = new SMOTE();
         smote.setRandomSeed(42);
@@ -95,15 +111,6 @@ public class ClassificationService {
         return out;
     }
 
-    /**
-     * Wrap a classifier in {@link CostSensitiveClassifier} with the
-     * blueprint cost matrix [[0,1],[5,0]] (FN costs 5× FP).
-     *
-     * <p>Weka's CostMatrix uses {@code cell(actual, predicted)}: cost of
-     * predicting {@code predicted} when the truth is {@code actual}. So
-     * mis-predicting an Attrited customer (class index 1) as Existing (0)
-     * costs 5; mis-predicting an Existing as Attrited costs 1.</p>
-     */
     public CostSensitiveClassifier costSensitive(Classifier base) {
         try {
             CostSensitiveClassifier cs = new CostSensitiveClassifier();
@@ -121,7 +128,6 @@ public class ClassificationService {
         }
     }
 
-    /** Snapshot of headline metrics for one classifier on one eval set. */
     public static Map<String, Double> headline(Evaluation eval, int positiveClassIdx) {
         Map<String, Double> m = new LinkedHashMap<>();
         m.put("accuracy", round(eval.pctCorrect() / 100.0));
@@ -138,24 +144,128 @@ public class ClassificationService {
         return Math.round(v * 10000.0) / 10000.0;
     }
 
-    // ===== SERVE (Phase 8 — BE-90) =====
+    // ===== SERVE (BE-90/91) =====
 
     public PredictResponse predict(PredictRequest request) {
-        if (!modelConfig.isReady()) {
+        Classifier rf = modelConfig.getClassifier();
+        if (rf == null || !inputBuilder.isReady()) {
             throw BusinessException.modelNotLoaded();
         }
-        return PredictResponse.builder()
-                .churnProb(0.124)
-                .label("Existing")
-                .riskScore(0.32)
-                .cluster(1)
-                .clusterName("Premium Loyal")
-                .topFeatures(List.of(
-                        new PredictResponse.FeatureContribution("Total_Trans_Ct", 0.28),
-                        new PredictResponse.FeatureContribution("Avg_Utilization_Ratio", 0.19),
-                        new PredictResponse.FeatureContribution("Months_Inactive_12_mon", 0.15)))
-                .recommendation("Stable customer — eligible for premium upsell")
-                .modelUsed("RandomForest_v1")
+        try {
+            Instance inst = inputBuilder.build(request);
+            double[] probs = rf.distributionForInstance(inst);
+            int positiveIdx = inst.classAttribute().indexOfValue("Attrited Customer");
+            double churnProb = positiveIdx >= 0 ? probs[positiveIdx] : 0;
+            String label = churnProb >= 0.5 ? "Attrited" : "Existing";
+
+            int clusterId = -1;
+            String clusterName = "Unknown";
+            try {
+                if (modelConfig.getClusterer() != null) {
+                    clusterId = clusteringService.assign(inst);
+                    Cluster cluster = clusterRepo.findById(clusterId).orElse(null);
+                    clusterName = cluster == null ? ("Cluster " + clusterId) : cluster.getPersonaName();
+                }
+            } catch (Exception clusterEx) {
+                log.warn("Cluster assignment failed: {}", clusterEx.getMessage());
+            }
+
+            double riskScore = inputBuilder.computeRiskScore(request);
+
+            PredictResponse response = PredictResponse.builder()
+                    .churnProb(roundDouble(churnProb))
+                    .label(label)
+                    .riskScore(roundDouble(riskScore))
+                    .cluster(clusterId)
+                    .clusterName(clusterName)
+                    .topFeatures(buildTopFeatures())
+                    .recommendation(buildRecommendation(churnProb, clusterName))
+                    .modelUsed("RandomForest_v1")
+                    .build();
+
+            try {
+                logPrediction(request, response);
+            } catch (Exception logEx) {
+                log.warn("Failed to log prediction: {}", logEx.getMessage());
+            }
+            return response;
+        } catch (BusinessException be) {
+            throw be;
+        } catch (Exception e) {
+            log.error("Predict failed", e);
+            throw BusinessException.inferenceError("Prediction failed: " + e.getMessage());
+        }
+    }
+
+    private void logPrediction(PredictRequest request, PredictResponse response) throws Exception {
+        PredictionLog logRow = PredictionLog.builder()
+                .ts(OffsetDateTime.now())
+                .inputJson(objectMapper.writeValueAsString(request))
+                .predictedLabel(response.getLabel())
+                .churnProb(BigDecimal.valueOf(response.getChurnProb()).setScale(4, RoundingMode.HALF_UP))
+                .clusterId(response.getCluster() < 0 ? null : response.getCluster())
+                .modelUsed(response.getModelUsed())
                 .build();
+        predictionLogRepo.save(logRow);
+    }
+
+    private List<PredictResponse.FeatureContribution> buildTopFeatures() {
+        if (cachedTopFeatures == null) {
+            cachedTopFeatures = loadTopFeatures();
+        }
+        // Normalize importance values into contribution shares (sum to 1) over the top 3.
+        List<Map.Entry<String, Double>> top = cachedTopFeatures.subList(0,
+                Math.min(3, cachedTopFeatures.size()));
+        double total = 0;
+        for (Map.Entry<String, Double> e : top) total += e.getValue();
+        List<PredictResponse.FeatureContribution> out = new ArrayList<>(top.size());
+        for (Map.Entry<String, Double> e : top) {
+            out.add(new PredictResponse.FeatureContribution(
+                    e.getKey(),
+                    total == 0 ? 0 : roundDouble(e.getValue() / total)));
+        }
+        return out;
+    }
+
+    private List<Map.Entry<String, Double>> loadTopFeatures() {
+        try {
+            File f = new File(featureImportancePath);
+            if (!f.exists()) {
+                log.warn("Feature importance JSON missing at {} — top features will be empty", featureImportancePath);
+                return List.of();
+            }
+            var node = objectMapper.readTree(f).get("ranking");
+            if (node == null || !node.isArray()) return List.of();
+            List<Map.Entry<String, Double>> out = new ArrayList<>();
+            for (var n : node) {
+                out.add(Map.entry(n.get("name").asText(), n.get("importance").asDouble()));
+            }
+            return out;
+        } catch (Exception e) {
+            log.warn("Failed to load feature importance: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /** Rule-based recommendation derived from churn probability + cluster. */
+    private static String buildRecommendation(double churnProb, String clusterName) {
+        if (churnProb >= 0.7) {
+            return "High churn risk — escalate to retention team within 48h. Consider credit-limit increase or fee waiver.";
+        }
+        if (churnProb >= 0.4) {
+            return "Elevated churn risk — add to monitoring watchlist. Trigger an engagement campaign at next inactivity flag.";
+        }
+        if ("Premium Loyal".equalsIgnoreCase(clusterName)) {
+            return "Stable Premium Loyal customer — eligible for premium upsell and travel-rewards offer.";
+        }
+        if ("Low-Income Stable".equalsIgnoreCase(clusterName)) {
+            return "Stable low-income customer with healthy engagement — promote tier upgrade with first-year fee waiver.";
+        }
+        return "Stable customer — maintain current relationship; no action needed.";
+    }
+
+    private static double roundDouble(double v) {
+        if (Double.isNaN(v) || Double.isInfinite(v)) return v;
+        return Math.round(v * 10000.0) / 10000.0;
     }
 }

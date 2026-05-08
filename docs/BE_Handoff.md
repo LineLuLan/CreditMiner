@@ -7,7 +7,7 @@
 
 ## 0. Implementation Status
 
-> **Last updated**: 2026-05-09 (Phase 7 Association Rules complete on `backend`).
+> **Last updated**: 2026-05-09 (Phase 8 code complete on `backend`; live seed run against Neon pending user authorization).
 > Granular per-task status lives in `docs/BE_Tracker.md`. This section is the cross-team summary.
 
 ### Phases
@@ -22,7 +22,7 @@
 | **5. Classification** | ✅ DONE | `Phase5Pipeline` trains 10 model variants (J48 / RF / NaiveBayes / Logistic — each with baseline + SMOTE-on-train; J48 + RF also wrapped in CostSensitiveClassifier with cost matrix [[0,1],[5,0]]). Stratified 80/20 split (seed 42), SMOTE applied to TRAIN only, NB/Logistic standardized, Logistic also one-hot-encoded. 10-fold CV on train + held-out test eval recorded as F1-Attrited / ROC-AUC / PR-AUC / accuracy / precision / recall in `data/processed/phase5_comparison.csv`. **Best**: RandomForest+SMOTE — CV F1=0.9315, Test F1=0.8758, Test ROC-AUC=0.9888, Test PR-AUC=0.9429. RandomForest+CostSensitive close behind (Test F1=0.8775). NaiveBayes worst (Test F1≈0.55). Top-5 RF feature importance (Mean Decrease Impurity): Total_Trans_Amt, Customer_Age, Total_Trans_Ct, Total_Amt_Chng_Q4_Q1, Spending_Intensity (Phase 3 derived feature). Persisted: `models/{j48,rf,nb,logistic}.model` (best variant per algo). `models/rf.model` (6.1MB) is the production classifier loaded by `ModelConfig` at startup. |
 | **6. Clustering & Anomaly** | ✅ DONE | `Phase6Pipeline` drops nominals + CLIENTNUM + Attrition_Flag, min-max normalizes 19 numeric features, sweeps k=2..8, picks best k by sampled silhouette. **Best k=3** (silhouette 0.218). Final `SimpleKMeans(seed=42, iter=500)` saved to `models/kmeans.model` (50KB, loaded by `ModelConfig`). Per-cluster summaries (centroids in ORIGINAL units, avgRisk, churnRate) in `phase6_clusters.json`: C0=Premium-pattern (1920 rows, $24K credit, util 7%, churn 12%), C1=Stress-pattern (3981 rows, $5K credit, util 11%, churn 26% — highest), C2=Low-util-pattern (4226 rows, $4K credit, util 65%, churn 9% — lowest). Cluster-distance anomalies (`distance > μ+3σ` where μ=0.71, σ=0.19): 50 flagged. **Combined `is_anomaly`** = Phase 2 outlier ∩ cluster-distance outlier → 47 customers (47/50 cluster outliers agreed with Phase 2 — strong cross-method agreement). **BE-43 PCA-2D** (Weka `PrincipalComponents` → first 2 PCs of normalized matrix) exported to `phase6_pca_2d.json` (10127 × {x,y,clusterId,clientNum}). HTTP endpoint deferred to Phase 8 alongside `/api/clusters`. EM bonus (BE-65) skipped. |
 | **7. Association Rules** | ✅ DONE | `Phase7Pipeline` discretizes 6 numerics into 3 equal-frequency bins, drops unused attrs (final 13: 7 nominals + 6 discretized numerics), saves `data/processed/clean_assoc.arff`, runs Apriori (sup ≥ 0.05, conf ≥ 0.7, numRules=10000 internally then trimmed to top 50 by lift), filters to single-attribute `Attrition_Flag` RHS, exports `models/rules.json` (consumed by `GET /api/rules` in Phase 8). **Result: 50 retention rules, 0 churn rules**. Math: max lift for `Existing Customer` (84% prevalence) = 1/0.84 ≈ 1.19, so blueprint's `lift > 1.2` was relaxed to 1.0; conf stays at blueprint's 0.7. Top rules all retention with conf=1.0, lift=1.19 — high transaction frequency (`Total_Trans_Ct > 76`) + low credit limit predicts retention with 100% confidence in this dataset. **No churn single-attribute rules** at conf ≥ 0.7 with sup ≥ 0.05 because Attrited prevalence (16%) is too low for any LHS combo to exceed 70% conf at 5% support floor — multi-attribute Attrited consequences exist but inflate lift artificially and were excluded per blueprint §7.3. |
-| **8. Insights & API** | 🟡 PARTIAL | All controllers in §3 are scaffolded; only `GET /api/insights` returns real data (5 seeded rows from Neon). Everything else returns mock/stub responses today. |
+| **8. Insights & API** | 🟡 CODE READY | All controllers wired to JPA repos. `DatabaseSeeder` reads enriched.arff + phase6_*.json + rules.json to populate `customers` (10127 rows), `clusters` (3 rows with persona names), `rules` (50 rows). `Phase8Seeder` standalone Spring CLI runs the seed against Neon. `ClusterController.all()` parses centroid_json JSONB → Map. `ClassificationService.predict()` builds a 26-attr Instance from `PredictRequest` (re-derives Phase 3 features at request time, bins Customer_Tier from training quartile cutoffs cached at startup), runs RandomForest → churnProb, KMeans → cluster, looks up persona name, derives top-3 features from `phase5_feature_importance.json`, returns rule-based recommendation. Every prediction logs to `predictions` table. **Live seed not yet executed against Neon — pending user authorization** (re-run wipes customers/clusters/rules tables; insights untouched). |
 
 ### Endpoints — current behavior
 
@@ -31,12 +31,12 @@
 | `GET /actuator/health` | ✅ UP, hits Neon | (already real) |
 | `GET /swagger-ui.html`, `/v3/api-docs` | ✅ Live | (already real) |
 | `GET /api/insights` | ✅ Returns 5 real rows from Neon | (already real) |
-| `GET /api/overview` | 🟡 Mock JSON | Phase 8 (BE-82) |
-| `GET /api/customers`, `/api/customers/{id}` | 🟡 Mock | Phase 8 (BE-83/84) — needs Phase 2-5 first |
-| `GET /api/clusters`, `/api/clusters/{id}/customers` | 🟡 Mock | Phase 8 (BE-85/86) — needs Phase 6 |
-| `GET /api/rules` | 🟡 Mock | Phase 8 (BE-87) — needs Phase 7 |
-| `GET /api/anomalies` | 🟡 Mock | Phase 8 (BE-89) — needs Phase 6 |
-| `POST /api/predict` | 🟡 Mock | Phase 8 (BE-90) — needs Phase 5 |
+| `GET /api/overview` | 🟡 Wired, awaiting seed | Live after Phase 8 seed runs |
+| `GET /api/customers`, `/api/customers/{id}` | 🟡 Wired, awaiting seed | Live after Phase 8 seed runs |
+| `GET /api/clusters`, `/api/clusters/{id}/customers` | 🟡 Wired, awaiting seed | Live after Phase 8 seed runs |
+| `GET /api/rules` | 🟡 Wired, awaiting seed | Live after Phase 8 seed runs |
+| `GET /api/anomalies` | 🟡 Wired, awaiting seed | Live after Phase 8 seed runs |
+| `POST /api/predict` | 🟡 Wired, awaiting model load | Live after Phase 8 seed + restart (loads `models/rf.model` + `kmeans.model`) |
 | `GET /api/eda/distribution\|correlation\|churn-by` | ✅ Live | (already real) — see §3.2 / §3.3 / §3.4 |
 | `GET /api/eda/describe` | ✅ Live | (already real) — see §3.13 |
 
@@ -55,7 +55,22 @@ Neon Postgres (project `ep-purple-smoke-aosu7szo`, region `ap-southeast-1`, PG 1
 
 ### Pick-up notes for the next session
 
-When user says **"start Phase 8"** or **"làm phase 8"**:
+**Phase 8 code is complete; the only remaining step is the one-shot seed run against Neon. To finish:**
+
+```powershell
+# From backend/ directory, set Neon env vars (don't commit them):
+$env:DATABASE_URL  = 'jdbc:postgresql://ep-purple-smoke-aosu7szo-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+$env:DB_USER       = '...'   # neondb_owner
+$env:DB_PASSWORD   = '...'   # held by user
+$env:SPRING_PROFILES_ACTIVE = 'prod'
+mvn -q exec:java '-Dexec.mainClass=com.creditminer.pipeline.Phase8Seeder'
+```
+
+This wipes & re-populates `customers` (10127 rows), `clusters` (3 personas), `rules` (50 rules) but does NOT touch `insights` or `predictions`. After it completes, restart `mvn spring-boot:run` so `ModelConfig.@PostConstruct` loads `models/rf.model` + `models/kmeans.model` for the live `/api/predict` flow.
+
+**When user says "start Phase 9" or anything past Phase 8** there is no Phase 9 in scope — the 8-phase CRISP-DM pipeline is complete. Likely follow-ups: persona-name review (currently auto-assigned), insight refresh (existing 5 are pre-Phase-7 stubs in `db/seed.sql`), more PredictRequest fields (the form lacks `Total_Amt_Chng_Q4_Q1` / `Total_Ct_Chng_Q4_Q1` so they default to 1.0 at predict time), HTTP endpoint for `phase6_pca_2d.json`, or load testing the predict endpoint.
+
+**Original Phase 8 plan retained below for context:**
 1. Phase 8 scope = Insights & API (BE-80..BE-91): hand-curate 5+ insights JSON (Discovery / Evidence / Recommendation per blueprint §8 examples), build `DatabaseSeeder` to populate Postgres customers/clusters/rules/insights/predictions tables, then implement live versions of `/api/overview`, `/api/customers`, `/api/customers/{id}`, `/api/clusters`, `/api/clusters/{id}/customers`, `/api/rules`, `/api/anomalies`, `/api/predict`, plus prediction logging.
 2. Pre-reqs satisfied: ALL upstream phase outputs ready in `data/processed/` and `models/`. `models/rf.model` (best classifier) + `models/kmeans.model` (clusterer) auto-load via `ModelConfig.@PostConstruct`. `models/rules.json` (50 retention rules) consumed by `/api/rules`.
 3. **Persona names**: still placeholder "Cluster 0/1/2" in `phase6_clusters.json`. Phase 8 is the right place to inject human-readable names. Suggested mapping (confirm with user before seeding):
