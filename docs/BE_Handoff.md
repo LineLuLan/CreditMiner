@@ -5,6 +5,67 @@
 
 ---
 
+## 0. Implementation Status
+
+> **Last updated**: 2026-05-08 (commit `3ac1d37` on `backend`).
+> Granular per-task status lives in `docs/BE_Tracker.md`. This section is the cross-team summary.
+
+### Phases
+
+| Phase | Status | What works today |
+|---|---|---|
+| **0. Infra** | ✅ DONE | Spring Boot 3.2 boots clean against Neon (PG 17, ap-southeast-1). Profiles dev/prod, CORS, OpenAPI/Swagger, structured logback, error envelope handler. `/actuator/health` UP. |
+| **1. Data Understanding** | 🔜 NEXT | DataLoader (CSV→ARFF), drop leakage cols, describe table report. See `docs/BE_Tracker.md` Phase 1 (BE-10..BE-13). FE will get a `GET /api/eda/describe` once BE-13 lands. |
+| **2. Preprocessing** | ⏳ BACKLOG | Imputation, dedup, outlier flags, scaling. Needed before §3.2-3.4 EDA endpoints. |
+| **3. Feature Engineering** | ⏳ BACKLOG | 6 derived features (utilization_score, risk_score, customer_tier, etc.). |
+| **4. EDA endpoints** | ⏳ BACKLOG | `/api/eda/*` (§3.2-3.4). Currently 501-equivalent stubs. |
+| **5. Classification** | ⏳ BACKLOG | J48/RF/NB models, SMOTE on train, 10-fold CV. |
+| **6. Clustering & Anomaly** | ⏳ BACKLOG | KMeans + silhouette + cluster-distance anomaly. |
+| **7. Association Rules** | ⏳ BACKLOG | Discretize + Apriori → `rules.json`. |
+| **8. Insights & API** | 🟡 PARTIAL | All controllers in §3 are scaffolded; only `GET /api/insights` returns real data (5 seeded rows from Neon). Everything else returns mock/stub responses today. |
+
+### Endpoints — current behavior
+
+| Endpoint | Today | Becomes real in |
+|---|---|---|
+| `GET /actuator/health` | ✅ UP, hits Neon | (already real) |
+| `GET /swagger-ui.html`, `/v3/api-docs` | ✅ Live | (already real) |
+| `GET /api/insights` | ✅ Returns 5 real rows from Neon | (already real) |
+| `GET /api/overview` | 🟡 Mock JSON | Phase 8 (BE-82) |
+| `GET /api/customers`, `/api/customers/{id}` | 🟡 Mock | Phase 8 (BE-83/84) — needs Phase 2-5 first |
+| `GET /api/clusters`, `/api/clusters/{id}/customers` | 🟡 Mock | Phase 8 (BE-85/86) — needs Phase 6 |
+| `GET /api/rules` | 🟡 Mock | Phase 8 (BE-87) — needs Phase 7 |
+| `GET /api/anomalies` | 🟡 Mock | Phase 8 (BE-89) — needs Phase 6 |
+| `POST /api/predict` | 🟡 Mock | Phase 8 (BE-90) — needs Phase 5 |
+| `GET /api/eda/distribution\|correlation\|churn-by` | 🟡 Mock | Phase 4 (BE-40..43) — needs Phase 1-2 |
+| `GET /api/eda/describe` _(NEW)_ | ❌ Not yet | Phase 1 (BE-13) |
+
+### Error envelope status
+
+Working today (verified by smoke test on `3ac1d37`):
+- 400 `VALIDATION_ERROR` for malformed JSON, bean-validation failures, type mismatches, constraint violations
+- 404 `NOT_FOUND` for unknown routes (`NoResourceFoundException`)
+- 500 `INTERNAL_ERROR` fallback
+
+Caveat: `405 Method Not Allowed` still uses Spring's default `{timestamp,status,error,path}` shape, not our envelope. FE only sends GET/POST so low-impact. Tracked in BE-05.
+
+### Database
+
+Neon Postgres (project `ep-purple-smoke-aosu7szo`, region `ap-southeast-1`, PG 17). Schema applied via `db/schema.sql` + `db/seed.sql`. Connection via `DATABASE_URL` + `DB_USER` + `DB_PASSWORD` env vars (see `backend/.env.example`). Hibernate runs in `validate` mode — schema tweaks must land in `db/schema.sql` AND match JPA entity types.
+
+### Pick-up notes for the next session
+
+When user says **"start Phase 1"** or **"làm phase 1"**:
+1. Plan file location: `~/.claude/plans/` (one per phase). Old Phase 0 plan at `b-t-u-phase-1-fizzy-bachman.md` (filename was misnamed; actual content was Phase 0).
+2. Phase 1 scope already confirmed with user:
+   - **BE-10..BE-13** in `docs/BE_Tracker.md` Phase 1 row (DataLoader CSV/ARFF, drop 2 leakage cols, `Phase1Report.java` describe table).
+   - User confirmed the describe-table output should be **console + JSON file + a new `GET /api/eda/describe` endpoint** (the endpoint is BE-13 scope, slot it into §3 of this doc when implemented).
+   - Run mode (mvn exec:java vs JUnit) was deferred — ask user when starting.
+3. Pre-reqs already satisfied: backend boots, Neon up, error envelope ready, .env.example documents env vars. User still owes BE-M1 (JDK/Maven local) and BE-M2 (download `BankChurners.csv` to `backend/data/raw/`).
+4. Source of truth for current behavior: this section + `docs/BE_Tracker.md`. Don't crawl Java stubs to infer scope (memory: `feedback_read_docs_first.md`).
+
+---
+
 ## 1. Base URL & Conventions
 
 | Env | Base URL |
