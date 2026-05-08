@@ -1,0 +1,63 @@
+# =============================================================================
+# CreditMiner — base config (overridden by application-{profile}.yml)
+# Active profile is set via SPRING_PROFILES_ACTIVE env var (default: dev)
+# =============================================================================
+
+spring:
+  application:
+    name: creditminer-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  compression:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+# CreditMiner-specific config
+creditminer:
+  data:
+    raw-csv: ${CM_RAW_CSV:data/raw/BankChurners.csv}
+    processed-arff: ${CM_PROCESSED_ARFF:data/processed/clean.arff}
+    assoc-arff: ${CM_ASSOC_ARFF:data/processed/clean_assoc.arff}
+  models:
+    classifier: ${CM_MODEL_CLASSIFIER:models/rf.model}
+    clusterer: ${CM_MODEL_CLUSTERER:models/kmeans.model}
+    rules-json: ${CM_MODEL_RULES:models/rules.json}
+    j48: ${CM_MODEL_J48:models/j48.model}
+    nb: ${CM_MODEL_NB:models/nb.model}
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://127.0.0.1:3000
+  pipeline:
+    random-seed: 42
+    train-split-ratio: 0.8
+    cv-folds: 10
+    smote-percentage: 100

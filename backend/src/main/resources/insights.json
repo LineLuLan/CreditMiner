@@ -1,0 +1,42 @@
+[
+  {
+    "title": "High utilization signals imminent churn",
+    "discovery": "Customers with Avg_Utilization_Ratio > 0.7 churn at 2.4x the average rate.",
+    "evidence": "Apriori rule {Util=high, Inactive=high} -> Attrited (sup=0.08, conf=0.78, lift=4.84). Confirmed by RandomForest feature importance (utilization ranks top 3).",
+    "recommendation": "Trigger an alert when utilization exceeds 70% for 2 consecutive months; offer credit-limit increase or financial counseling.",
+    "category": "churn",
+    "priority": 1
+  },
+  {
+    "title": "Premium Loyal cluster is under-monetized",
+    "discovery": "The Premium Loyal cluster has the highest credit limits but the lowest utilization rate.",
+    "evidence": "Premium centroid: Credit_Limit ~ $20K, Utilization ~ 0.15. Cluster size ~30%, churn rate <6%.",
+    "recommendation": "Push premium credit products, travel rewards, and investment offerings to this cohort.",
+    "category": "opportunity",
+    "priority": 2
+  },
+  {
+    "title": "Inactive months strongly correlates with churn",
+    "discovery": "Customers with Months_Inactive_12_mon >= 4 churn 3.1x more often.",
+    "evidence": "Pearson r(inactive, attrited)=0.21; Apriori rule {Inactive=high, Trans_Ct=low} -> Attrited (lift=3.6).",
+    "recommendation": "Send re-engagement campaigns at 2-month inactivity; escalate at 3 months.",
+    "category": "churn",
+    "priority": 1
+  },
+  {
+    "title": "Low transaction count is the strongest single predictor",
+    "discovery": "Total_Trans_Ct ranks #1 in RandomForest feature importance.",
+    "evidence": "RF importance: Total_Trans_Ct = 0.28 (top), followed by Total_Trans_Amt (0.19) and Avg_Utilization_Ratio (0.17).",
+    "recommendation": "Surface a 'transactions this month vs last' KPI in customer-facing app to drive activity.",
+    "category": "risk",
+    "priority": 2
+  },
+  {
+    "title": "Blue card holders churn 1.6x more than Silver/Gold",
+    "discovery": "Card_Category=Blue customers have a 17.2% churn rate vs 11% for higher tiers.",
+    "evidence": "Apriori rule {Card=Blue, Trans_Ct=low} -> Attrited (sup=0.05, conf=0.72, lift=4.46).",
+    "recommendation": "Promote tier upgrade with first-year fee waiver to active Blue customers.",
+    "category": "opportunity",
+    "priority": 3
+  }
+]

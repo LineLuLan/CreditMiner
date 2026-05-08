@@ -1,0 +1,30 @@
+# =============================================================================
+# Production profile
+# Neon DB. Models on persistent disk or S3 (configured via env vars).
+# =============================================================================
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 20000
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+
+server:
+  forward-headers-strategy: framework
+
+logging:
+  level:
+    root: WARN
+    com.creditminer: INFO
+
+creditminer:
+  cors:
+    allowed-origins:
+      - ${CM_FRONTEND_URL:https://creditminer-demo.vercel.app}

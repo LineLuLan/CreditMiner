@@ -1,0 +1,25 @@
+# =============================================================================
+# Development profile
+# Local Postgres via docker-compose. Models from local filesystem.
+# =============================================================================
+
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/creditminer_db}
+    username: ${DB_USER:creditminer}
+    password: ${DB_PASSWORD:creditminer}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+
+logging:
+  level:
+    root: INFO
+    com.creditminer: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
