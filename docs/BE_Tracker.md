@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 1 close-out (2026-05-08)
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 2 close-out (2026-05-08)
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -23,10 +23,10 @@
 |---|---|
 | Total tasks | 64 |
 | Done | 3 (BE-00, BE-M2, BE-M3) |
-| REVIEW | 9 (BE-01..BE-05, BE-10..BE-13) |
+| REVIEW | 16 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26) |
 | WIP | 0 |
 | Blocked | 1 (manual user step BE-M1) |
-| % complete | 4.7% (18.8% incl REVIEW) |
+| % complete | 4.7% (29.7% incl REVIEW) |
 
 ---
 
@@ -54,13 +54,13 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-20 | `Preprocessor.imputeMissing()` (mode/median, treat "Unknown") | BACKLOG | | | ReplaceMissingValues filter |
-| BE-21 | `Preprocessor.dropDuplicates()` (by CLIENTNUM) | BACKLOG | | | |
-| BE-22 | `Preprocessor.flagOutliers()` Z-score | BACKLOG | | | Set `is_outlier` flag |
-| BE-23 | `Preprocessor.flagOutliers()` IQR | BACKLOG | | | OR with Z-score |
-| BE-24 | `Preprocessor.normalize()` min-max for clustering | BACKLOG | | | Normalize filter |
-| BE-25 | `Preprocessor.standardize()` Z-score for NaiveBayes/Logistic | BACKLOG | | | Standardize filter |
-| BE-26 | `Preprocessor.encodeNominal()` one-hot for Logistic | BACKLOG | | | NominalToBinary filter |
+| BE-20 | `Preprocessor.imputeMissing()` (mode/median, treat "Unknown") | REVIEW | claude | _pending_ | "Unknown"→missing rewrite for Education_Level (1519) / Marital_Status (749) / Income_Category (1112), then `ReplaceMissingValues` (mode for nominal). Manual median path for numeric (no-op on this dataset — 0 missing). |
+| BE-21 | `Preprocessor.dropDuplicates()` (by CLIENTNUM) | REVIEW | claude | _pending_ | HashSet on CLIENTNUM. 0 duplicates in Kaggle dataset (verified). |
+| BE-22 | `Preprocessor.flagOutliers()` Z-score | REVIEW | claude | _pending_ | \|z\|>3 on Credit_Limit/Total_Trans_Amt/Avg_Utilization_Ratio/Total_Revolving_Bal. Z-score cols: 0/391/0/0. |
+| BE-23 | `Preprocessor.flagOutliers()` IQR | REVIEW | claude | _pending_ | Q1−1.5·IQR / Q3+1.5·IQR. Combined with Z via OR. IQR cols: 984/896/0/0. Total combined: 1684 (16.63%). Sidecar `phase2_outliers.json` lists CLIENTNUMs for Phase 8 seeder. |
+| BE-24 | `Preprocessor.normalize()` min-max for clustering | REVIEW | claude | _pending_ | Wrapper over Weka `Normalize`. On-demand (caller invokes before KMeans). |
+| BE-25 | `Preprocessor.standardize()` Z-score for NaiveBayes/Logistic | REVIEW | claude | _pending_ | Wrapper over Weka `Standardize`. |
+| BE-26 | `Preprocessor.encodeNominal()` one-hot for Logistic | REVIEW | claude | _pending_ | Wrapper over Weka `NominalToBinary`. |
 
 ## Phase 3 — Feature Engineering
 

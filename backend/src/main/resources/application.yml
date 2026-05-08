@@ -47,6 +47,8 @@ creditminer:
     phase1-arff: ${CM_PHASE1_ARFF:data/processed/phase1_raw.arff}
     describe-json: ${CM_DESCRIBE_JSON:data/processed/phase1_describe.json}
     processed-arff: ${CM_PROCESSED_ARFF:data/processed/clean.arff}
+    phase2-report-json: ${CM_PHASE2_REPORT:data/processed/phase2_report.json}
+    phase2-outliers-json: ${CM_PHASE2_OUTLIERS:data/processed/phase2_outliers.json}
     assoc-arff: ${CM_ASSOC_ARFF:data/processed/clean_assoc.arff}
   models:
     classifier: ${CM_MODEL_CLASSIFIER:models/rf.model}
