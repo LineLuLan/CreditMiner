@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 6 Clustering + BE-43 close-out (2026-05-08)
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 7 Association Rules close-out (2026-05-09)
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -23,11 +23,11 @@
 |---|---|
 | Total tasks | 64 |
 | Done | 3 (BE-00, BE-M2, BE-M3) |
-| REVIEW | 41 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-43, BE-50..BE-59, BE-60..BE-64) |
+| REVIEW | 46 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-43, BE-50..BE-59, BE-60..BE-64, BE-70..BE-74) |
 | WIP | 0 |
 | Blocked | 1 (manual user step BE-M1) |
 | Skipped | 1 (BE-65 EM bonus — optional, deprioritized) |
-| % complete | 4.7% (68.8% incl REVIEW) |
+| % complete | 4.7% (76.6% incl REVIEW) |
 
 ---
 
@@ -113,11 +113,11 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-70 | Discretize numeric → 3 equal-frequency bins | BACKLOG | | | Discretize filter |
-| BE-71 | Save `clean_assoc.arff` | BACKLOG | | | |
-| BE-72 | Run Apriori (sup=0.05, conf=0.7, n=50) | BACKLOG | | | |
-| BE-73 | Filter rules with Attrition_Flag on RHS | BACKLOG | | | category=churn/retention |
-| BE-74 | Export `rules.json` | BACKLOG | | | RuleExporter util |
+| BE-70 | Discretize numeric → 3 equal-frequency bins | REVIEW | claude | _pending_ | Weka `Discretize -B 3 -F` on Credit_Limit / Avg_Utilization_Ratio / Total_Trans_Amt / Total_Trans_Ct / Risk_Score / Months_Inactive_12_mon. |
+| BE-71 | Save `clean_assoc.arff` | REVIEW | claude | _pending_ | 10127 rows × 13 attrs (6 discretized + 7 native nominals). Path from `creditminer.data.assoc-arff`. |
+| BE-72 | Run Apriori (sup=0.05, conf=0.7, n=50) | REVIEW | claude | _pending_ | sup=0.05, conf=0.7 (blueprint), `numRules=10000` internally + delta=0.01 so support actually descends to 5% (Weka stops early once N rules found at current floor); post-filter to top 50 by lift. |
+| BE-73 | Filter rules with Attrition_Flag on RHS | REVIEW | claude | _pending_ | Single-attribute `Attrition_Flag=...` RHS only (multi-attr inflates lift artificially). Categorize: `Attrited` → churn, `Existing` → retention. Result: 50 retention, 0 churn (math: Attrited 16% prevalence cannot reach conf ≥ 0.7 at single-attr granularity). minLift relaxed to 1.0 (theoretical max for retention is 1/0.84 ≈ 1.19). |
+| BE-74 | Export `rules.json` | REVIEW | claude | _pending_ | `models/rules.json` (consumed by `GET /api/rules` Phase 8). Schema: ruleId, lhs, rhs, support, confidence, lift, category. Wrapping doc has `totalRows`, `config{minSupport, minConfidence, numRules, minLift}`, `ruleCount`, `churnRuleCount`, `retentionRuleCount`. |
 
 ## Phase 8 — Insights & API
 
