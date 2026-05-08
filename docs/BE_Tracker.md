@@ -22,10 +22,11 @@
 | Metric | Value |
 |---|---|
 | Total tasks | 64 |
-| Done | 1 |
+| Done | 2 (BE-00, BE-M3) |
+| REVIEW | 5 (BE-01..BE-05) |
 | WIP | 0 |
-| Blocked | 3 (manual user steps BE-M1..M3) |
-| % complete | 1.6% |
+| Blocked | 2 (manual user steps BE-M1, BE-M2) |
+| % complete | 3.1% (10.9% incl REVIEW) |
 
 ---
 
@@ -34,11 +35,11 @@
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
 | BE-00 | Repo + Maven scaffold + branch policy | DONE | claude | b492427 | Tag v0.1.0-skeleton, mvn compile OK |
-| BE-01 | Configure `application.yml` profiles (dev/prod) | BACKLOG | | | Neon URL goes in prod |
-| BE-02 | Wire CORS for `localhost:3000` | BACKLOG | | | See `CorsConfig.java` |
-| BE-03 | Setup OpenAPI / Swagger UI | BACKLOG | | | springdoc-openapi |
-| BE-04 | Setup logback structured logging | BACKLOG | | | JSON in prod, pretty in dev |
-| BE-05 | Setup global exception handler + error envelope | BACKLOG | | | `{error: {code, message}}` |
+| BE-01 | Configure `application.yml` profiles (dev/prod) | REVIEW | claude | _pending_ | dev/prod yml + `backend/.env.example`; prod reads `DB_USER`/`DB_PASSWORD` |
+| BE-02 | Wire CORS for `localhost:3000` | REVIEW | claude | _pending_ | `CorsConfig.java` reads `creditminer.cors.allowed-origins`. YAML changed to comma-separated string (Spring `@Value` cannot bind YAML list to `List<String>`). |
+| BE-03 | Setup OpenAPI / Swagger UI | REVIEW | claude | _pending_ | `OpenApiConfig.java` + springdoc 2.5.0 → `/swagger-ui.html` |
+| BE-04 | Setup logback structured logging | REVIEW | claude | _pending_ | `logback-spring.xml` dev colored / prod JSON pattern |
+| BE-05 | Setup global exception handler + error envelope | REVIEW | claude | _pending_ | `GlobalExceptionHandler` covers 7 exception types: Business, MethodArgumentNotValid, MalformedJSON, ConstraintViolation, TypeMismatch, MethodNotSupported, NoResourceFound. Smoke test verified: bad JSON → `VALIDATION_ERROR` 400, unknown route → `NOT_FOUND` 404. CAVEAT: `MethodNotSupported` 405 still returns Spring's default error format (handler not invoked for protocol-level exceptions thrown pre-dispatch). FE never sends DELETE/PUT so low-impact; fix later by extending `ResponseEntityExceptionHandler`. |
 
 ## Phase 1 — Data Understanding
 
@@ -151,7 +152,7 @@
 |---|---|---|---|
 | BE-M1 | Install JDK 17 + Maven 3.9 | BLOCKED | User must verify locally; flag if missing |
 | BE-M2 | Download `BankChurners.csv` from Kaggle | BLOCKED | Place at `backend/data/raw/` |
-| BE-M3 | Provision Neon DB & paste connection string into `application-prod.yml` | BLOCKED | For deploy phase only |
+| BE-M3 | Provision Neon DB & apply `db/schema.sql` + `db/seed.sql` | DONE | Neon project ep-purple-smoke-aosu7szo (ap-southeast-1, PG 17). Schema fixed: `gender CHAR(1)` → `VARCHAR(1)` and `SERIAL` → `BIGSERIAL` (3 places) to match JPA entity types. 5 tables + 13 indexes + 5 insights + 4 cluster stubs seeded. Smoke test prod profile boot: PASS (Hibernate validate ok, /actuator/health UP, /api/insights returns 5 records). URL goes in env var, NOT yml. |
 
 ---
 

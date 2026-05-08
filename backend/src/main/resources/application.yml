@@ -53,9 +53,7 @@ creditminer:
     j48: ${CM_MODEL_J48:models/j48.model}
     nb: ${CM_MODEL_NB:models/nb.model}
   cors:
-    allowed-origins:
-      - http://localhost:3000
-      - http://127.0.0.1:3000
+    allowed-origins: http://localhost:3000,http://127.0.0.1:3000
   pipeline:
     random-seed: 42
     train-split-ratio: 0.8
