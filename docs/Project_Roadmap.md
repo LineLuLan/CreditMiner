@@ -133,6 +133,7 @@ If `/api/predict` slips, the demo loses its centerpiece. Protect it.
 - ✅ All 7 trackers seeded with detailed initial content
 - ✅ GitHub Actions CI for backend + frontend + docs-sync reminder
 - ✅ Tag `v0.1.0-skeleton` pushed; all branches pushed to origin
+- ✅ Branch protection enabled on all 4 branches via `gh api` (no force-push, no deletion, direct push still allowed for skeleton flow)
 - 🎯 Next: Phase 1 EDA on `backend` branch + FE-10..15 layout polish on `frontend` branch
 
 ### Week 2
@@ -152,6 +153,7 @@ _(fill at end of week)_
 | W1 | Move blueprints to `docs/` | Matches README structure; centralizes docs |
 | W1 | Skeleton level = "Detailed scaffolding" | Faster team onboarding |
 | W1 | No auth in API | Academic project; deploy with caveat |
+| W1 | Branch protection: force-push + deletion blocked, no PR review required | Match the user's "direct push allowed but never rewrite history" rule |
 
 ---
 
