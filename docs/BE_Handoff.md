@@ -7,7 +7,7 @@
 
 ## 0. Implementation Status
 
-> **Last updated**: 2026-05-08 (Phase 5 Classification complete on `backend`; BE-43 PCA-2D still deferred to Phase 6).
+> **Last updated**: 2026-05-08 (Phase 6 Clustering & Anomaly + BE-43 PCA-2D complete on `backend`).
 > Granular per-task status lives in `docs/BE_Tracker.md`. This section is the cross-team summary.
 
 ### Phases
@@ -20,7 +20,7 @@
 | **3. Feature Engineering** | ✅ DONE | `FeatureEngineer.run()` appends 6 derived columns to `clean.arff` → `enriched.arff` (10127 rows × 27 cols): `Utilization_Score` (Bal/Limit, cross-checks Avg_Utilization_Ratio), `Spending_Intensity` (Amt/Ct), `Engagement_Score` (Ct/Months), `Customer_Value_Score` (composite z-score, **NO Attrition_Flag input**), `Risk_Score` (0.4·Util + 0.3·(Inactive/12) + 0.3·(1−Engagement_norm), **NO Attrition_Flag**), `Customer_Tier` (quartile bins → Bronze/Silver/Gold/Platinum). `DescribeCacheService` now prefers enriched.arff > clean.arff > phase1_raw.arff > raw CSV, so `/api/eda/describe` shows all 27 columns. Verified: tier counts 2532/2531/2532/2532, Utilization_Score mean=0.2749 matches Avg_Utilization_Ratio. |
 | **4. EDA endpoints** | 🟡 PARTIAL | `/api/eda/distribution`, `/correlation`, `/churn-by` are live (BE-40/41/42), backed by `EdaDataCache` (lazy-loads enriched.arff once, shared across all 3 endpoints) + `EdaService`. Distribution supports both numeric (histogram with bins 5..50, default 20) and nominal (value counts). Correlation = Pearson over 26 numeric cols (CLIENTNUM excluded), cached in-memory. Churn-by validates `dim` against whitelist incl. new `Customer_Tier`. **BE-43 PCA-2D coords deferred to Phase 6** — depends on the cluster feature subset which isn't fixed yet. |
 | **5. Classification** | ✅ DONE | `Phase5Pipeline` trains 10 model variants (J48 / RF / NaiveBayes / Logistic — each with baseline + SMOTE-on-train; J48 + RF also wrapped in CostSensitiveClassifier with cost matrix [[0,1],[5,0]]). Stratified 80/20 split (seed 42), SMOTE applied to TRAIN only, NB/Logistic standardized, Logistic also one-hot-encoded. 10-fold CV on train + held-out test eval recorded as F1-Attrited / ROC-AUC / PR-AUC / accuracy / precision / recall in `data/processed/phase5_comparison.csv`. **Best**: RandomForest+SMOTE — CV F1=0.9315, Test F1=0.8758, Test ROC-AUC=0.9888, Test PR-AUC=0.9429. RandomForest+CostSensitive close behind (Test F1=0.8775). NaiveBayes worst (Test F1≈0.55). Top-5 RF feature importance (Mean Decrease Impurity): Total_Trans_Amt, Customer_Age, Total_Trans_Ct, Total_Amt_Chng_Q4_Q1, Spending_Intensity (Phase 3 derived feature). Persisted: `models/{j48,rf,nb,logistic}.model` (best variant per algo). `models/rf.model` (6.1MB) is the production classifier loaded by `ModelConfig` at startup. |
-| **6. Clustering & Anomaly** | ⏳ BACKLOG | KMeans + silhouette + cluster-distance anomaly. |
+| **6. Clustering & Anomaly** | ✅ DONE | `Phase6Pipeline` drops nominals + CLIENTNUM + Attrition_Flag, min-max normalizes 19 numeric features, sweeps k=2..8, picks best k by sampled silhouette. **Best k=3** (silhouette 0.218). Final `SimpleKMeans(seed=42, iter=500)` saved to `models/kmeans.model` (50KB, loaded by `ModelConfig`). Per-cluster summaries (centroids in ORIGINAL units, avgRisk, churnRate) in `phase6_clusters.json`: C0=Premium-pattern (1920 rows, $24K credit, util 7%, churn 12%), C1=Stress-pattern (3981 rows, $5K credit, util 11%, churn 26% — highest), C2=Low-util-pattern (4226 rows, $4K credit, util 65%, churn 9% — lowest). Cluster-distance anomalies (`distance > μ+3σ` where μ=0.71, σ=0.19): 50 flagged. **Combined `is_anomaly`** = Phase 2 outlier ∩ cluster-distance outlier → 47 customers (47/50 cluster outliers agreed with Phase 2 — strong cross-method agreement). **BE-43 PCA-2D** (Weka `PrincipalComponents` → first 2 PCs of normalized matrix) exported to `phase6_pca_2d.json` (10127 × {x,y,clusterId,clientNum}). HTTP endpoint deferred to Phase 8 alongside `/api/clusters`. EM bonus (BE-65) skipped. |
 | **7. Association Rules** | ⏳ BACKLOG | Discretize + Apriori → `rules.json`. |
 | **8. Insights & API** | 🟡 PARTIAL | All controllers in §3 are scaffolded; only `GET /api/insights` returns real data (5 seeded rows from Neon). Everything else returns mock/stub responses today. |
 
@@ -55,14 +55,13 @@ Neon Postgres (project `ep-purple-smoke-aosu7szo`, region `ap-southeast-1`, PG 1
 
 ### Pick-up notes for the next session
 
-When user says **"start Phase 6"** or **"làm phase 6"**:
-1. Phase 6 scope = Clustering & Anomaly (BE-60..BE-65 in `docs/BE_Tracker.md`): KMeans elbow over k=2..8 picking optimal k, silhouette scoring, train final SimpleKMeans (seed 42, save `models/kmeans.model`), centroid-distance anomaly flagging (distance > μ+3σ), combine Z+IQR+cluster-distance into `is_anomaly`, optional EM bonus. **Also pick up BE-43 (PCA-2D)** here since the cluster feature subset will now be fixed.
-2. Pre-reqs satisfied: `enriched.arff` is input. Drop `Attrition_Flag` and `CLIENTNUM` before clustering (unsupervised), then `Preprocessor.normalize()` (min-max for distance-based KMeans). Phase 5 already produced the SMOTE/feature-importance work; clustering is independent.
-3. Output target: `models/kmeans.model` + `data/processed/phase6_clusters.json` (per-cluster centroid + persona name + size + avg_risk + churn_rate) + `data/processed/phase6_anomalies.json` (CLIENTNUM list combining is_outlier from Phase 2 with cluster-distance anomalies).
-4. PCA-2D: use `weka.filters.unsupervised.attribute.PrincipalComponents` on the same normalized feature matrix used for KMeans; keep first 2 PCs; export per-CLIENTNUM (x, y) to `data/processed/phase6_pca_2d.json`. New endpoint `GET /api/eda/pca-2d` (or attach to `/api/clusters`) — confirm shape with FE.
-5. Persona names (Premium Loyal / Heavy Spender / At-Risk Mid / Dormant Light etc.) — manually assigned by inspecting centroids; map cluster id → name in `phase6_clusters.json`.
-6. Phase 5 deliverables ready: 4 .model files, comparison CSV, RF feature importance JSON. `ModelConfig` loads `models/rf.model` + (Phase 6) `models/kmeans.model` at startup; `/predict` endpoint will go live in Phase 8 once seeder lands.
-7. Source of truth: this section + `docs/BE_Tracker.md`.
+When user says **"start Phase 7"** or **"làm phase 7"**:
+1. Phase 7 scope = Association Rules (BE-70..BE-74): discretize numeric → 3 equal-frequency bins (Discretize filter on Credit_Limit / Avg_Utilization_Ratio / Total_Trans_Amt / Total_Trans_Ct / Risk_Score / Months_Inactive_12_mon), keep existing nominals (Income_Category / Card_Category / Customer_Tier / Gender / Education_Level / Marital_Status / Attrition_Flag), save `clean_assoc.arff`, run Apriori (sup=0.05, conf=0.7, n=50, sortBy=lift, keep lift>1.2), filter to rules with `Attrition_Flag` on RHS only, categorize churn vs retention, export `data/processed/rules.json`.
+2. Pre-reqs satisfied: `enriched.arff` is input. New service `RuleMiner` lives at `com.creditminer.service.RuleMiner` (skeleton may not exist; create if needed). New `Phase7Pipeline` standalone main.
+3. Persona renaming for Phase 6 clusters: still uses placeholder "Cluster 0/1/2" in `phase6_clusters.json`. Phase 8 seeder is the right place to inject human-readable persona names (e.g. "Premium Loyal" for C0). Confirm naming with user before Phase 8.
+4. **Phase 6 deliverables ready**: `models/kmeans.model`, `phase6_clusters.json`, `phase6_anomalies.json`, `phase6_pca_2d.json`, `phase6_elbow.json`. Combined anomaly count = 47 (Phase 2 ∩ cluster-distance).
+5. PCA endpoint `GET /api/eda/pca-2d`: still not wired — JSON exists but no controller. Add when Phase 8 lands `/api/clusters` (BE-85) so they share cache infrastructure.
+6. Source of truth: this section + `docs/BE_Tracker.md`.
 
 ---
 

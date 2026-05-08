@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 5 Classification close-out (2026-05-08)
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 6 Clustering + BE-43 close-out (2026-05-08)
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -23,11 +23,11 @@
 |---|---|
 | Total tasks | 64 |
 | Done | 3 (BE-00, BE-M2, BE-M3) |
-| REVIEW | 35 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-42, BE-50..BE-59) |
+| REVIEW | 41 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-43, BE-50..BE-59, BE-60..BE-64) |
 | WIP | 0 |
 | Blocked | 1 (manual user step BE-M1) |
-| Deferred | 1 (BE-43 PCA-2D — pick up alongside Phase 6) |
-| % complete | 4.7% (59.4% incl REVIEW) |
+| Skipped | 1 (BE-65 EM bonus — optional, deprioritized) |
+| % complete | 4.7% (68.8% incl REVIEW) |
 
 ---
 
@@ -81,7 +81,7 @@
 | BE-40 | `GET /api/eda/distribution?col=&bins=` | REVIEW | claude | _pending_ | New `EdaDataCache` lazy-loads enriched.arff (or fallback). `EdaService.distribution()` handles numeric (histogram, bins clamped 5..50, default 20) AND nominal (value counts) — DTO has `type` discriminator. Validates col against dataset; throws VALIDATION_ERROR 400 for unknown col. |
 | BE-41 | `GET /api/eda/correlation` | REVIEW | claude | _pending_ | Pearson over all numeric cols on `enriched.arff` minus CLIENTNUM (~26 cols → 26×26 matrix). Cached in-memory after first call. Values rounded to 4 dp. |
 | BE-42 | `GET /api/eda/churn-by?dim=` | REVIEW | claude | _pending_ | Whitelisted dim (Income_Category / Card_Category / Customer_Tier / Gender / Education_Level / Marital_Status). Single linear scan — not cached, ~ms per call. Group order matches nominal level order on input. |
-| BE-43 | PCA-2D coords export for `/clusters` page | DEFERRED | | | **Deferred to Phase 6** — depends on the cluster feature subset which isn't fixed yet. Pick up alongside BE-60..62 when Phase 6 starts. |
+| BE-43 | PCA-2D coords export for `/clusters` page | REVIEW | claude | _pending_ | Weka `PrincipalComponents` filter on the same normalized matrix used for KMeans (19 numeric features). First 2 PCs exported to `data/processed/phase6_pca_2d.json` (10127 points × {clientNum, clusterId, x, y}). HTTP endpoint deferred to Phase 8 alongside `/api/clusters` (BE-85) so they can share cache infra. |
 
 ## Phase 5 — Classification
 
@@ -102,12 +102,12 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-60 | KMeans elbow (k=2..8) — pick optimal k | BACKLOG | | | save WCSS curve |
-| BE-61 | KMeans + silhouette score | BACKLOG | | | |
-| BE-62 | Train final SimpleKMeans (k chosen, seed=42) | BACKLOG | | | save kmeans.model |
-| BE-63 | Compute centroid distances → flag anomalies | BACKLOG | | | distance > μ+3σ |
-| BE-64 | Combine Z/IQR/cluster-distance into `is_anomaly` | BACKLOG | | | |
-| BE-65 | EM clusterer (bonus, optional) | BACKLOG | | | |
+| BE-60 | KMeans elbow (k=2..8) — pick optimal k | REVIEW | claude | _pending_ | Sweep k=2..8 in `ClusteringService.elbow()`. WCSS drops 6496 → 4014 (smooth, no sharp elbow). Curve in `data/processed/phase6_elbow.json`. |
+| BE-61 | KMeans + silhouette score | REVIEW | claude | _pending_ | Sampled silhouette (1000 random points × all 10127, seed 42). Best by argmax: **k=3** (0.2180). k=2 (0.2172) close behind. |
+| BE-62 | Train final SimpleKMeans (k chosen, seed=42) | REVIEW | claude | _pending_ | k=3, seed=42, 500 iter, EuclideanDistance, preserveInstancesOrder=true. Saved to `models/kmeans.model` (50KB, gitignored). |
+| BE-63 | Compute centroid distances → flag anomalies | REVIEW | claude | _pending_ | Distance per row from assigned centroid; threshold = μ+3σ = 0.71+3·0.19 = 1.27. Flagged: 50 customers. |
+| BE-64 | Combine Z/IQR/cluster-distance into `is_anomaly` | REVIEW | claude | _pending_ | `isAnomaly = phase2_outlier AND cluster_distance_outlier` (strict: both must fire). 47 customers combined. Sidecar `data/processed/phase6_anomalies.json` per-row records (clientNum, clusterId, centroidDistance, phase2Outlier, clusterDistanceOutlier, isAnomaly) for Phase 8 seeder. |
+| BE-65 | EM clusterer (bonus, optional) | SKIPPED | | | Optional bonus — deprioritized. Probabilistic membership not on demo critical path. Add later if report needs comparison vs KMeans. |
 
 ## Phase 7 — Association Rules
 
