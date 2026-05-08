@@ -7,7 +7,7 @@
 
 ## 0. Implementation Status
 
-> **Last updated**: 2026-05-08 (Phase 2 complete on `backend`).
+> **Last updated**: 2026-05-08 (Phase 3 complete on `backend`).
 > Granular per-task status lives in `docs/BE_Tracker.md`. This section is the cross-team summary.
 
 ### Phases
@@ -17,7 +17,7 @@
 | **0. Infra** | ✅ DONE | Spring Boot 3.2 boots clean against Neon (PG 17, ap-southeast-1). Profiles dev/prod, CORS, OpenAPI/Swagger, structured logback, error envelope handler. `/actuator/health` UP. |
 | **1. Data Understanding** | ✅ DONE | `DataLoader.loadCsv()` reads Kaggle BankChurners.csv, drops the 2 trailing `Naive_Bayes_Classifier_*` leakage columns via Weka `Remove` filter, sets `Attrition_Flag` as class index. `Phase1Report` (mvn exec:java) saves cleaned ARFF to `data/processed/phase1_raw.arff`, prints describe table to console, writes `data/processed/phase1_describe.json`. `GET /api/eda/describe` serves the describe table with lazy in-memory cache. Verified: 10127 rows × 21 cols (23 raw - 2 leakage), `Customer_Age` mean=46.33 std=8.02 min=26 max=73, `Attrition_Flag` topValue=Existing Customer count=8500. |
 | **2. Preprocessing** | ✅ DONE | `Preprocessor.run()` chains: rewrite "Unknown" → missing in 3 categorical cols (Education_Level/Marital_Status/Income_Category), mode-impute via `ReplaceMissingValues`, dedup by CLIENTNUM (none in this dataset), flag outliers via Z-score \|z\|>3 OR IQR-fence on 4 financial cols. Scaling/encoding (`normalize`/`standardize`/`encodeNominal`) are on-demand wrappers — caller decides per algorithm. `Phase2Report` produces `data/processed/clean.arff`, `phase2_report.json`, and `phase2_outliers.json` (CLIENTNUM list, consumed by Phase 8 seeder for `customers.is_outlier`). Verified: 1519 + 749 + 1112 Unknown rewrites, 0 duplicates, 1684 outliers (16.63%) — Credit_Limit 984, Total_Trans_Amt 896. No new endpoint (Phase 4 EDA endpoints will read clean.arff). |
-| **3. Feature Engineering** | ⏳ BACKLOG | 6 derived features (utilization_score, risk_score, customer_tier, etc.). |
+| **3. Feature Engineering** | ✅ DONE | `FeatureEngineer.run()` appends 6 derived columns to `clean.arff` → `enriched.arff` (10127 rows × 27 cols): `Utilization_Score` (Bal/Limit, cross-checks Avg_Utilization_Ratio), `Spending_Intensity` (Amt/Ct), `Engagement_Score` (Ct/Months), `Customer_Value_Score` (composite z-score, **NO Attrition_Flag input**), `Risk_Score` (0.4·Util + 0.3·(Inactive/12) + 0.3·(1−Engagement_norm), **NO Attrition_Flag**), `Customer_Tier` (quartile bins → Bronze/Silver/Gold/Platinum). `DescribeCacheService` now prefers enriched.arff > clean.arff > phase1_raw.arff > raw CSV, so `/api/eda/describe` shows all 27 columns. Verified: tier counts 2532/2531/2532/2532, Utilization_Score mean=0.2749 matches Avg_Utilization_Ratio. |
 | **4. EDA endpoints** | ⏳ BACKLOG | `/api/eda/*` (§3.2-3.4). Currently 501-equivalent stubs. |
 | **5. Classification** | ⏳ BACKLOG | J48/RF/NB models, SMOTE on train, 10-fold CV. |
 | **6. Clustering & Anomaly** | ⏳ BACKLOG | KMeans + silhouette + cluster-distance anomaly. |
@@ -55,13 +55,14 @@ Neon Postgres (project `ep-purple-smoke-aosu7szo`, region `ap-southeast-1`, PG 1
 
 ### Pick-up notes for the next session
 
-When user says **"start Phase 3"** or **"làm phase 3"**:
-1. Phase 3 scope = Feature Engineering (BE-30..BE-35 in `docs/BE_Tracker.md`): 6 derived features computed from `clean.arff` — `utilization_score` (Bal/Limit), `spending_intensity` (Amt/Ct), `engagement_score` (Ct/Months), `customer_value_score` (composite z-score, NO Attrition_Flag), `risk_score` (NO Attrition_Flag), `customer_tier` (quartile bin → Bronze/Silver/Gold/Platinum).
-2. Pre-reqs satisfied: `data/processed/clean.arff` is input. Use `DataLoader.loadArff()`. New service `FeatureEngineer` at `com.creditminer.service.FeatureEngineer` (skeleton already in repo). Output target: `data/processed/enriched.arff` (suggest new key `creditminer.data.enriched-arff` rather than overwriting clean.arff).
-3. **Critical leakage rule**: per blueprint §3, `customer_value_score` and `risk_score` MUST NOT use `Attrition_Flag` as input. They are composite z-scores over: utilization, transaction volume, inactivity, contacts, engagement. Verify in code review.
-4. Suggest: extend `DescribeCacheService` to invalidate when input ARFF mtime changes, OR point it at `enriched.arff` instead of `phase1_raw.arff` so describe shows the 6 new columns post-Phase-3.
-5. Phase 2 deliverables ready for downstream: `clean.arff` (input for Phase 3-7), `phase2_outliers.json` (input for Phase 8 seeder).
-6. Source of truth for current behavior: this section + `docs/BE_Tracker.md`. Don't crawl Java stubs to infer scope (memory: `feedback_read_docs_first.md`).
+When user says **"start Phase 4"** or **"làm phase 4"**:
+1. Phase 4 scope = EDA endpoints (BE-40..BE-43 in `docs/BE_Tracker.md`): replace mocks in `EdaController` for `GET /api/eda/distribution?col=&bins=`, `GET /api/eda/correlation`, `GET /api/eda/churn-by?dim=`, plus PCA-2D coords for `/clusters` page (BE-43).
+2. Pre-reqs satisfied: `enriched.arff` (27 cols) is the canonical EDA dataset. Reuse `DescribeCacheService` pattern — create one cache service per endpoint OR a shared `EdaDataCache` that loads enriched.arff once and serves multiple aggregations.
+3. Distribution endpoint: histogram per numeric col with configurable bins (5..50). For nominal cols, return value counts instead.
+4. Correlation: Pearson matrix over numeric cols only. Skip CLIENTNUM, Attrition_Flag (nominal). Cache the matrix — it's 21+6=27 numeric mostly, ~700 cell square.
+5. Churn-by: GROUP BY {dim} on enriched.arff in-memory. Categorical dims include the new `Customer_Tier`.
+6. Phase 3 deliverable ready for downstream: `enriched.arff` (input for Phase 4 EDA + Phase 5 classification + Phase 6 clustering + Phase 7 association rules).
+7. Source of truth: this section + `docs/BE_Tracker.md`. Don't crawl Java stubs (memory: `feedback_read_docs_first.md`).
 
 ---
 

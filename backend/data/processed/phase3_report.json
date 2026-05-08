@@ -1,0 +1,52 @@
+{
+  "totalRows" : 10127,
+  "totalColumnsIn" : 21,
+  "totalColumnsOut" : 27,
+  "derivedFeatures" : [ {
+    "name" : "Utilization_Score",
+    "type" : "numeric",
+    "mean" : 0.2749,
+    "std" : 0.2757,
+    "min" : 0.0,
+    "max" : 0.9988
+  }, {
+    "name" : "Spending_Intensity",
+    "type" : "numeric",
+    "mean" : 62.6127,
+    "std" : 26.4042,
+    "min" : 19.1379,
+    "max" : 190.1932
+  }, {
+    "name" : "Engagement_Score",
+    "type" : "numeric",
+    "mean" : 1.9231,
+    "std" : 0.912,
+    "min" : 0.1887,
+    "max" : 9.7692
+  }, {
+    "name" : "Customer_Value_Score",
+    "type" : "numeric",
+    "mean" : 0.0,
+    "std" : 0.5807,
+    "min" : -1.4513,
+    "max" : 2.5883
+  }, {
+    "name" : "Risk_Score",
+    "type" : "numeric",
+    "mean" : 0.4142,
+    "std" : 0.1167,
+    "min" : 0.0762,
+    "max" : 0.806
+  }, {
+    "name" : "Customer_Tier",
+    "type" : "nominal",
+    "counts" : {
+      "Bronze" : 2532,
+      "Silver" : 2531,
+      "Gold" : 2532,
+      "Platinum" : 2532
+    }
+  } ],
+  "outputArff" : "data/processed/enriched.arff",
+  "generatedAt" : "2026-05-08T15:54:14.250009500Z"
+}

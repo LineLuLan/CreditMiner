@@ -14,12 +14,13 @@ import java.io.File;
 import java.util.List;
 
 /**
- * Lazily computes the Phase 1 describe report on first call and caches it
- * in-memory for subsequent {@code GET /api/eda/describe} requests.
+ * Lazily computes the describe report on first call and caches it in-memory
+ * for subsequent {@code GET /api/eda/describe} requests.
  *
- * <p>Source preference: pre-generated ARFF (fast, already leakage-free) →
- * raw CSV (slower, runs leakage filter). If neither is on disk, throws a
- * {@code REPORT_NOT_GENERATED} {@link BusinessException} → HTTP 503.</p>
+ * <p>Source preference (most enriched first): {@code enriched.arff} (Phase 3) →
+ * {@code clean.arff} (Phase 2) → {@code phase1_raw.arff} (Phase 1) → raw CSV
+ * (re-runs leakage filter). If none exist, throws {@code REPORT_NOT_GENERATED}
+ * → HTTP 503.</p>
  */
 @Slf4j
 @Service
@@ -33,7 +34,13 @@ public class DescribeCacheService {
     private String csvPath;
 
     @Value("${creditminer.data.phase1-arff}")
-    private String arffPath;
+    private String phase1ArffPath;
+
+    @Value("${creditminer.data.processed-arff}")
+    private String cleanArffPath;
+
+    @Value("${creditminer.data.enriched-arff}")
+    private String enrichedArffPath;
 
     private volatile DescribeResponse cached;
 
@@ -57,26 +64,39 @@ public class DescribeCacheService {
     }
 
     private DescribeResponse compute() {
-        log.info("Computing describe report (cache miss) — csv={}, arff={}", csvPath, arffPath);
-        File arff = new File(arffPath);
-        File csv = new File(csvPath);
+        log.info("Computing describe report (cache miss)");
         try {
             Instances data;
             List<String> dropped;
-            if (arff.exists()) {
-                data = dataLoader.loadArff(arffPath);
+            String source;
+            if (new File(enrichedArffPath).exists()) {
+                source = enrichedArffPath;
+                data = dataLoader.loadArff(enrichedArffPath);
                 ensureClassIndex(data);
                 dropped = List.of();
-            } else if (csv.exists()) {
+            } else if (new File(cleanArffPath).exists()) {
+                source = cleanArffPath;
+                data = dataLoader.loadArff(cleanArffPath);
+                ensureClassIndex(data);
+                dropped = List.of();
+            } else if (new File(phase1ArffPath).exists()) {
+                source = phase1ArffPath;
+                data = dataLoader.loadArff(phase1ArffPath);
+                ensureClassIndex(data);
+                dropped = List.of();
+            } else if (new File(csvPath).exists()) {
+                source = csvPath;
                 data = dataLoader.loadCsv(csvPath);
                 dropped = dataLoader.getLastDroppedColumns();
             } else {
                 throw new BusinessException("REPORT_NOT_GENERATED",
                         HttpStatus.SERVICE_UNAVAILABLE,
-                        "Phase 1 dataset not available. Place BankChurners.csv at '"
-                                + csvPath + "' or run Phase1Report to generate '"
-                                + arffPath + "'.");
+                        "No dataset available. Expected one of: '"
+                                + enrichedArffPath + "', '" + cleanArffPath + "', '"
+                                + phase1ArffPath + "', or raw CSV '" + csvPath + "'.");
             }
+            log.info("Describe source: {} ({} rows × {} cols)", source,
+                    data.numInstances(), data.numAttributes());
             return describeService.describe(data, dropped);
         } catch (BusinessException be) {
             throw be;
@@ -84,7 +104,7 @@ public class DescribeCacheService {
             log.error("Failed to compute describe report", ex);
             throw new BusinessException("REPORT_NOT_GENERATED",
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "Failed to load Phase 1 dataset: " + ex.getMessage());
+                    "Failed to load dataset: " + ex.getMessage());
         }
     }
 

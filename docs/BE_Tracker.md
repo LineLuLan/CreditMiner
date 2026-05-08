@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 2 close-out (2026-05-08)
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 3 close-out (2026-05-08)
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -23,10 +23,10 @@
 |---|---|
 | Total tasks | 64 |
 | Done | 3 (BE-00, BE-M2, BE-M3) |
-| REVIEW | 16 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26) |
+| REVIEW | 22 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35) |
 | WIP | 0 |
 | Blocked | 1 (manual user step BE-M1) |
-| % complete | 4.7% (29.7% incl REVIEW) |
+| % complete | 4.7% (39.1% incl REVIEW) |
 
 ---
 
@@ -66,12 +66,12 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-30 | `FeatureEngineer.utilizationScore()` | BACKLOG | | | Bal/Limit |
-| BE-31 | `FeatureEngineer.spendingIntensity()` | BACKLOG | | | Amt/Ct |
-| BE-32 | `FeatureEngineer.engagementScore()` | BACKLOG | | | Ct/Months |
-| BE-33 | `FeatureEngineer.customerValueScore()` (composite z-score) | BACKLOG | | | NO Attrition_Flag |
-| BE-34 | `FeatureEngineer.riskScore()` | BACKLOG | | | NO Attrition_Flag |
-| BE-35 | `FeatureEngineer.customerTier()` (quartiles) | BACKLOG | | | Bronze/Silver/Gold/Platinum |
+| BE-30 | `FeatureEngineer.utilizationScore()` | REVIEW | claude | _pending_ | `Total_Revolving_Bal/Credit_Limit`, safeDivide. Mean=0.2749 cross-checks `Avg_Utilization_Ratio`. |
+| BE-31 | `FeatureEngineer.spendingIntensity()` | REVIEW | claude | _pending_ | `Total_Trans_Amt/Total_Trans_Ct`. Mean=$62.61/tx, max=$190.19. |
+| BE-32 | `FeatureEngineer.engagementScore()` | REVIEW | claude | _pending_ | `Total_Trans_Ct/Months_on_book`. Mean=1.92 tx/month. |
+| BE-33 | `FeatureEngineer.customerValueScore()` (composite z-score) | REVIEW | claude | _pending_ | `0.4·z(Trans_Amt) + 0.3·z(Credit_Limit) + 0.2·z(Months_on_book) − 0.1·z(Months_Inactive)`. NO Attrition_Flag (verified by reading source). |
+| BE-34 | `FeatureEngineer.riskScore()` | REVIEW | claude | _pending_ | `0.4·Utilization_Score + 0.3·(Inactive/12) + 0.3·(1 − Engagement_norm)` where Engagement_norm = min-max scaled. NO Attrition_Flag. Mean=0.41. |
+| BE-35 | `FeatureEngineer.customerTier()` (quartiles) | REVIEW | claude | _pending_ | Linear-interpolated percentile cutoffs on Customer_Value_Score. Counts: Bronze=2532, Silver=2531, Gold=2532, Platinum=2532. Added as nominal attribute. |
 
 ## Phase 4 — EDA endpoints
 
