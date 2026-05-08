@@ -1,0 +1,117 @@
+# =============================================================================
+# CreditMiner — .gitignore
+# =============================================================================
+
+# ----- OS -----
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ----- Editors / IDE -----
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+nbproject/
+.metadata/
+
+# ----- Logs -----
+*.log
+logs/
+log/
+
+# ----- Java / Maven (backend/) -----
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/dependency-reduced-pom.xml
+*.class
+hs_err_pid*
+replay_pid*
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/**/lib/*.jar
+
+# Spring Boot
+backend/.spring-boot-devtools.properties
+
+# ----- Trained models & raw data (regenerable) -----
+backend/models/*.model
+backend/models/*.json
+!backend/models/.gitkeep
+backend/data/raw/*.csv
+backend/data/raw/*.zip
+backend/data/processed/*.arff
+backend/data/processed/*.csv
+!backend/data/raw/.gitkeep
+!backend/data/processed/.gitkeep
+
+# ----- Node / Next.js (web/) -----
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/dist/
+web/.turbo/
+web/.swc/
+web/coverage/
+web/.eslintcache
+web/*.tsbuildinfo
+web/next-env.d.ts
+
+# Package manager artifacts
+web/.pnpm-store/
+web/.yarn/cache/
+web/.yarn/unplugged/
+web/.yarn/build-state.yml
+web/.yarn/install-state.gz
+web/.pnp.*
+
+# ----- Environment & secrets -----
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+!.env.local.example
+!.env.example
+
+# ----- Database dumps -----
+db/dumps/
+*.sql.gz
+*.dump
+
+# ----- Test / Coverage -----
+coverage/
+*.lcov
+junit.xml
+test-results/
+playwright-report/
+.nyc_output/
+
+# ----- Build artifacts -----
+*.pdb
+*.exe
+
+# ----- Python (if helper scripts) -----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ----- Docker volumes -----
+postgres_data/
+volumes/
+
+# ----- Misc -----
+.history/
+tmp/
+temp/
+.cache/
