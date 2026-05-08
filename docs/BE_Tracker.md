@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 3 close-out (2026-05-08)
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 4 EDA endpoints close-out (2026-05-08)
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -23,10 +23,11 @@
 |---|---|
 | Total tasks | 64 |
 | Done | 3 (BE-00, BE-M2, BE-M3) |
-| REVIEW | 22 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35) |
+| REVIEW | 25 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-42) |
 | WIP | 0 |
 | Blocked | 1 (manual user step BE-M1) |
-| % complete | 4.7% (39.1% incl REVIEW) |
+| Deferred | 1 (BE-43 PCA-2D — needs Phase 6 cluster feature subset) |
+| % complete | 4.7% (43.8% incl REVIEW) |
 
 ---
 
@@ -77,10 +78,10 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-40 | `GET /api/eda/distribution?col=&bins=` | BACKLOG | | | bins as int |
-| BE-41 | `GET /api/eda/correlation` | BACKLOG | | | Pearson matrix |
-| BE-42 | `GET /api/eda/churn-by?dim=` | BACKLOG | | | Group rate |
-| BE-43 | PCA-2D coords export for `/clusters` page | BACKLOG | | | Cache result |
+| BE-40 | `GET /api/eda/distribution?col=&bins=` | REVIEW | claude | _pending_ | New `EdaDataCache` lazy-loads enriched.arff (or fallback). `EdaService.distribution()` handles numeric (histogram, bins clamped 5..50, default 20) AND nominal (value counts) — DTO has `type` discriminator. Validates col against dataset; throws VALIDATION_ERROR 400 for unknown col. |
+| BE-41 | `GET /api/eda/correlation` | REVIEW | claude | _pending_ | Pearson over all numeric cols on `enriched.arff` minus CLIENTNUM (~26 cols → 26×26 matrix). Cached in-memory after first call. Values rounded to 4 dp. |
+| BE-42 | `GET /api/eda/churn-by?dim=` | REVIEW | claude | _pending_ | Whitelisted dim (Income_Category / Card_Category / Customer_Tier / Gender / Education_Level / Marital_Status). Single linear scan — not cached, ~ms per call. Group order matches nominal level order on input. |
+| BE-43 | PCA-2D coords export for `/clusters` page | DEFERRED | | | **Deferred to Phase 6** — depends on the cluster feature subset which isn't fixed yet. Pick up alongside BE-60..62 when Phase 6 starts. |
 
 ## Phase 5 — Classification
 

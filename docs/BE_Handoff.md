@@ -7,7 +7,7 @@
 
 ## 0. Implementation Status
 
-> **Last updated**: 2026-05-08 (Phase 3 complete on `backend`).
+> **Last updated**: 2026-05-08 (Phase 4 EDA endpoints complete on `backend`; BE-43 PCA-2D deferred to Phase 6).
 > Granular per-task status lives in `docs/BE_Tracker.md`. This section is the cross-team summary.
 
 ### Phases
@@ -18,7 +18,7 @@
 | **1. Data Understanding** | ✅ DONE | `DataLoader.loadCsv()` reads Kaggle BankChurners.csv, drops the 2 trailing `Naive_Bayes_Classifier_*` leakage columns via Weka `Remove` filter, sets `Attrition_Flag` as class index. `Phase1Report` (mvn exec:java) saves cleaned ARFF to `data/processed/phase1_raw.arff`, prints describe table to console, writes `data/processed/phase1_describe.json`. `GET /api/eda/describe` serves the describe table with lazy in-memory cache. Verified: 10127 rows × 21 cols (23 raw - 2 leakage), `Customer_Age` mean=46.33 std=8.02 min=26 max=73, `Attrition_Flag` topValue=Existing Customer count=8500. |
 | **2. Preprocessing** | ✅ DONE | `Preprocessor.run()` chains: rewrite "Unknown" → missing in 3 categorical cols (Education_Level/Marital_Status/Income_Category), mode-impute via `ReplaceMissingValues`, dedup by CLIENTNUM (none in this dataset), flag outliers via Z-score \|z\|>3 OR IQR-fence on 4 financial cols. Scaling/encoding (`normalize`/`standardize`/`encodeNominal`) are on-demand wrappers — caller decides per algorithm. `Phase2Report` produces `data/processed/clean.arff`, `phase2_report.json`, and `phase2_outliers.json` (CLIENTNUM list, consumed by Phase 8 seeder for `customers.is_outlier`). Verified: 1519 + 749 + 1112 Unknown rewrites, 0 duplicates, 1684 outliers (16.63%) — Credit_Limit 984, Total_Trans_Amt 896. No new endpoint (Phase 4 EDA endpoints will read clean.arff). |
 | **3. Feature Engineering** | ✅ DONE | `FeatureEngineer.run()` appends 6 derived columns to `clean.arff` → `enriched.arff` (10127 rows × 27 cols): `Utilization_Score` (Bal/Limit, cross-checks Avg_Utilization_Ratio), `Spending_Intensity` (Amt/Ct), `Engagement_Score` (Ct/Months), `Customer_Value_Score` (composite z-score, **NO Attrition_Flag input**), `Risk_Score` (0.4·Util + 0.3·(Inactive/12) + 0.3·(1−Engagement_norm), **NO Attrition_Flag**), `Customer_Tier` (quartile bins → Bronze/Silver/Gold/Platinum). `DescribeCacheService` now prefers enriched.arff > clean.arff > phase1_raw.arff > raw CSV, so `/api/eda/describe` shows all 27 columns. Verified: tier counts 2532/2531/2532/2532, Utilization_Score mean=0.2749 matches Avg_Utilization_Ratio. |
-| **4. EDA endpoints** | ⏳ BACKLOG | `/api/eda/*` (§3.2-3.4). Currently 501-equivalent stubs. |
+| **4. EDA endpoints** | 🟡 PARTIAL | `/api/eda/distribution`, `/correlation`, `/churn-by` are live (BE-40/41/42), backed by `EdaDataCache` (lazy-loads enriched.arff once, shared across all 3 endpoints) + `EdaService`. Distribution supports both numeric (histogram with bins 5..50, default 20) and nominal (value counts). Correlation = Pearson over 26 numeric cols (CLIENTNUM excluded), cached in-memory. Churn-by validates `dim` against whitelist incl. new `Customer_Tier`. **BE-43 PCA-2D coords deferred to Phase 6** — depends on the cluster feature subset which isn't fixed yet. |
 | **5. Classification** | ⏳ BACKLOG | J48/RF/NB models, SMOTE on train, 10-fold CV. |
 | **6. Clustering & Anomaly** | ⏳ BACKLOG | KMeans + silhouette + cluster-distance anomaly. |
 | **7. Association Rules** | ⏳ BACKLOG | Discretize + Apriori → `rules.json`. |
@@ -37,7 +37,7 @@
 | `GET /api/rules` | 🟡 Mock | Phase 8 (BE-87) — needs Phase 7 |
 | `GET /api/anomalies` | 🟡 Mock | Phase 8 (BE-89) — needs Phase 6 |
 | `POST /api/predict` | 🟡 Mock | Phase 8 (BE-90) — needs Phase 5 |
-| `GET /api/eda/distribution\|correlation\|churn-by` | 🟡 Mock | Phase 4 (BE-40..43) — needs Phase 1-2 |
+| `GET /api/eda/distribution\|correlation\|churn-by` | ✅ Live | (already real) — see §3.2 / §3.3 / §3.4 |
 | `GET /api/eda/describe` | ✅ Live | (already real) — see §3.13 |
 
 ### Error envelope status
@@ -55,14 +55,15 @@ Neon Postgres (project `ep-purple-smoke-aosu7szo`, region `ap-southeast-1`, PG 1
 
 ### Pick-up notes for the next session
 
-When user says **"start Phase 4"** or **"làm phase 4"**:
-1. Phase 4 scope = EDA endpoints (BE-40..BE-43 in `docs/BE_Tracker.md`): replace mocks in `EdaController` for `GET /api/eda/distribution?col=&bins=`, `GET /api/eda/correlation`, `GET /api/eda/churn-by?dim=`, plus PCA-2D coords for `/clusters` page (BE-43).
-2. Pre-reqs satisfied: `enriched.arff` (27 cols) is the canonical EDA dataset. Reuse `DescribeCacheService` pattern — create one cache service per endpoint OR a shared `EdaDataCache` that loads enriched.arff once and serves multiple aggregations.
-3. Distribution endpoint: histogram per numeric col with configurable bins (5..50). For nominal cols, return value counts instead.
-4. Correlation: Pearson matrix over numeric cols only. Skip CLIENTNUM, Attrition_Flag (nominal). Cache the matrix — it's 21+6=27 numeric mostly, ~700 cell square.
-5. Churn-by: GROUP BY {dim} on enriched.arff in-memory. Categorical dims include the new `Customer_Tier`.
-6. Phase 3 deliverable ready for downstream: `enriched.arff` (input for Phase 4 EDA + Phase 5 classification + Phase 6 clustering + Phase 7 association rules).
-7. Source of truth: this section + `docs/BE_Tracker.md`. Don't crawl Java stubs (memory: `feedback_read_docs_first.md`).
+When user says **"start Phase 5"** or **"làm phase 5"**:
+1. Phase 5 scope = Classification (BE-50..BE-59 in `docs/BE_Tracker.md`): stratified 80/20 split (seed 42), train J48 / RandomForest / NaiveBayes / Logistic baseline, then SMOTE-on-train variants, then cost-sensitive wrapper [[0,1],[5,0]]. 10-fold CV on train, final eval on test, export `results/comparison.csv` + RF feature importance JSON. Save all `.model` files to `backend/models/`.
+2. Pre-reqs satisfied: `enriched.arff` is input. Use `Preprocessor.standardize()` for NB/Logistic, leave J48/RF unscaled (per blueprint §2.4: tree-based models don't need scaling — call this out in the report). Use `Preprocessor.encodeNominal()` for Logistic only.
+3. **Critical**: SMOTE is `weka.filters.supervised.instance.SMOTE`, applied to TRAIN ONLY. NEVER on test set (would inflate metrics). Pom.xml already has the `nz.ac.waikato.cms.weka:SMOTE:1.0.3` dependency.
+4. Primary metrics: F1-Attrited + ROC-AUC + PR-AUC. NOT accuracy (84:16 imbalance makes accuracy useless).
+5. New `Phase5Pipeline` standalone main (NOT a report — produces models). Suggest splitting heavy training across multiple `mvn exec:java` invocations if it slows the iteration loop.
+6. **BE-43 (PCA-2D for /clusters page) still deferred** — pick up in Phase 6 once cluster feature subset is fixed.
+7. Phase 4 deliverables: 4 live EDA endpoints (`/describe` + `/distribution` + `/correlation` + `/churn-by`). FE can build EDA dashboard from these without further BE work.
+8. Source of truth: this section + `docs/BE_Tracker.md`.
 
 ---
 
@@ -132,36 +133,51 @@ Dashboard KPIs.
 
 ### 3.2 `GET /api/eda/distribution?col={name}&bins={int}`
 
-Histogram for one column.
+Distribution for one column. Numeric → histogram. Nominal → value counts.
 
 **Query**:
-- `col` (required): one of `Customer_Age | Credit_Limit | Total_Trans_Amt | Avg_Utilization_Ratio | Risk_Score | Customer_Value_Score`
-- `bins` (optional, default 20): 5..50
+- `col` (required): any attribute name on `enriched.arff` (Phase 3 output, 27 cols). Common: `Customer_Age | Credit_Limit | Total_Trans_Amt | Avg_Utilization_Ratio | Risk_Score | Customer_Value_Score | Customer_Tier | Card_Category | ...`
+- `bins` (optional, default 20): 5..50 (clamped). Numeric only.
 
-**Response 200**:
+**Response 200 — numeric**:
 ```json
 {
   "column": "Credit_Limit",
-  "binEdges": [1438, 5000, 10000, 15000, 20000, 25000, 34516],
+  "type": "numeric",
+  "binEdges": [1438.3, 3092.4, 4746.5, ..., 34516.0],
   "counts": [3211, 2104, 1850, 1230, 980, 752]
 }
 ```
+- `binEdges` length = `n+1`, `counts` length = `n`. Bin `i` covers `[binEdges[i], binEdges[i+1])` except the last is closed.
+
+**Response 200 — nominal**:
+```json
+{
+  "column": "Customer_Tier",
+  "type": "nominal",
+  "categories": ["Bronze", "Silver", "Gold", "Platinum"],
+  "counts": [2532, 2531, 2532, 2532]
+}
+```
+
+**Response 400**: `VALIDATION_ERROR` if `col` does not exist on the dataset.
 
 ### 3.3 `GET /api/eda/correlation`
 
-Pearson correlation matrix for numeric features.
+Pearson correlation matrix for numeric features in `enriched.arff` (CLIENTNUM excluded).
 
 **Response 200**:
 ```json
 {
-  "columns": ["Customer_Age", "Credit_Limit", "Total_Trans_Amt", "..."],
-  "matrix": [[1.0, 0.05, -0.02, ...], [0.05, 1.0, ...], ...]
+  "columns": ["Customer_Age", "Dependent_count", "Months_on_book", "...", "Risk_Score"],
+  "matrix": [[1.0, 0.0123, ...], [0.0123, 1.0, ...], ...]
 }
 ```
+- `matrix` is square, `length(columns) × length(columns)`. Diagonal is always `1.0`. Cached in-memory (computed once on first call). Values rounded to 4 decimals.
 
 ### 3.4 `GET /api/eda/churn-by?dim={name}`
 
-Churn rate grouped by a categorical dimension.
+Churn rate grouped by a categorical dimension. Computed live from `enriched.arff` per request (cheap — single linear scan).
 
 **Query**: `dim` ∈ `{Income_Category, Card_Category, Customer_Tier, Gender, Education_Level, Marital_Status}`
 
@@ -172,6 +188,11 @@ Churn rate grouped by a categorical dimension.
   { "group": "$40K - $60K",    "count": 1790, "attritedCount": 271, "churnRate": 0.1514 }
 ]
 ```
+- `churnRate = attritedCount / count`, rounded to 4 decimals.
+- Group order matches the nominal value order on the ARFF attribute (preserved from input CSV).
+- "Attrited" is identified by exact match on `Attrition_Flag = "Attrited Customer"`.
+
+**Response 400**: `VALIDATION_ERROR` if `dim` is not in the whitelist or is not a nominal attribute.
 
 ### 3.5 `GET /api/customers?page={int}&size={int}&filter={json}&sort={field,asc|desc}`
 
