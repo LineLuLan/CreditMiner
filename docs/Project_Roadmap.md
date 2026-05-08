@@ -60,7 +60,7 @@ If `/api/predict` slips, the demo loses its centerpiece. Protect it.
 
 | ID | Name | Target | Status |
 |---|---|---|---|
-| M1 | Skeleton bootstrap | end W1 | ✅ DONE — tag `v0.1.0-skeleton` |
+| M1 | Skeleton bootstrap | end W1 | ✅ DONE 2026-05-08 — tag `v0.1.0-skeleton`, all 4 branches pushed to origin |
 | M2 | Models trained (3 classifiers + KMeans + Apriori) | end W5 | PENDING |
 | M3 | Backend API complete (all 12 endpoints) | end W6 | PENDING |
 | M4 | Frontend MVP (all 7 pages live) | mid W7 | PENDING |
@@ -124,11 +124,16 @@ If `/api/predict` slips, the demo loses its centerpiece. Protect it.
 
 ## Weekly Reviews
 
-### Week 1 (current) — Setup
-- ✅ Repo created, branches set up
-- ✅ Skeleton scaffolds compile/build (or flagged for manual)
-- ✅ All 7 trackers seeded
-- 🎯 Next: Phase 1 EDA on `backend` branch + Layout shell on `frontend` branch
+### Week 1 (closed) — Setup
+- ✅ Repo created with 4-branch flow (main / develop / backend / frontend)
+- ✅ Backend skeleton compiles (`mvn clean compile` BUILD SUCCESS)
+- ✅ Frontend builds (`pnpm build` 10/10 pages OK)
+- ✅ DB schema + seed scripts ready
+- ✅ Docker compose for local Postgres
+- ✅ All 7 trackers seeded with detailed initial content
+- ✅ GitHub Actions CI for backend + frontend + docs-sync reminder
+- ✅ Tag `v0.1.0-skeleton` pushed; all branches pushed to origin
+- 🎯 Next: Phase 1 EDA on `backend` branch + FE-10..15 layout polish on `frontend` branch
 
 ### Week 2
 _(fill at end of week)_
