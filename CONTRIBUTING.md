@@ -39,11 +39,21 @@ History stays linear-readable but is **never rewritten**. Each merge produces a 
 
 ### Forbidden operations
 - `git rebase` on shared branches
-- `git push --force` / `--force-with-lease` on shared branches
+- `git push --force` / `--force-with-lease` on shared branches  *(blocked at the GitHub side too — branch protection enabled)*
 - `git commit --amend` after pushing
+- `git push --delete` to remove a shared branch  *(also blocked by branch protection)*
 - Skipping pre-commit hooks (`--no-verify`)
 
 If you absolutely need one of these, ask the lead first.
+
+### Branch protection (applied 2026-05-08)
+All four branches (`main`, `develop`, `backend`, `frontend`) have:
+- `allow_force_pushes: false`
+- `allow_deletions: false`
+- No PR review required (direct push allowed per skeleton flow)
+- No required status checks (CI is informational)
+
+Reapply with: `gh api -X PUT repos/LineLuLan/CreditMiner/branches/<branch>/protection --input <json>`.
 
 ---
 
