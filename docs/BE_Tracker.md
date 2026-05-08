@@ -24,7 +24,7 @@
 | Total tasks | 64 |
 | Done | 1 |
 | WIP | 0 |
-| Blocked | 0 |
+| Blocked | 3 (manual user steps BE-M1..M3) |
 | % complete | 1.6% |
 
 ---
@@ -33,7 +33,7 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-00 | Repo + Maven scaffold + branch policy | DONE | claude | _initial_ | Skeleton bootstrap |
+| BE-00 | Repo + Maven scaffold + branch policy | DONE | claude | b492427 | Tag v0.1.0-skeleton, mvn compile OK |
 | BE-01 | Configure `application.yml` profiles (dev/prod) | BACKLOG | | | Neon URL goes in prod |
 | BE-02 | Wire CORS for `localhost:3000` | BACKLOG | | | See `CorsConfig.java` |
 | BE-03 | Setup OpenAPI / Swagger UI | BACKLOG | | | springdoc-openapi |

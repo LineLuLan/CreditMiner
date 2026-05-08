@@ -24,7 +24,7 @@
 | Total tasks | 56 |
 | Done | 1 |
 | WIP | 0 |
-| Blocked | 0 |
+| Blocked | 3 (manual user steps FE-M1..M3) |
 | % complete | 1.8% |
 
 ---
@@ -33,7 +33,7 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| FE-00 | Next.js 14 scaffold + Tailwind + shadcn config | DONE | claude | _initial_ | Skeleton bootstrap |
+| FE-00 | Next.js 14 scaffold + Tailwind + shadcn config | DONE | claude | 400ae9a | Tag v0.1.0-skeleton, pnpm build OK (10/10 pages) |
 | FE-01 | Install + configure ESLint + Prettier | BACKLOG | | | enforce in CI |
 | FE-02 | TanStack Query provider in root layout | BACKLOG | | | + devtools |
 | FE-03 | Theme provider (dark mode toggle) | BACKLOG | | | next-themes |
