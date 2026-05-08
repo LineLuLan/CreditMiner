@@ -7,7 +7,7 @@
 
 ## 0. Implementation Status
 
-> **Last updated**: 2026-05-08 (Phase 4 EDA endpoints complete on `backend`; BE-43 PCA-2D deferred to Phase 6).
+> **Last updated**: 2026-05-08 (Phase 5 Classification complete on `backend`; BE-43 PCA-2D still deferred to Phase 6).
 > Granular per-task status lives in `docs/BE_Tracker.md`. This section is the cross-team summary.
 
 ### Phases
@@ -19,7 +19,7 @@
 | **2. Preprocessing** | ✅ DONE | `Preprocessor.run()` chains: rewrite "Unknown" → missing in 3 categorical cols (Education_Level/Marital_Status/Income_Category), mode-impute via `ReplaceMissingValues`, dedup by CLIENTNUM (none in this dataset), flag outliers via Z-score \|z\|>3 OR IQR-fence on 4 financial cols. Scaling/encoding (`normalize`/`standardize`/`encodeNominal`) are on-demand wrappers — caller decides per algorithm. `Phase2Report` produces `data/processed/clean.arff`, `phase2_report.json`, and `phase2_outliers.json` (CLIENTNUM list, consumed by Phase 8 seeder for `customers.is_outlier`). Verified: 1519 + 749 + 1112 Unknown rewrites, 0 duplicates, 1684 outliers (16.63%) — Credit_Limit 984, Total_Trans_Amt 896. No new endpoint (Phase 4 EDA endpoints will read clean.arff). |
 | **3. Feature Engineering** | ✅ DONE | `FeatureEngineer.run()` appends 6 derived columns to `clean.arff` → `enriched.arff` (10127 rows × 27 cols): `Utilization_Score` (Bal/Limit, cross-checks Avg_Utilization_Ratio), `Spending_Intensity` (Amt/Ct), `Engagement_Score` (Ct/Months), `Customer_Value_Score` (composite z-score, **NO Attrition_Flag input**), `Risk_Score` (0.4·Util + 0.3·(Inactive/12) + 0.3·(1−Engagement_norm), **NO Attrition_Flag**), `Customer_Tier` (quartile bins → Bronze/Silver/Gold/Platinum). `DescribeCacheService` now prefers enriched.arff > clean.arff > phase1_raw.arff > raw CSV, so `/api/eda/describe` shows all 27 columns. Verified: tier counts 2532/2531/2532/2532, Utilization_Score mean=0.2749 matches Avg_Utilization_Ratio. |
 | **4. EDA endpoints** | 🟡 PARTIAL | `/api/eda/distribution`, `/correlation`, `/churn-by` are live (BE-40/41/42), backed by `EdaDataCache` (lazy-loads enriched.arff once, shared across all 3 endpoints) + `EdaService`. Distribution supports both numeric (histogram with bins 5..50, default 20) and nominal (value counts). Correlation = Pearson over 26 numeric cols (CLIENTNUM excluded), cached in-memory. Churn-by validates `dim` against whitelist incl. new `Customer_Tier`. **BE-43 PCA-2D coords deferred to Phase 6** — depends on the cluster feature subset which isn't fixed yet. |
-| **5. Classification** | ⏳ BACKLOG | J48/RF/NB models, SMOTE on train, 10-fold CV. |
+| **5. Classification** | ✅ DONE | `Phase5Pipeline` trains 10 model variants (J48 / RF / NaiveBayes / Logistic — each with baseline + SMOTE-on-train; J48 + RF also wrapped in CostSensitiveClassifier with cost matrix [[0,1],[5,0]]). Stratified 80/20 split (seed 42), SMOTE applied to TRAIN only, NB/Logistic standardized, Logistic also one-hot-encoded. 10-fold CV on train + held-out test eval recorded as F1-Attrited / ROC-AUC / PR-AUC / accuracy / precision / recall in `data/processed/phase5_comparison.csv`. **Best**: RandomForest+SMOTE — CV F1=0.9315, Test F1=0.8758, Test ROC-AUC=0.9888, Test PR-AUC=0.9429. RandomForest+CostSensitive close behind (Test F1=0.8775). NaiveBayes worst (Test F1≈0.55). Top-5 RF feature importance (Mean Decrease Impurity): Total_Trans_Amt, Customer_Age, Total_Trans_Ct, Total_Amt_Chng_Q4_Q1, Spending_Intensity (Phase 3 derived feature). Persisted: `models/{j48,rf,nb,logistic}.model` (best variant per algo). `models/rf.model` (6.1MB) is the production classifier loaded by `ModelConfig` at startup. |
 | **6. Clustering & Anomaly** | ⏳ BACKLOG | KMeans + silhouette + cluster-distance anomaly. |
 | **7. Association Rules** | ⏳ BACKLOG | Discretize + Apriori → `rules.json`. |
 | **8. Insights & API** | 🟡 PARTIAL | All controllers in §3 are scaffolded; only `GET /api/insights` returns real data (5 seeded rows from Neon). Everything else returns mock/stub responses today. |
@@ -55,15 +55,14 @@ Neon Postgres (project `ep-purple-smoke-aosu7szo`, region `ap-southeast-1`, PG 1
 
 ### Pick-up notes for the next session
 
-When user says **"start Phase 5"** or **"làm phase 5"**:
-1. Phase 5 scope = Classification (BE-50..BE-59 in `docs/BE_Tracker.md`): stratified 80/20 split (seed 42), train J48 / RandomForest / NaiveBayes / Logistic baseline, then SMOTE-on-train variants, then cost-sensitive wrapper [[0,1],[5,0]]. 10-fold CV on train, final eval on test, export `results/comparison.csv` + RF feature importance JSON. Save all `.model` files to `backend/models/`.
-2. Pre-reqs satisfied: `enriched.arff` is input. Use `Preprocessor.standardize()` for NB/Logistic, leave J48/RF unscaled (per blueprint §2.4: tree-based models don't need scaling — call this out in the report). Use `Preprocessor.encodeNominal()` for Logistic only.
-3. **Critical**: SMOTE is `weka.filters.supervised.instance.SMOTE`, applied to TRAIN ONLY. NEVER on test set (would inflate metrics). Pom.xml already has the `nz.ac.waikato.cms.weka:SMOTE:1.0.3` dependency.
-4. Primary metrics: F1-Attrited + ROC-AUC + PR-AUC. NOT accuracy (84:16 imbalance makes accuracy useless).
-5. New `Phase5Pipeline` standalone main (NOT a report — produces models). Suggest splitting heavy training across multiple `mvn exec:java` invocations if it slows the iteration loop.
-6. **BE-43 (PCA-2D for /clusters page) still deferred** — pick up in Phase 6 once cluster feature subset is fixed.
-7. Phase 4 deliverables: 4 live EDA endpoints (`/describe` + `/distribution` + `/correlation` + `/churn-by`). FE can build EDA dashboard from these without further BE work.
-8. Source of truth: this section + `docs/BE_Tracker.md`.
+When user says **"start Phase 6"** or **"làm phase 6"**:
+1. Phase 6 scope = Clustering & Anomaly (BE-60..BE-65 in `docs/BE_Tracker.md`): KMeans elbow over k=2..8 picking optimal k, silhouette scoring, train final SimpleKMeans (seed 42, save `models/kmeans.model`), centroid-distance anomaly flagging (distance > μ+3σ), combine Z+IQR+cluster-distance into `is_anomaly`, optional EM bonus. **Also pick up BE-43 (PCA-2D)** here since the cluster feature subset will now be fixed.
+2. Pre-reqs satisfied: `enriched.arff` is input. Drop `Attrition_Flag` and `CLIENTNUM` before clustering (unsupervised), then `Preprocessor.normalize()` (min-max for distance-based KMeans). Phase 5 already produced the SMOTE/feature-importance work; clustering is independent.
+3. Output target: `models/kmeans.model` + `data/processed/phase6_clusters.json` (per-cluster centroid + persona name + size + avg_risk + churn_rate) + `data/processed/phase6_anomalies.json` (CLIENTNUM list combining is_outlier from Phase 2 with cluster-distance anomalies).
+4. PCA-2D: use `weka.filters.unsupervised.attribute.PrincipalComponents` on the same normalized feature matrix used for KMeans; keep first 2 PCs; export per-CLIENTNUM (x, y) to `data/processed/phase6_pca_2d.json`. New endpoint `GET /api/eda/pca-2d` (or attach to `/api/clusters`) — confirm shape with FE.
+5. Persona names (Premium Loyal / Heavy Spender / At-Risk Mid / Dormant Light etc.) — manually assigned by inspecting centroids; map cluster id → name in `phase6_clusters.json`.
+6. Phase 5 deliverables ready: 4 .model files, comparison CSV, RF feature importance JSON. `ModelConfig` loads `models/rf.model` + (Phase 6) `models/kmeans.model` at startup; `/predict` endpoint will go live in Phase 8 once seeder lands.
+7. Source of truth: this section + `docs/BE_Tracker.md`.
 
 ---
 

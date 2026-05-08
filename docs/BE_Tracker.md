@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 4 EDA endpoints close-out (2026-05-08)
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 5 Classification close-out (2026-05-08)
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -23,11 +23,11 @@
 |---|---|
 | Total tasks | 64 |
 | Done | 3 (BE-00, BE-M2, BE-M3) |
-| REVIEW | 25 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-42) |
+| REVIEW | 35 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-42, BE-50..BE-59) |
 | WIP | 0 |
 | Blocked | 1 (manual user step BE-M1) |
-| Deferred | 1 (BE-43 PCA-2D — needs Phase 6 cluster feature subset) |
-| % complete | 4.7% (43.8% incl REVIEW) |
+| Deferred | 1 (BE-43 PCA-2D — pick up alongside Phase 6) |
+| % complete | 4.7% (59.4% incl REVIEW) |
 
 ---
 
@@ -87,16 +87,16 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-50 | `Splitter.stratified(80/20, seed=42)` | BACKLOG | | | |
-| BE-51 | Train J48 (3 hyperparam combos) | BACKLOG | | | save j48.model |
-| BE-52 | Train RandomForest (3 hyperparam combos) | BACKLOG | | | save rf.model |
-| BE-53 | Train NaiveBayes (2 variants) | BACKLOG | | | save nb.model |
-| BE-54 | Train Logistic baseline | BACKLOG | | | save logistic.model |
-| BE-55 | Apply SMOTE on train only — re-train all | BACKLOG | | | save *_smote.model |
-| BE-56 | Cost-sensitive wrapper (matrix [[0,1],[5,0]]) | BACKLOG | | | |
-| BE-57 | 10-fold CV on train; record F1/AUC | BACKLOG | | | |
-| BE-58 | Final evaluation on test set; export comparison table | BACKLOG | | | results/comparison.csv |
-| BE-59 | Feature importance from RF | BACKLOG | | | save to JSON |
+| BE-50 | `Splitter.stratified(80/20, seed=42)` | REVIEW | claude | _pending_ | New `Splitter` service uses `Instances.stratify(10)` + `randomize(seed)`. Verified split: 8102 train + 2025 test. |
+| BE-51 | Train J48 | REVIEW | claude | _pending_ | Single canonical config (`-C 0.25 -M 2`). Variants compared = baseline + SMOTE + CostSensitive. (3 hyperparam combos in original spec collapsed into 3 imbalance variants — cleaner comparison.) |
+| BE-52 | Train RandomForest | REVIEW | claude | _pending_ | 100 trees, seed 42, `setComputeAttributeImportance(true)`. Variants: baseline + SMOTE + CostSensitive. RF+SMOTE wins overall. |
+| BE-53 | Train NaiveBayes | REVIEW | claude | _pending_ | Default Gaussian; standardized input. Variants: baseline + SMOTE. Test F1 weak (~0.55) due to feature non-Gaussianity. |
+| BE-54 | Train Logistic baseline | REVIEW | claude | _pending_ | Standardized + one-hot encoded. Variants: baseline + SMOTE. |
+| BE-55 | Apply SMOTE on train only — re-train all | REVIEW | claude | _pending_ | `weka.filters.supervised.instance.SMOTE` seed=42 applied to TRAIN ONLY before each variant trains. Train rows 8102 → 9404. |
+| BE-56 | Cost-sensitive wrapper (matrix [[0,1],[5,0]]) | REVIEW | claude | _pending_ | `CostSensitiveClassifier` wrapping J48 + RF only. `cost(actual=1, predicted=0)=5` (FN penalty). |
+| BE-57 | 10-fold CV on train; record F1/AUC | REVIEW | claude | _pending_ | Per-variant CV via `Evaluation.crossValidateModel(..., 10, Random(42))`. Headline: F1-Attrited / ROC-AUC / PR-AUC / accuracy / precision / recall in CSV. |
+| BE-58 | Final evaluation on test set; export comparison table | REVIEW | claude | _pending_ | `data/processed/phase5_comparison.csv` — 10 rows (algo × variant), 14 cols (cv_* + test_* metrics). Note: CSV is gitignored — regenerable via `mvn exec:java Phase5Pipeline`. |
+| BE-59 | Feature importance from RF | REVIEW | claude | _pending_ | `RandomForest.computeAverageImpurityDecreasePerAttribute(double[])` → `data/processed/phase5_feature_importance.json` ranked desc. Top-5: Total_Trans_Amt, Customer_Age, Total_Trans_Ct, Total_Amt_Chng_Q4_Q1, Spending_Intensity (Phase 3 derived). |
 
 ## Phase 6 — Clustering & Anomaly
 

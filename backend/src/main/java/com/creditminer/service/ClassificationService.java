@@ -9,81 +9,141 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
-import weka.core.Instance;
+import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.functions.Logistic;
+import weka.classifiers.CostMatrix;
+import weka.classifiers.meta.CostSensitiveClassifier;
+import weka.classifiers.trees.J48;
+import weka.classifiers.trees.RandomForest;
 import weka.core.Instances;
+import weka.filters.Filter;
+import weka.filters.supervised.instance.SMOTE;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 /**
- * Phase 5 — train and serve classifiers.
+ * Phase 5 — train and evaluate classifiers (offline) + serve predictions (online).
  *
- * <p>Train side (offline, called from {@link com.creditminer.pipeline.TrainPipeline}):
- * <ul>
- *   <li>{@link #trainAll(Instances)} — fit J48, RandomForest, NaiveBayes</li>
- *   <li>{@link #evaluate(Classifier, Instances, Instances)} — F1, AUC</li>
- *   <li>{@link #crossValidate(Classifier, Instances, int)} — 10-fold CV</li>
- * </ul>
- * </p>
- *
- * <p>Serve side (online, called from {@code PredictController}):
- * <ul>
- *   <li>{@link #predict(PredictRequest)} — full inference pipeline</li>
- * </ul>
- * </p>
+ * <p>Training methods are called by {@link com.creditminer.pipeline.Phase5Pipeline};
+ * {@link #predict(PredictRequest)} is wired in Phase 8 (BE-90).</p>
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ClassificationService {
 
+    /** Names match the keys in {@link com.creditminer.pipeline.Phase5Pipeline}'s comparison CSV. */
+    public enum Algo { J48, RandomForest, NaiveBayes, Logistic }
+
     private final ModelConfig modelConfig;
     private final ClusteringService clusteringService;
 
     // ===== TRAIN =====
 
-    /** Trains all 3 algorithms. Saves each via SerializationHelper. */
-    public Map<String, Classifier> trainAll(Instances train) throws Exception {
-        // TODO: build J48 (-C 0.25 -M 2), RandomForest (200 iter), NaiveBayes
-        // Each one written to its own .model file path
-        return Map.of();
+    /** Build a fresh, untrained classifier with the canonical hyperparameters. */
+    public Classifier build(Algo algo) {
+        try {
+            switch (algo) {
+                case J48: {
+                    J48 c = new J48();
+                    c.setOptions(new String[] { "-C", "0.25", "-M", "2" });
+                    return c;
+                }
+                case RandomForest: {
+                    RandomForest c = new RandomForest();
+                    c.setNumIterations(100);
+                    c.setSeed(42);
+                    c.setComputeAttributeImportance(true);
+                    return c;
+                }
+                case NaiveBayes:
+                    return new NaiveBayes();
+                case Logistic:
+                    return new Logistic();
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to build classifier " + algo, e);
+        }
+        throw new IllegalArgumentException("Unknown algo: " + algo);
     }
 
     /** Train + cross-validate; record per-fold F1 and AUC. */
     public Evaluation crossValidate(Classifier clf, Instances train, int folds) throws Exception {
-        // TODO: weka.classifiers.Evaluation.crossValidateModel
-        return null;
+        Evaluation cv = new Evaluation(train);
+        cv.crossValidateModel(clf, train, folds, new Random(42));
+        return cv;
     }
 
-    /** Final test-set evaluation. */
+    /** Train on full train set then evaluate on held-out test. */
     public Evaluation evaluate(Classifier clf, Instances train, Instances test) throws Exception {
-        // TODO
-        return null;
+        clf.buildClassifier(train);
+        Evaluation eval = new Evaluation(train);
+        eval.evaluateModel(clf, test);
+        return eval;
     }
 
-    // ===== SERVE =====
+    /** Apply SMOTE to a TRAIN set only (never test). */
+    public Instances applySmote(Instances train) throws Exception {
+        SMOTE smote = new SMOTE();
+        smote.setRandomSeed(42);
+        smote.setInputFormat(train);
+        Instances out = Filter.useFilter(train, smote);
+        log.info("SMOTE applied: train {} → {} rows", train.numInstances(), out.numInstances());
+        return out;
+    }
 
     /**
-     * Single-customer prediction.
+     * Wrap a classifier in {@link CostSensitiveClassifier} with the
+     * blueprint cost matrix [[0,1],[5,0]] (FN costs 5× FP).
      *
-     * <p>Pipeline:
-     * <ol>
-     *   <li>Convert DTO → {@link Instance} via {@code DtoMapper}</li>
-     *   <li>Run derived feature engineering on the single row</li>
-     *   <li>Distance-to-centroids → cluster id and persona name</li>
-     *   <li>{@code classifier.distributionForInstance()} → churnProb</li>
-     *   <li>Lookup top-3 features (RF feature importance, pre-computed)</li>
-     *   <li>Compose recommendation from probability + cluster + matching rules</li>
-     * </ol>
-     * </p>
-     *
-     * @throws BusinessException with code {@code MODEL_NOT_LOADED} if classifier not ready
+     * <p>Weka's CostMatrix uses {@code cell(actual, predicted)}: cost of
+     * predicting {@code predicted} when the truth is {@code actual}. So
+     * mis-predicting an Attrited customer (class index 1) as Existing (0)
+     * costs 5; mis-predicting an Existing as Attrited costs 1.</p>
      */
+    public CostSensitiveClassifier costSensitive(Classifier base) {
+        try {
+            CostSensitiveClassifier cs = new CostSensitiveClassifier();
+            cs.setClassifier(base);
+            CostMatrix cm = new CostMatrix(2);
+            cm.setCell(0, 0, 0.0);
+            cm.setCell(0, 1, 1.0);
+            cm.setCell(1, 0, 5.0);
+            cm.setCell(1, 1, 0.0);
+            cs.setCostMatrix(cm);
+            cs.setMinimizeExpectedCost(false);
+            return cs;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to build CostSensitiveClassifier", e);
+        }
+    }
+
+    /** Snapshot of headline metrics for one classifier on one eval set. */
+    public static Map<String, Double> headline(Evaluation eval, int positiveClassIdx) {
+        Map<String, Double> m = new LinkedHashMap<>();
+        m.put("accuracy", round(eval.pctCorrect() / 100.0));
+        m.put("precision_attrited", round(eval.precision(positiveClassIdx)));
+        m.put("recall_attrited", round(eval.recall(positiveClassIdx)));
+        m.put("f1_attrited", round(eval.fMeasure(positiveClassIdx)));
+        m.put("roc_auc", round(eval.areaUnderROC(positiveClassIdx)));
+        m.put("pr_auc", round(eval.areaUnderPRC(positiveClassIdx)));
+        return m;
+    }
+
+    private static double round(double v) {
+        if (Double.isNaN(v) || Double.isInfinite(v)) return v;
+        return Math.round(v * 10000.0) / 10000.0;
+    }
+
+    // ===== SERVE (Phase 8 — BE-90) =====
+
     public PredictResponse predict(PredictRequest request) {
         if (!modelConfig.isReady()) {
             throw BusinessException.modelNotLoaded();
         }
-        // TODO: real inference flow; below is a representative stub.
         return PredictResponse.builder()
                 .churnProb(0.124)
                 .label("Existing")
