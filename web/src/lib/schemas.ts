@@ -51,6 +51,9 @@ export const PredictRequestSchema = z.object({
   totalTransAmt: z.number().nonnegative(),
   totalTransCt: z.number().int().min(0),
   avgUtilizationRatio: z.number().min(0).max(1),
+  // Optional Q4/Q1 quarterly change ratios (BE defaults to 1.0 when omitted).
+  totalAmtChngQ4Q1: z.number().nonnegative().optional(),
+  totalCtChngQ4Q1: z.number().nonnegative().optional(),
 });
 
 // ---------- PredictResponse ----------
@@ -141,6 +144,14 @@ export const AnomalySchema = z.object({
   reason: z.string(),
   score: z.number(),
   clusterId: z.number().int().nullable(),
+});
+
+// ---------- PCA-2D ----------
+export const PcaPointSchema = z.object({
+  clientNum: z.number(),
+  clusterId: z.number().int(),
+  x: z.number(),
+  y: z.number(),
 });
 
 // ---------- Error envelope ----------

@@ -8,6 +8,7 @@ import type {
   Insight,
   OverviewResponse,
   PageResponse,
+  PcaPoint,
   PredictRequest,
   PredictResponse,
   Rule,
@@ -68,6 +69,8 @@ export const api = {
         { params: { dim } },
       )
       .then((r) => r.data),
+
+  edaPca2d: () => client.get<PcaPoint[]>(`/eda/pca-2d`).then((r) => r.data),
 
   customers: (params: {
     page?: number;

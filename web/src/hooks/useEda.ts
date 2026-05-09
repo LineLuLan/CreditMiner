@@ -26,3 +26,11 @@ export function useEdaChurnBy(dim: string | null) {
     enabled: !!dim,
   });
 }
+
+export function useEdaPca2d() {
+  return useQuery({
+    queryKey: ["eda", "pca-2d"],
+    queryFn: api.edaPca2d,
+    staleTime: 5 * 60 * 1000,
+  });
+}

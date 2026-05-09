@@ -14,6 +14,7 @@ import {
   InsightSchema,
   MaritalStatus,
   OverviewResponseSchema,
+  PcaPointSchema,
   PredictRequestSchema,
   PredictResponseSchema,
   RuleSchema,
@@ -39,6 +40,7 @@ export type Cluster = z.infer<typeof ClusterSchema>;
 export type Rule = z.infer<typeof RuleSchema>;
 export type Insight = z.infer<typeof InsightSchema>;
 export type Anomaly = z.infer<typeof AnomalySchema>;
+export type PcaPoint = z.infer<typeof PcaPointSchema>;
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 
 export interface PageResponse<T> {

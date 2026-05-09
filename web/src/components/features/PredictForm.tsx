@@ -35,6 +35,8 @@ const SAMPLE_LOW_RISK: PredictRequest = {
   totalTransAmt: 4500,
   totalTransCt: 45,
   avgUtilizationRatio: 0.064,
+  totalAmtChngQ4Q1: 1.0,
+  totalCtChngQ4Q1: 1.0,
 };
 
 const SAMPLE_HIGH_RISK: PredictRequest = {
@@ -54,6 +56,8 @@ const SAMPLE_HIGH_RISK: PredictRequest = {
   totalTransAmt: 1200,
   totalTransCt: 15,
   avgUtilizationRatio: 0.8,
+  totalAmtChngQ4Q1: 0.4,
+  totalCtChngQ4Q1: 0.3,
 };
 
 const EDUCATION_OPTIONS: PredictRequest["educationLevel"][] = [
@@ -259,6 +263,28 @@ export function PredictForm() {
                 type="number"
                 step="0.001"
                 {...register("avgUtilizationRatio", { valueAsNumber: true })}
+              />
+            </Field>
+            <Field
+              label="Q4/Q1 amount ratio (optional)"
+              error={formState.errors.totalAmtChngQ4Q1?.message}
+            >
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="default 1.0 (no change)"
+                {...register("totalAmtChngQ4Q1", { valueAsNumber: true })}
+              />
+            </Field>
+            <Field
+              label="Q4/Q1 count ratio (optional)"
+              error={formState.errors.totalCtChngQ4Q1?.message}
+            >
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="default 1.0 (no change)"
+                {...register("totalCtChngQ4Q1", { valueAsNumber: true })}
               />
             </Field>
           </CardContent>
