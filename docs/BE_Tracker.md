@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 8 code complete (2026-05-09); seed run pending
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 8 SEED RUN against Neon (2026-05-09 09:40 UTC+7); insights refreshed; anomaly threshold tuned to blueprint 3-5%.
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -28,7 +28,8 @@
 | Blocked | 1 (manual user step BE-M1) |
 | Skipped | 1 (BE-65 EM bonus — optional, deprioritized) |
 | % complete | 4.7% (95.3% incl REVIEW) |
-| Pending | 1 (Phase 8 seed run against Neon — needs user authorization) |
+| Pending | 0 — Phase 8 seed RAN successfully 2026-05-09; all 12 endpoints live against Neon |
+| Follow-ups | 1 known issue: `/api/predict` cluster lookup returns -1 (preprocessing mismatch). Other phase-pipeline output is correct. |
 
 ---
 
@@ -107,7 +108,7 @@
 | BE-61 | KMeans + silhouette score | REVIEW | claude | _pending_ | Sampled silhouette (1000 random points × all 10127, seed 42). Best by argmax: **k=3** (0.2180). k=2 (0.2172) close behind. |
 | BE-62 | Train final SimpleKMeans (k chosen, seed=42) | REVIEW | claude | _pending_ | k=3, seed=42, 500 iter, EuclideanDistance, preserveInstancesOrder=true. Saved to `models/kmeans.model` (50KB, gitignored). |
 | BE-63 | Compute centroid distances → flag anomalies | REVIEW | claude | _pending_ | Distance per row from assigned centroid; threshold = μ+3σ = 0.71+3·0.19 = 1.27. Flagged: 50 customers. |
-| BE-64 | Combine Z/IQR/cluster-distance into `is_anomaly` | REVIEW | claude | _pending_ | `isAnomaly = phase2_outlier AND cluster_distance_outlier` (strict: both must fire). 47 customers combined. Sidecar `data/processed/phase6_anomalies.json` per-row records (clientNum, clusterId, centroidDistance, phase2Outlier, clusterDistanceOutlier, isAnomaly) for Phase 8 seeder. |
+| BE-64 | Combine Z/IQR/cluster-distance into `is_anomaly` | REVIEW | claude | _pending_ | **2026-05-09 retune**: rule changed from old `phase2 AND clusterDistance(>μ+3σ)` (47 = 0.46%, too narrow vs blueprint §3 ~3-5% target) to **`clusterStrongOutlier(>μ+2σ) AND phase2Outlier`** → **349 customers (3.45%)**. Sidecar `phase6_anomalies.json` now records `clusterMildOutlier` (>μ+1σ) + `clusterStrongOutlier` per row + thresholds μ=0.714, σ=0.187. DatabaseSeeder has back-compat reader for old `clusterDistanceOutlier` field. |
 | BE-65 | EM clusterer (bonus, optional) | SKIPPED | | | Optional bonus — deprioritized. Probabilistic membership not on demo critical path. Add later if report needs comparison vs KMeans. |
 
 ## Phase 7 — Association Rules
@@ -124,8 +125,8 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-80 | Seed `insights.json` with 5+ Discovery/Evidence/Recommendation | REVIEW | claude | _pending_ | Existing 5 in `db/seed.sql` (pre-Phase-7 baseline, hand-curated). DatabaseSeeder intentionally skips insights to avoid clobbering. Refresh as a follow-up using actual Phase 5/7 data. |
-| BE-81 | DB seeder: insert customers/clusters/rules/insights | REVIEW | claude | _pending_ | `DatabaseSeeder` service + `Phase8Seeder` Spring CLI main. Reads enriched.arff (10127 customers), phase6_pca_2d.json (cluster_id per CLIENTNUM), phase6_anomalies.json (outlier/anomaly flags), phase6_clusters.json (3 cluster summaries renamed: C0→Premium Loyal, C1→At-Risk Mid-Tier, C2→Low-Income Stable), models/rules.json (50 rules). Truncates + re-populates customers/clusters/rules. **Live run pending user authorization.** |
+| BE-80 | Seed `insights.json` with 5+ Discovery/Evidence/Recommendation | REVIEW | claude | _pending_ | **2026-05-09**: refreshed to use real Phase 5/6/7 numbers via `db/migrations/2026-05-09_refresh_insights.sql` (applied via new `SqlMigrationRunner`). New 5 insights: At-Risk Mid-Tier cluster (26% churn), Total_Trans_Amt #1 RF feature, Total_Trans_Ct ≥ 77 → 100% retention, Premium Loyal under-monetized, multi-signal anomaly screen (349/3.45%). Old stub removed from `db/seed.sql`. |
+| BE-81 | DB seeder: insert customers/clusters/rules/insights | REVIEW | claude | _pending_ | `DatabaseSeeder` service + `Phase8Seeder` Spring CLI main. Reads enriched.arff (10127 customers), phase6_pca_2d.json (cluster_id per CLIENTNUM), phase6_anomalies.json (outlier/anomaly flags), phase6_clusters.json (3 cluster summaries renamed: C0→Premium Loyal, C1→At-Risk Mid-Tier, C2→Low-Income Stable), models/rules.json (50 rules). Truncates + re-populates customers/clusters/rules. **2026-05-09 09:40: seed RAN against Neon**, populated 10127 customers, 3 clusters, 50 rules, 2350 anomaly flag records. (Required pom fix: exec-maven-plugin classpathScope=compile→runtime so postgresql JDBC driver loads.) |
 | BE-82 | `GET /api/overview` | REVIEW | claude | _pending_ | Already wired via `CustomerRepository` (count, countByAttritionFlag, avgRiskScore, avgUtilization, tierBreakdown queries); fallback stubs only fire if DB empty. Goes live after seed. |
 | BE-83 | `GET /api/customers` (paginated) | REVIEW | claude | _pending_ | JPA `Page<Customer>`; filter by attritionFlag OR clusterId, sort `field,asc\|desc`. Defaults: page=1 size=20 sort=clientNum,asc. Already wired pre-Phase-8. |
 | BE-84 | `GET /api/customers/{id}` | REVIEW | claude | _pending_ | `CustomerRepository.findById()`; throws `BusinessException.notFound("Customer", id)` → 404 envelope. |
@@ -134,7 +135,7 @@
 | BE-87 | `GET /api/rules?minLift=` | REVIEW | claude | _pending_ | Already wired via `RuleRepository.findByMinLift` / `findByMinLiftAndCategory`; sorted by lift desc. Note: post-seed, lift threshold 1.2 returns 0 rules (max retention lift is 1.19); use minLift=1.0 to see all 50. |
 | BE-88 | `GET /api/insights` | DONE | claude | b492427 | Already live since Phase 0; 5 rows from `db/seed.sql`. |
 | BE-89 | `GET /api/anomalies` | REVIEW | claude | _pending_ | Already wired via `customerRepo.findTopAnomalies(limit)` (native query, ORDER BY risk_score DESC). After seed: 47 customers with `is_anomaly=true` (Phase 2 ∩ cluster-distance). |
-| BE-90 | `POST /api/predict` (full flow with cluster + recommendation) | REVIEW | claude | _pending_ | New `PredictInputBuilder` builds 26-attr Instance from `PredictRequest`: re-derives Phase 3 features at request time, bins Customer_Tier from training quartile cutoffs cached at startup. `ClassificationService.predict()` runs RF→churnProb, KMeans→cluster, looks up persona name from `clusters` table, derives top-3 features from `phase5_feature_importance.json`, builds rule-based recommendation. Note: PredictRequest lacks `Total_Amt_Chng_Q4_Q1` / `Total_Ct_Chng_Q4_Q1` fields so those default to 1.0 at inference. |
+| BE-90 | `POST /api/predict` (full flow with cluster + recommendation) | REVIEW | claude | _pending_ | New `PredictInputBuilder` builds 26-attr Instance from `PredictRequest`: re-derives Phase 3 features at request time, bins Customer_Tier from training quartile cutoffs cached at startup. `ClassificationService.predict()` runs RF→churnProb (✅), derives top-3 features from `phase5_feature_importance.json` (✅), builds rule-based recommendation (✅). **Known issue**: KMeans cluster lookup throws "Src and Dest differ in # of attributes: 26 != 19" because `kmeans.model` was trained on the post-drop+normalize 19-feature matrix but predict feeds the full 26-attr enriched instance. Currently catches the error and returns `cluster=-1, clusterName="Unknown"`. Fix: apply `Phase6Pipeline.removeAttributesByName(NOMINAL_DROP)` + `Preprocessor.normalize()` inside ClusteringService.assign() before forwarding. Note: PredictRequest also lacks `Total_Amt_Chng_Q4_Q1` / `Total_Ct_Chng_Q4_Q1` so those default to 1.0. |
 | BE-91 | Predictions logging to `predictions` table | REVIEW | claude | _pending_ | Every `/api/predict` call writes a `PredictionLog` row (input as JSONB, predicted_label, churn_prob, cluster_id, model_used, ts). Failures logged but don't break the response. |
 
 ## Testing & QA

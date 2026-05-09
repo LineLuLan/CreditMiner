@@ -74,7 +74,8 @@ public class DatabaseSeeder {
     );
 
     /** Anomaly record fields parsed from {@code phase6_anomalies.json}. */
-    private record AnomalyFlags(boolean phase2Outlier, boolean clusterDistanceOutlier, boolean isAnomaly) {}
+    private record AnomalyFlags(boolean phase2Outlier, boolean clusterMildOutlier,
+                                boolean clusterStrongOutlier, boolean isAnomaly) {}
 
     @Transactional
     public void seed() throws Exception {
@@ -166,7 +167,7 @@ public class DatabaseSeeder {
             Instance inst = data.instance(i);
             long clientNum = (long) inst.value(clientAttr);
             AnomalyFlags flags = flagsByClient.getOrDefault(clientNum,
-                    new AnomalyFlags(false, false, false));
+                    new AnomalyFlags(false, false, false, false));
             batch.add(Customer.builder()
                     .clientNum(clientNum)
                     .attritionFlag(nominalValue(inst, "Attrition_Flag"))
@@ -245,10 +246,19 @@ public class DatabaseSeeder {
         JsonNode records = root.get("records");
         if (records == null || !records.isArray()) return out;
         for (JsonNode n : records) {
+            JsonNode mildNode = n.get("clusterMildOutlier");
+            JsonNode strongNode = n.get("clusterStrongOutlier");
+            // Back-compat: old JSON used `clusterDistanceOutlier` (single threshold).
+            JsonNode legacy = n.get("clusterDistanceOutlier");
+            boolean mild = mildNode != null ? mildNode.asBoolean()
+                    : (legacy != null && legacy.asBoolean());
+            boolean strong = strongNode != null ? strongNode.asBoolean()
+                    : (legacy != null && legacy.asBoolean());
             out.put(n.get("clientNum").asLong(),
                     new AnomalyFlags(
                             n.get("phase2Outlier").asBoolean(),
-                            n.get("clusterDistanceOutlier").asBoolean(),
+                            mild,
+                            strong,
                             n.get("isAnomaly").asBoolean()));
         }
         log.info("Loaded anomaly flags for {} CLIENTNUMs", out.size());

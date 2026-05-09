@@ -142,7 +142,10 @@
                 <version>3.2.0</version>
                 <configuration>
                     <mainClass>${exec.mainClass}</mainClass>
-                    <classpathScope>compile</classpathScope>
+                    <!-- runtime scope so Phase8Seeder can reach the postgresql JDBC driver
+                         (declared as <scope>runtime</scope> in dependencies). Other pipeline
+                         mains don't touch the DB so the wider classpath is harmless. -->
+                    <classpathScope>runtime</classpathScope>
                 </configuration>
             </plugin>
         </plugins>

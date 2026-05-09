@@ -1,12 +1,14 @@
 -- =============================================================================
--- CreditMiner — initial seed
--- Apply AFTER schema.sql:  psql $DATABASE_URL -f db/seed.sql
+-- 2026-05-09 — Refresh insights with real Phase 5/6/7 numbers (BE-80)
+-- Replaces the 5 pre-Phase-7 stub insights from db/seed.sql.
+-- Apply via:  psql "$DATABASE_URL" -f db/migrations/2026-05-09_refresh_insights.sql
+-- Idempotent: TRUNCATE + RESTART IDENTITY before insert.
 -- =============================================================================
 
--- Insights (refreshed 2026-05-09 with Phase 5/6/7 numbers)
--- Source artefacts: data/processed/phase5_feature_importance.json,
---                   data/processed/phase6_clusters.json,
---                   models/rules.json
+BEGIN;
+
+TRUNCATE TABLE insights RESTART IDENTITY;
+
 INSERT INTO insights (title, discovery, evidence, recommendation, category, priority) VALUES
 ('At-Risk Mid-Tier cluster drives churn',
  'Cluster 1 (At-Risk Mid-Tier, 3981 customers / 39% of base) churns at 26.07% — 3x the safest cluster (Low-Income Stable, 8.64%) and 2.2x Premium Loyal (11.67%).',
@@ -34,20 +36,11 @@ INSERT INTO insights (title, discovery, evidence, recommendation, category, prio
  'Pull the 349 anomalies into a manual-review queue; cross-check transaction logs for fraud patterns before any automated action.',
  'risk', 2);
 
--- Stub clusters (real values overwritten by TrainPipeline)
-INSERT INTO clusters (cluster_id, persona_name, size, centroid_json, avg_risk, churn_rate, description) VALUES
-(0, 'Premium Loyal',       3210, '{"Credit_Limit": 18420, "Avg_Utilization_Ratio": 0.15, "Total_Trans_Ct": 78}'::jsonb,
-   0.21, 0.06, 'High credit, low utilization, high transactions — under-monetized.'),
-(1, 'High-Risk Spenders',  2511, '{"Credit_Limit":  6840, "Avg_Utilization_Ratio": 0.74, "Total_Trans_Ct": 42}'::jsonb,
-   0.62, 0.31, 'High utilization with declining transaction count. Proactive retention needed.'),
-(2, 'Dormant',             1820, '{"Credit_Limit":  5280, "Avg_Utilization_Ratio": 0.18, "Total_Trans_Ct": 21}'::jsonb,
-   0.51, 0.28, 'Low transactions, high inactive months. Reactivation campaign target.'),
-(3, 'Average Active',      2586, '{"Credit_Limit":  9170, "Avg_Utilization_Ratio": 0.34, "Total_Trans_Ct": 55}'::jsonb,
-   0.29, 0.10, 'Mid-range across all metrics. Nurture and monitor.');
-
--- (customers + rules tables intentionally left empty — populated by TrainPipeline)
+COMMIT;
 
 DO $$
+DECLARE c INT;
 BEGIN
-  RAISE NOTICE 'Seed applied: 5 insights + 4 cluster stubs.';
+  SELECT count(*) INTO c FROM insights;
+  RAISE NOTICE 'Insights refreshed: % rows', c;
 END $$;

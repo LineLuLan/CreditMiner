@@ -105,7 +105,11 @@ public class Phase6Pipeline {
 
         int[] assignments = finalModel.getAssignments();
 
-        // Centroid distances
+        // Centroid distances + tiered thresholds.
+        // Blueprint §3 targets ~3-5% anomalies. Old strict rule
+        // (μ+3σ AND phase2_outlier) hit only 0.46%, so we widen with two thresholds:
+        //   strongCluster = distance > μ+2σ  → qualifies as anomaly alone
+        //   mildCluster   = distance > μ+1σ  → must be confirmed by phase2 (Z OR IQR) signal
         Instances centroids = finalModel.getClusterCentroids();
         double[] distances = new double[normalized.numInstances()];
         for (int i = 0; i < normalized.numInstances(); i++) {
@@ -113,17 +117,18 @@ public class Phase6Pipeline {
         }
         double mu = mean(distances);
         double sd = std(distances, mu);
-        double threshold = mu + 3 * sd;
-        boolean[] clusterDistanceOutlier = new boolean[distances.length];
-        int clusterDistanceCount = 0;
+        double strongThreshold = mu + 2 * sd;
+        double mildThreshold = mu + 1 * sd;
+        boolean[] strongCluster = new boolean[distances.length];
+        boolean[] mildCluster = new boolean[distances.length];
+        int strongCount = 0, mildCount = 0;
         for (int i = 0; i < distances.length; i++) {
-            if (distances[i] > threshold) {
-                clusterDistanceOutlier[i] = true;
-                clusterDistanceCount++;
-            }
+            if (distances[i] > strongThreshold) { strongCluster[i] = true; strongCount++; }
+            if (distances[i] > mildThreshold)   { mildCluster[i]   = true; mildCount++; }
         }
-        log.info("Centroid distance: μ={}, σ={}, threshold={}; flagged {} outliers",
-                round(mu), round(sd), round(threshold), clusterDistanceCount);
+        log.info("Centroid distance: μ={}, σ={}; strong>μ+2σ={} (count {}); mild>μ+1σ={} (count {})",
+                round(mu), round(sd), round(strongThreshold), strongCount,
+                round(mildThreshold), mildCount);
 
         // Phase 2 outlier set
         Set<Long> phase2OutlierSet = readPhase2OutlierSet(phase2Outliers);
@@ -142,10 +147,12 @@ public class Phase6Pipeline {
         writeJson(mapper, ELBOW_JSON, buildElbowDoc(elbow, bestK));
         writeJson(mapper, CLUSTERS_JSON, summaries);
         writeJson(mapper, ANOMALIES_JSON,
-                buildAnomaliesDoc(raw, assignments, distances, clusterDistanceOutlier, phase2OutlierSet));
+                buildAnomaliesDoc(raw, assignments, distances,
+                        strongCluster, mildCluster, phase2OutlierSet,
+                        round(mu), round(sd), round(strongThreshold), round(mildThreshold)));
         writeJson(mapper, PCA_JSON, buildPcaDoc(raw, assignments, pcaCoords));
 
-        printConsoleSummary(elbow, bestK, summaries, clusterDistanceCount, phase2OutlierSet.size());
+        printConsoleSummary(elbow, bestK, summaries, strongCount, mildCount, phase2OutlierSet.size());
         log.info("=== Phase 6 DONE ===");
     }
 
@@ -256,7 +263,8 @@ public class Phase6Pipeline {
 
     private static Map<String, Object> buildAnomaliesDoc(
             Instances raw, int[] assignments, double[] distances,
-            boolean[] clusterFlags, Set<Long> phase2OutlierSet) {
+            boolean[] strongCluster, boolean[] mildCluster, Set<Long> phase2OutlierSet,
+            double mu, double sd, double strongThreshold, double mildThreshold) {
 
         Attribute clientNumAttr = raw.attribute("CLIENTNUM");
         List<Map<String, Object>> records = new ArrayList<>();
@@ -264,25 +272,37 @@ public class Phase6Pipeline {
         for (int i = 0; i < raw.numInstances(); i++) {
             long clientNum = clientNumAttr == null ? 0L : (long) raw.instance(i).value(clientNumAttr);
             boolean p2 = phase2OutlierSet.contains(clientNum);
-            boolean cd = clusterFlags[i];
-            if (!p2 && !cd) continue;
-            boolean isAnomaly = p2 && cd; // strict: must be flagged by both signals
+            boolean strong = strongCluster[i];
+            boolean mild = mildCluster[i];
+            if (!p2 && !mild && !strong) continue; // include row if any anomaly signal fired
+            // Blueprint §6.5: combine cluster distance with Phase-2 (Z OR IQR) signals.
+            // Rule: anomaly when STRONG cluster outlier (cd>μ+2σ) is also confirmed
+            // by univariate extremity from Phase 2. Targets ~3-5% per blueprint §3.
+            boolean isAnomaly = strong && p2;
             if (isAnomaly) combinedCount++;
             Map<String, Object> r = new LinkedHashMap<>();
             r.put("clientNum", clientNum);
             r.put("clusterId", assignments[i]);
             r.put("centroidDistance", round(distances[i]));
             r.put("phase2Outlier", p2);
-            r.put("clusterDistanceOutlier", cd);
+            r.put("clusterMildOutlier", mild);
+            r.put("clusterStrongOutlier", strong);
             r.put("isAnomaly", isAnomaly);
             records.add(r);
         }
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("totalRows", raw.numInstances());
         doc.put("phase2OutlierCount", phase2OutlierSet.size());
-        doc.put("clusterDistanceOutlierCount", countTrue(clusterFlags));
+        doc.put("clusterStrongOutlierCount", countTrue(strongCluster));
+        doc.put("clusterMildOutlierCount", countTrue(mildCluster));
         doc.put("combinedAnomalyCount", combinedCount);
-        doc.put("rule", "isAnomaly = phase2Outlier AND clusterDistanceOutlier (both signals required)");
+        doc.put("combinedAnomalyPct", raw.numInstances() == 0
+                ? 0.0 : round((double) combinedCount / raw.numInstances()));
+        doc.put("clusterDistanceMu", mu);
+        doc.put("clusterDistanceSigma", sd);
+        doc.put("strongThreshold", strongThreshold);
+        doc.put("mildThreshold", mildThreshold);
+        doc.put("rule", "isAnomaly = clusterStrongOutlier (cd>μ+2σ) AND phase2Outlier (Z>3 OR IQR fence). Targets blueprint §3 ~3-5%.");
         doc.put("records", records);
         doc.put("generatedAt", Instant.now().toString());
         return doc;
@@ -325,7 +345,7 @@ public class Phase6Pipeline {
 
     private static void printConsoleSummary(ElbowResult e, int bestK,
                                             List<ClusterResponse> summaries,
-                                            int clusterDistanceCount,
+                                            int strongCount, int mildCount,
                                             int phase2OutlierCount) {
         System.out.println();
         System.out.println("=== PHASE 6 SUMMARY ===");
@@ -345,8 +365,8 @@ public class Phase6Pipeline {
                     c.getDescription());
         }
         System.out.println();
-        System.out.printf("Phase 2 outliers: %d | Cluster-distance outliers: %d%n",
-                phase2OutlierCount, clusterDistanceCount);
+        System.out.printf("Phase 2 outliers: %d | Cluster strong (>μ+2σ): %d | Cluster mild (>μ+1σ): %d%n",
+                phase2OutlierCount, strongCount, mildCount);
         System.out.println();
     }
 }
