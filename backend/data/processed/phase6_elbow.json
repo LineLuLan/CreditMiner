@@ -1,0 +1,35 @@
+{
+  "kMin" : 2,
+  "kMax" : 8,
+  "bestK" : 3,
+  "strategy" : "argmax silhouette",
+  "scores" : [ {
+    "k" : 2,
+    "wcss" : 6496.2878,
+    "silhouette" : 0.2172
+  }, {
+    "k" : 3,
+    "wcss" : 5512.4152,
+    "silhouette" : 0.218
+  }, {
+    "k" : 4,
+    "wcss" : 5046.2889,
+    "silhouette" : 0.1718
+  }, {
+    "k" : 5,
+    "wcss" : 4547.3455,
+    "silhouette" : 0.1751
+  }, {
+    "k" : 6,
+    "wcss" : 4333.7293,
+    "silhouette" : 0.1552
+  }, {
+    "k" : 7,
+    "wcss" : 4163.5204,
+    "silhouette" : 0.1366
+  }, {
+    "k" : 8,
+    "wcss" : 4014.4706,
+    "silhouette" : 0.137
+  } ]
+}

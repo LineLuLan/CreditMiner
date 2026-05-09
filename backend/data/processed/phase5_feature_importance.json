@@ -1,0 +1,81 @@
+{
+  "model" : "RandomForest",
+  "metric" : "MeanDecreaseImpurity",
+  "ranking" : [ {
+    "name" : "Total_Trans_Amt",
+    "importance" : 3242.0
+  }, {
+    "name" : "Customer_Age",
+    "importance" : 2677.0
+  }, {
+    "name" : "Total_Trans_Ct",
+    "importance" : 2532.0
+  }, {
+    "name" : "Total_Amt_Chng_Q4_Q1",
+    "importance" : 2475.0
+  }, {
+    "name" : "Spending_Intensity",
+    "importance" : 2339.0
+  }, {
+    "name" : "Total_Ct_Chng_Q4_Q1",
+    "importance" : 2255.0
+  }, {
+    "name" : "Total_Relationship_Count",
+    "importance" : 2227.0
+  }, {
+    "name" : "Credit_Limit",
+    "importance" : 2058.0
+  }, {
+    "name" : "Months_on_book",
+    "importance" : 2042.0
+  }, {
+    "name" : "Engagement_Score",
+    "importance" : 1765.0
+  }, {
+    "name" : "Education_Level",
+    "importance" : 1761.0
+  }, {
+    "name" : "Avg_Open_To_Buy",
+    "importance" : 1677.0
+  }, {
+    "name" : "Dependent_count",
+    "importance" : 1656.0
+  }, {
+    "name" : "Total_Revolving_Bal",
+    "importance" : 1655.0
+  }, {
+    "name" : "Income_Category",
+    "importance" : 1520.0
+  }, {
+    "name" : "Months_Inactive_12_mon",
+    "importance" : 1482.0
+  }, {
+    "name" : "Contacts_Count_12_mon",
+    "importance" : 1470.0
+  }, {
+    "name" : "Customer_Value_Score",
+    "importance" : 1402.0
+  }, {
+    "name" : "Risk_Score",
+    "importance" : 1284.0
+  }, {
+    "name" : "Avg_Utilization_Ratio",
+    "importance" : 985.0
+  }, {
+    "name" : "Marital_Status",
+    "importance" : 876.0
+  }, {
+    "name" : "Utilization_Score",
+    "importance" : 739.0
+  }, {
+    "name" : "Customer_Tier",
+    "importance" : 612.0
+  }, {
+    "name" : "Gender",
+    "importance" : 606.0
+  }, {
+    "name" : "Card_Category",
+    "importance" : 196.0
+  } ],
+  "generatedAt" : "2026-05-08T16:18:08.837302800Z"
+}

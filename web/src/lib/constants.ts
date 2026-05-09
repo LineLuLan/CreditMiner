@@ -13,12 +13,11 @@ export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 /** App brand name. */
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "CreditMiner";
 
-/** Persona display order. */
+/** Persona display order — matches BE Phase 6 cluster names (k=3). */
 export const PERSONA_ORDER = [
   "Premium Loyal",
-  "High-Risk Spenders",
-  "Average Active",
-  "Dormant",
+  "At-Risk Mid-Tier",
+  "Low-Income Stable",
 ] as const;
 
 /** Customer tier order. */

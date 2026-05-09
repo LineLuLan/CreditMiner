@@ -1,0 +1,227 @@
+{
+  "totalRows" : 10127,
+  "totalColumns" : 21,
+  "classColumn" : "Attrition_Flag",
+  "leakageColumnsDropped" : [ "Naive_Bayes_Classifier_Attrition_Flag_Card_Category_Contacts_Count_12_mon_Dependent_count_Education_Level_Months_Inactive_12_mon_1", "Naive_Bayes_Classifier_Attrition_Flag_Card_Category_Contacts_Count_12_mon_Dependent_count_Education_Level_Months_Inactive_12_mon_2" ],
+  "columns" : [ {
+    "name" : "CLIENTNUM",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 7.391776063337E8,
+    "std" : 3.69037834502E7,
+    "min" : 7.08082083E8,
+    "max" : 8.28343083E8,
+    "median" : 7.17926358E8
+  }, {
+    "name" : "Attrition_Flag",
+    "type" : "nominal",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 2,
+    "topValue" : "Existing Customer",
+    "topCount" : 8500
+  }, {
+    "name" : "Customer_Age",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 46.326,
+    "std" : 8.0168,
+    "min" : 26.0,
+    "max" : 73.0,
+    "median" : 46.0
+  }, {
+    "name" : "Gender",
+    "type" : "nominal",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 2,
+    "topValue" : "F",
+    "topCount" : 5358
+  }, {
+    "name" : "Dependent_count",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 2.3462,
+    "std" : 1.2989,
+    "min" : 0.0,
+    "max" : 5.0,
+    "median" : 2.0
+  }, {
+    "name" : "Education_Level",
+    "type" : "nominal",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 7,
+    "topValue" : "Graduate",
+    "topCount" : 3128
+  }, {
+    "name" : "Marital_Status",
+    "type" : "nominal",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 4,
+    "topValue" : "Married",
+    "topCount" : 4687
+  }, {
+    "name" : "Income_Category",
+    "type" : "nominal",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 6,
+    "topValue" : "Less than $40K",
+    "topCount" : 3561
+  }, {
+    "name" : "Card_Category",
+    "type" : "nominal",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 4,
+    "topValue" : "Blue",
+    "topCount" : 9436
+  }, {
+    "name" : "Months_on_book",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 35.9284,
+    "std" : 7.9864,
+    "min" : 13.0,
+    "max" : 56.0,
+    "median" : 36.0
+  }, {
+    "name" : "Total_Relationship_Count",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 3.8126,
+    "std" : 1.5544,
+    "min" : 1.0,
+    "max" : 6.0,
+    "median" : 4.0
+  }, {
+    "name" : "Months_Inactive_12_mon",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 2.3412,
+    "std" : 1.0106,
+    "min" : 0.0,
+    "max" : 6.0,
+    "median" : 2.0
+  }, {
+    "name" : "Contacts_Count_12_mon",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 2.4553,
+    "std" : 1.1062,
+    "min" : 0.0,
+    "max" : 6.0,
+    "median" : 2.0
+  }, {
+    "name" : "Credit_Limit",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 8631.9537,
+    "std" : 9088.7767,
+    "min" : 1438.3,
+    "max" : 34516.0,
+    "median" : 4549.0
+  }, {
+    "name" : "Total_Revolving_Bal",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 1162.8141,
+    "std" : 814.9873,
+    "min" : 0.0,
+    "max" : 2517.0,
+    "median" : 1276.0
+  }, {
+    "name" : "Avg_Open_To_Buy",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 7469.1396,
+    "std" : 9090.6853,
+    "min" : 3.0,
+    "max" : 34516.0,
+    "median" : 3474.0
+  }, {
+    "name" : "Total_Amt_Chng_Q4_Q1",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 0.7599,
+    "std" : 0.2192,
+    "min" : 0.0,
+    "max" : 3.397,
+    "median" : 0.736
+  }, {
+    "name" : "Total_Trans_Amt",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 4404.0863,
+    "std" : 3397.1293,
+    "min" : 510.0,
+    "max" : 18484.0,
+    "median" : 3899.0
+  }, {
+    "name" : "Total_Trans_Ct",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 64.8587,
+    "std" : 23.4726,
+    "min" : 10.0,
+    "max" : 139.0,
+    "median" : 67.0
+  }, {
+    "name" : "Total_Ct_Chng_Q4_Q1",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 0.7122,
+    "std" : 0.2381,
+    "min" : 0.0,
+    "max" : 3.714,
+    "median" : 0.702
+  }, {
+    "name" : "Avg_Utilization_Ratio",
+    "type" : "numeric",
+    "count" : 10127,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 0.2749,
+    "std" : 0.2757,
+    "min" : 0.0,
+    "max" : 0.999,
+    "median" : 0.176
+  } ],
+  "generatedAt" : 1778244590.113132700
+}

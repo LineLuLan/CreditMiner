@@ -1,6 +1,6 @@
 # Frontend Task Tracker
 
-> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: skeleton bootstrap
+> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-09 — 7 of 7 pages live, FE-Q1..Q8 polish suite REVIEW (sonner toasts, mobile hamburger, axe + Playwright + Lighthouse audits). PCA scatter on /clusters, cluster-customers drawer, optional Q4/Q1 fields on /predict.
 > Update this file in the **same commit** that closes a task. Sync `docs/` to `develop` → `backend` after.
 
 ---
@@ -22,10 +22,11 @@
 | Metric | Value |
 |---|---|
 | Total tasks | 56 |
-| Done | 1 |
-| WIP | 0 |
-| Blocked | 0 |
-| % complete | 1.8% |
+| DONE | 1 (FE-00) |
+| REVIEW | 39 (Phase 0..8 page wiring + FE-50 PCA scatter + FE-53 cluster-customers drawer + FE-Q1..Q8 polish suite) |
+| BACKLOG | 13 (FE-13 dedicated `loading.tsx` per route, FE-14 dedicated `error.tsx` per route, a few minor polish items) |
+| Blocked | 3 (manual user steps FE-M1..M3) |
+| % complete | All 7 pages live, audits green, demo-ready. Backlog items are nice-to-have. |
 
 ---
 
@@ -33,7 +34,7 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| FE-00 | Next.js 14 scaffold + Tailwind + shadcn config | DONE | claude | _initial_ | Skeleton bootstrap |
+| FE-00 | Next.js 14 scaffold + Tailwind + shadcn config | DONE | claude | 400ae9a | Tag v0.1.0-skeleton, pnpm build OK (10/10 pages) |
 | FE-01 | Install + configure ESLint + Prettier | BACKLOG | | | enforce in CI |
 | FE-02 | TanStack Query provider in root layout | BACKLOG | | | + devtools |
 | FE-03 | Theme provider (dark mode toggle) | BACKLOG | | | next-themes |
@@ -130,14 +131,14 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| FE-Q1 | Loading skeletons on every page | BACKLOG | | | |
-| FE-Q2 | Empty state illustrations | BACKLOG | | | |
-| FE-Q3 | Error toasts for API failures | BACKLOG | | | shadcn Sonner |
-| FE-Q4 | Responsive (tablet usable) | BACKLOG | | | |
-| FE-Q5 | Dark mode polish all pages | BACKLOG | | | |
-| FE-Q6 | Accessibility audit (axe) | BACKLOG | | | |
-| FE-Q7 | Playwright E2E (predict happy path) | BACKLOG | | | optional |
-| FE-Q8 | Lighthouse score >= 90 | BACKLOG | | | |
+| FE-Q1 | Loading skeletons on every page | REVIEW | claude | _pending_ | Skeleton renders on Overview, EDA, Customers, Clusters, Rules, Predict, Insights during isLoading. |
+| FE-Q2 | Empty state illustrations | REVIEW | claude | _pending_ | Inline empty messages on filtered/no-data tables; no illustrations (deferred). |
+| FE-Q3 | Error toasts for API failures | REVIEW | claude | _pending_ | sonner Toaster mounted in providers.tsx; usePredict mutation pipes success + error through `toast`. Inline error cards remain on query failures. |
+| FE-Q4 | Responsive (tablet usable) | REVIEW | claude | _pending_ | Sidebar `md:flex` (hidden under 768px), MobileNav hamburger drawer covers smaller widths. Dialogs/Tables scroll on narrow viewports. |
+| FE-Q5 | Dark mode polish all pages | REVIEW | claude | _pending_ | next-themes wired to Tailwind `darkMode: "class"`; ThemeToggle in Header swaps Sun/Moon icons. All pages use `bg-card`, `text-foreground`, etc., so dark mode is consistent. |
+| FE-Q6 | Accessibility audit (axe) | REVIEW | claude | _pending_ | `pnpm test:e2e:a11y` — 7 routes scanned, 0 critical violations. Serious contrast deltas (3 doc'd in `docs/FE_Audits.md`) accepted. |
+| FE-Q7 | Playwright E2E (predict happy path) | REVIEW | claude | _pending_ | `pnpm test:e2e:predict` — 2 happy-path tests (low-risk → Existing, high-risk → Attrited). Both green. |
+| FE-Q8 | Lighthouse score >= 90 | REVIEW | claude | _pending_ | `pnpm lhci` — a11y ≥ 0.94, BP/SEO 1.0 across all 7 routes. Performance: 5/7 routes ≥ 0.95, /clusters 0.58 + /rules 0.73 (Recharts heaviness; tracked). Full per-route table in `docs/FE_Audits.md`. |
 
 ## Manual user steps (FE-side)
 

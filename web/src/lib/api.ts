@@ -8,6 +8,7 @@ import type {
   Insight,
   OverviewResponse,
   PageResponse,
+  PcaPoint,
   PredictRequest,
   PredictResponse,
   Rule,
@@ -69,6 +70,8 @@ export const api = {
       )
       .then((r) => r.data),
 
+  edaPca2d: () => client.get<PcaPoint[]>(`/eda/pca-2d`).then((r) => r.data),
+
   customers: (params: {
     page?: number;
     size?: number;
@@ -89,7 +92,9 @@ export const api = {
       .get<PageResponse<CustomerSummary>>(`/clusters/${id}/customers`, { params: { page, size } })
       .then((r) => r.data),
 
-  rules: (minLift = 1.2, category?: string) =>
+  // Note: BE retention rules cap at lift = 1/0.84 ≈ 1.19 due to 84% Existing
+  // class prevalence. minLift=1.2 returns 0 rows; default is 1.0 to surface all 50.
+  rules: (minLift = 1.0, category?: string) =>
     client
       .get<Rule[]>(`/rules`, { params: { minLift, category } })
       .then((r) => r.data),

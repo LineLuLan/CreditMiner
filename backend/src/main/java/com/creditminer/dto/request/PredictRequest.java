@@ -73,4 +73,19 @@ public class PredictRequest {
     @DecimalMin(value = "0.0", inclusive = true)
     @DecimalMax(value = "1.0", inclusive = true)
     private BigDecimal avgUtilizationRatio;
+
+    /**
+     * Quarter-over-quarter transaction amount ratio (Q4/Q1). Optional — when null,
+     * {@link com.creditminer.service.PredictInputBuilder} substitutes 1.0
+     * ("no change") so existing FE clients keep working.
+     */
+    @PositiveOrZero
+    private BigDecimal totalAmtChngQ4Q1;
+
+    /**
+     * Quarter-over-quarter transaction count ratio (Q4/Q1). Same fallback as
+     * {@link #totalAmtChngQ4Q1}.
+     */
+    @PositiveOrZero
+    private BigDecimal totalCtChngQ4Q1;
 }
