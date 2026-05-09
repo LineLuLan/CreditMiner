@@ -142,10 +142,10 @@
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-T1 | JUnit: `PreprocessorTest` | BACKLOG | | | |
-| BE-T2 | JUnit: `FeatureEngineerTest` | BACKLOG | | | edge cases |
-| BE-T3 | JUnit: `ClassificationServiceTest` | BACKLOG | | | mock model load |
-| BE-T4 | JUnit: `ClusteringServiceTest` | BACKLOG | | | |
+| BE-T1 | JUnit: `PreprocessorTest` | REVIEW | claude | _pending_ | 3 tests live (contextLoads, normalize keeps [0,1], Unknown→mode imputation). 2026-05-09. |
+| BE-T2 | JUnit: `FeatureEngineerTest` | REVIEW | claude | _pending_ | 3 tests live (contextLoads, **noTargetLeakage** — Risk_Score + Customer_Value_Score identical when Attrition_Flag toggled, spendingIntensity handles trans_ct=0). 2026-05-09. |
+| BE-T3 | JUnit: `ClassificationServiceTest` | REVIEW | claude | _pending_ | 2 tests live (cold-start guards: classifier null, builder not ready). 2026-05-09 — also fixed stale 2-arg constructor → 5-arg. |
+| BE-T4 | JUnit: `ClusteringServiceTest` | REVIEW | claude | _pending_ | 3 tests live (contextLoads, assign returns -1 when clusterer null, assignFromEnriched returns -1 when normalizer/header missing). 2026-05-09. |
 | BE-T5 | Postman/Bruno collection for all 12 endpoints | BACKLOG | | | docs/api/ |
 | BE-T6 | Load test `/predict` (k6 / hey) | BACKLOG | | | p95 < 100ms |
 

@@ -4,6 +4,7 @@ import com.creditminer.dto.response.ChurnGroupResponse;
 import com.creditminer.dto.response.CorrelationResponse;
 import com.creditminer.dto.response.DescribeResponse;
 import com.creditminer.dto.response.DistributionResponse;
+import com.creditminer.dto.response.PcaPointResponse;
 import com.creditminer.service.DescribeCacheService;
 import com.creditminer.service.EdaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -60,5 +61,11 @@ public class EdaController {
     @Operation(summary = "Churn rate grouped by a categorical dimension")
     public List<ChurnGroupResponse> churnBy(@RequestParam("dim") String dim) {
         return edaService.churnBy(dim);
+    }
+
+    @GetMapping("/pca-2d")
+    @Operation(summary = "First 2 PCs from Phase 6 (10127 customers × {clientNum, clusterId, x, y})")
+    public List<PcaPointResponse> pca2d() {
+        return edaService.pca2d();
     }
 }

@@ -118,12 +118,16 @@ public class PredictInputBuilder {
         setNumeric(inst, "Credit_Limit", creditLimit);
         setNumeric(inst, "Total_Revolving_Bal", revolvingBal);
         setNumeric(inst, "Avg_Open_To_Buy", creditLimit - revolvingBal);
-        // Quarterly change ratios — request DTO doesn't carry these; default to 1.0 (no change).
-        // Acceptable proxy for demo; FE form can be extended later if predictive value is needed.
-        setNumeric(inst, "Total_Amt_Chng_Q4_Q1", 1.0);
+        // Quarterly change ratios — optional in the request. Fall back to 1.0 ("no change")
+        // when the FE client doesn't supply them so older callers keep working.
+        double amtChng = req.getTotalAmtChngQ4Q1() != null
+                ? req.getTotalAmtChngQ4Q1().doubleValue() : 1.0;
+        double ctChng = req.getTotalCtChngQ4Q1() != null
+                ? req.getTotalCtChngQ4Q1().doubleValue() : 1.0;
+        setNumeric(inst, "Total_Amt_Chng_Q4_Q1", amtChng);
         setNumeric(inst, "Total_Trans_Amt", transAmt);
         setNumeric(inst, "Total_Trans_Ct", transCt);
-        setNumeric(inst, "Total_Ct_Chng_Q4_Q1", 1.0);
+        setNumeric(inst, "Total_Ct_Chng_Q4_Q1", ctChng);
         setNumeric(inst, "Avg_Utilization_Ratio", avgUtil);
 
         // Phase 3 derived features

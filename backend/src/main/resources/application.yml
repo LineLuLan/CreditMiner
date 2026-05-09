@@ -52,6 +52,7 @@ creditminer:
     phase2-outliers-json: ${CM_PHASE2_OUTLIERS:data/processed/phase2_outliers.json}
     phase3-report-json: ${CM_PHASE3_REPORT:data/processed/phase3_report.json}
     assoc-arff: ${CM_ASSOC_ARFF:data/processed/clean_assoc.arff}
+    phase6-pca-json: ${CM_PHASE6_PCA:data/processed/phase6_pca_2d.json}
   models:
     classifier: ${CM_MODEL_CLASSIFIER:models/rf.model}
     clusterer: ${CM_MODEL_CLUSTERER:models/kmeans.model}
