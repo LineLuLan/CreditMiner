@@ -1,12 +1,20 @@
 package com.creditminer.service;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import weka.core.Attribute;
+import weka.core.DenseInstance;
+import weka.core.Instances;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Stub tests for {@link Preprocessor}. Enable as methods are implemented.
+ * Tests for {@link Preprocessor}. Build small in-memory {@link Instances}
+ * to exercise filters without depending on Phase-1 ARFF files.
  */
 class PreprocessorTest {
 
@@ -18,26 +26,43 @@ class PreprocessorTest {
     }
 
     @Test
-    @Disabled("TODO: enable after BE-20 (mode/median imputation)")
-    void imputesMissingCategoricalsWithMode() {
-        // given: instances with "Unknown" in Education_Level
-        // when: imputeMissing()
-        // then: "Unknown" replaced with the modal value
+    void normalizeKeepsValuesIn01() {
+        Attribute x = new Attribute("x");
+        ArrayList<Attribute> attrs = new ArrayList<>(List.of(x));
+        Instances data = new Instances("t", attrs, 0);
+        for (double v : new double[] { 0, 5, 10, 25, 50 }) {
+            data.add(new DenseInstance(1.0, new double[] { v }));
+        }
+        Instances normalized = preprocessor.normalize(data);
+        for (int i = 0; i < normalized.numInstances(); i++) {
+            double v = normalized.instance(i).value(0);
+            assertTrue(v >= 0 && v <= 1, "Normalized value out of [0,1]: " + v);
+        }
+        // Endpoints should map exactly to 0 and 1
+        assertEquals(0.0, normalized.instance(0).value(0), 1e-9);
+        assertEquals(1.0, normalized.instance(4).value(0), 1e-9);
     }
 
     @Test
-    @Disabled("TODO: enable after BE-22/BE-23 (z-score + IQR flagging)")
-    void flagsOutliersWithoutDeleting() {
-        // given: instances with extreme Credit_Limit
-        // when: flagOutliers()
-        // then: row count unchanged, is_outlier set true for extremes
+    void imputeMissingRewritesUnknownToMode() {
+        // Use a real BE column name from CATEGORICAL_UNKNOWN_COLS so the rewrite fires.
+        ArrayList<String> levels = new ArrayList<>(List.of("Graduate", "College", "Unknown"));
+        Attribute edu = new Attribute("Education_Level", levels);
+        Instances data = new Instances("t", new ArrayList<>(List.of(edu)), 0);
+        addNominal(data, edu, "Graduate");
+        addNominal(data, edu, "Graduate");
+        addNominal(data, edu, "Graduate");
+        addNominal(data, edu, "College");
+        addNominal(data, edu, "Unknown");
+
+        Instances out = preprocessor.imputeMissing(data);
+        Attribute outAttr = out.attribute("Education_Level");
+        // Last row had "Unknown" → rewritten to missing → ReplaceMissingValues fills with mode (Graduate).
+        assertEquals("Graduate", outAttr.value((int) out.instance(4).value(outAttr)));
     }
 
-    @Test
-    @Disabled("TODO: enable after BE-24 (min-max normalize)")
-    void normalizeProducesValuesIn01() {
-        // given: arbitrary numeric instances
-        // when: normalize()
-        // then: every numeric attribute is within [0,1]
+    private static void addNominal(Instances data, Attribute attr, String value) {
+        DenseInstance inst = new DenseInstance(1.0, new double[] { attr.indexOfValue(value) });
+        data.add(inst);
     }
 }

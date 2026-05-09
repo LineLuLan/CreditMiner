@@ -2,59 +2,52 @@ package com.creditminer.service;
 
 import com.creditminer.config.ModelConfig;
 import com.creditminer.dto.request.PredictRequest;
-import com.creditminer.dto.response.PredictResponse;
 import com.creditminer.exception.BusinessException;
-import org.junit.jupiter.api.Disabled;
+import com.creditminer.repository.ClusterRepository;
+import com.creditminer.repository.PredictionLogRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Stub tests for {@link ClassificationService}.
- *
- * <p>The first two tests cover the inference path with a stubbed model.</p>
+ * Tests for {@link ClassificationService}. The serve path requires a real
+ * Weka model + the {@link PredictInputBuilder} fed by enriched.arff, so unit
+ * coverage focuses on the cold-start guard. End-to-end inference is exercised
+ * by the manual smoke against the live BE.
  */
 class ClassificationServiceTest {
 
     @Test
-    void predictThrowsWhenModelNotLoaded() {
+    void predictThrowsModelNotLoadedWhenClassifierMissing() {
         ModelConfig cfg = Mockito.mock(ModelConfig.class);
-        Mockito.when(cfg.isReady()).thenReturn(false);
+        Mockito.when(cfg.getClassifier()).thenReturn(null);
         ClusteringService clu = Mockito.mock(ClusteringService.class);
-        ClassificationService svc = new ClassificationService(cfg, clu);
+        PredictInputBuilder builder = Mockito.mock(PredictInputBuilder.class);
+        Mockito.when(builder.isReady()).thenReturn(false);
+        ClusterRepository clusterRepo = Mockito.mock(ClusterRepository.class);
+        PredictionLogRepository logRepo = Mockito.mock(PredictionLogRepository.class);
+        ClassificationService svc = new ClassificationService(
+                cfg, clu, builder, clusterRepo, logRepo);
 
         assertThrows(BusinessException.class, () -> svc.predict(sampleRequest()));
     }
 
     @Test
-    void predictReturnsStubResponseWhenReady() {
+    void predictThrowsModelNotLoadedWhenInputBuilderNotReady() {
         ModelConfig cfg = Mockito.mock(ModelConfig.class);
-        Mockito.when(cfg.isReady()).thenReturn(true);
+        Mockito.when(cfg.getClassifier()).thenReturn(Mockito.mock(weka.classifiers.Classifier.class));
         ClusteringService clu = Mockito.mock(ClusteringService.class);
-        ClassificationService svc = new ClassificationService(cfg, clu);
+        PredictInputBuilder builder = Mockito.mock(PredictInputBuilder.class);
+        Mockito.when(builder.isReady()).thenReturn(false);
+        ClusterRepository clusterRepo = Mockito.mock(ClusterRepository.class);
+        PredictionLogRepository logRepo = Mockito.mock(PredictionLogRepository.class);
+        ClassificationService svc = new ClassificationService(
+                cfg, clu, builder, clusterRepo, logRepo);
 
-        PredictResponse r = svc.predict(sampleRequest());
-        assertNotNull(r);
-        assertNotNull(r.getLabel());
-        assertTrue(r.getChurnProb() >= 0 && r.getChurnProb() <= 1);
-    }
-
-    @Test
-    @Disabled("TODO: enable after BE-90 (real RandomForest inference)")
-    void predictMatchesKnownLowRiskFixture() {
-        // fixture: low-risk customer should yield churnProb < 0.3
-    }
-
-    @Test
-    @Disabled("TODO: enable after BE-58 (test-set evaluation)")
-    void evaluateProducesAtLeastF1Threshold() {
-        // F1 on Attrited class >= 0.75
+        assertThrows(BusinessException.class, () -> svc.predict(sampleRequest()));
     }
 
     private PredictRequest sampleRequest() {

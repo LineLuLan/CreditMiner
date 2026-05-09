@@ -3,15 +3,20 @@ package com.creditminer.service;
 import com.creditminer.dto.response.ChurnGroupResponse;
 import com.creditminer.dto.response.CorrelationResponse;
 import com.creditminer.dto.response.DistributionResponse;
+import com.creditminer.dto.response.PcaPointResponse;
 import com.creditminer.exception.BusinessException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,7 +47,64 @@ public class EdaService {
 
     private final EdaDataCache dataCache;
 
+    @Value("${creditminer.data.phase6-pca-json:data/processed/phase6_pca_2d.json}")
+    private String pcaJsonPath;
+
     private volatile CorrelationResponse cachedCorrelation;
+    private volatile List<PcaPointResponse> cachedPca;
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    // -------------------- pca-2d (Phase 6 sidecar) --------------------
+
+    /**
+     * Loads first-2-PC scatter coordinates from
+     * {@code data/processed/phase6_pca_2d.json}, cached after first call.
+     * Re-run {@code Phase6Pipeline} to refresh — invalidate via {@link #invalidatePca()}.
+     */
+    public List<PcaPointResponse> pca2d() {
+        List<PcaPointResponse> local = cachedPca;
+        if (local != null) return local;
+        synchronized (this) {
+            if (cachedPca == null) cachedPca = loadPca();
+            return cachedPca;
+        }
+    }
+
+    public synchronized void invalidatePca() {
+        cachedPca = null;
+    }
+
+    private List<PcaPointResponse> loadPca() {
+        File f = new File(pcaJsonPath);
+        if (!f.exists()) {
+            throw new BusinessException("REPORT_NOT_GENERATED", HttpStatus.SERVICE_UNAVAILABLE,
+                    "PCA-2D file missing at " + pcaJsonPath + ". Run Phase 6 to generate.");
+        }
+        try {
+            JsonNode root = mapper.readTree(f);
+            JsonNode points = root.get("points");
+            if (points == null || !points.isArray()) {
+                throw new BusinessException("REPORT_NOT_GENERATED", HttpStatus.SERVICE_UNAVAILABLE,
+                        "PCA file " + pcaJsonPath + " has no 'points' array");
+            }
+            List<PcaPointResponse> out = new ArrayList<>(points.size());
+            for (JsonNode p : points) {
+                out.add(new PcaPointResponse(
+                        p.get("clientNum").asLong(),
+                        p.get("clusterId").asInt(),
+                        p.get("x").asDouble(),
+                        p.get("y").asDouble()));
+            }
+            log.info("EDA pca-2d loaded: {} points from {}", out.size(), pcaJsonPath);
+            return out;
+        } catch (BusinessException be) {
+            throw be;
+        } catch (Exception ex) {
+            log.error("Failed to load PCA-2D file", ex);
+            throw new BusinessException("REPORT_NOT_GENERATED", HttpStatus.SERVICE_UNAVAILABLE,
+                    "Failed to read PCA file: " + ex.getMessage());
+        }
+    }
 
     // -------------------- distribution --------------------
 

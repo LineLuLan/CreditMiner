@@ -7,7 +7,7 @@
 
 ## 0. Implementation Status
 
-> **Last updated**: 2026-05-09 (Phase 8 seed RUN against Neon — 10127 customers + 3 clusters + 50 rules + 5 refreshed insights live; anomaly threshold tuned to blueprint 3-5%; `/api/predict` cluster lookup fixed).
+> **Last updated**: 2026-05-09 — Phase 8 seed live on Neon (10127/3/50/5), anomaly tuned to 3.45%, `/api/predict` cluster lookup fixed, `/api/eda/pca-2d` endpoint added, PredictRequest accepts the 2 quarterly-change ratios, JUnit smoke suite green (12 tests).
 > Granular per-task status lives in `docs/BE_Tracker.md`. This section is the cross-team summary.
 
 ### Phases
@@ -39,15 +39,15 @@
 | `POST /api/predict` | ✅ Live — returns churnProb, label, riskScore, cluster (0/1/2), clusterName, topFeatures, persona-aware recommendation, modelUsed | (live) |
 | `GET /api/eda/distribution\|correlation\|churn-by` | ✅ Live | (already real) — see §3.2 / §3.3 / §3.4 |
 | `GET /api/eda/describe` | ✅ Live | (already real) — see §3.13 |
+| `GET /api/eda/pca-2d` | ✅ Live — 10127 points × `{clientNum, clusterId, x, y}` from `phase6_pca_2d.json` (cached after first call) | new 2026-05-09 |
 
 ### Error envelope status
 
-Working today (verified by smoke test on `3ac1d37`):
+Working today (verified by smoke test on `3ac1d37` + JUnit on 2026-05-09):
 - 400 `VALIDATION_ERROR` for malformed JSON, bean-validation failures, type mismatches, constraint violations
 - 404 `NOT_FOUND` for unknown routes (`NoResourceFoundException`)
+- 405 `METHOD_NOT_ALLOWED` for wrong HTTP verbs (handled in `GlobalExceptionHandler.handleMethodNotSupported`)
 - 500 `INTERNAL_ERROR` fallback
-
-Caveat: `405 Method Not Allowed` still uses Spring's default `{timestamp,status,error,path}` shape, not our envelope. FE only sends GET/POST so low-impact. Tracked in BE-05.
 
 ### Database
 
@@ -73,11 +73,13 @@ mvn -q -Dmaven.test.skip=true spring-boot:run
 Note: `pom.xml` `exec-maven-plugin` `<classpathScope>` is now `runtime` (was `compile`) so postgresql JDBC driver loads. `-Dmaven.test.skip=true` is required because `src/test/java/com/creditminer/service/ClassificationServiceTest.java` uses an outdated 2-arg constructor (real signature is now 5-arg post-Phase-8) — fix the test or delete it before turning tests back on.
 
 **Outstanding follow-ups (none block FE):**
-1. PCA-2D HTTP endpoint (`/api/eda/pca-2d`) — JSON file ready at `data/processed/phase6_pca_2d.json`, just needs a controller method.
-2. `PredictRequest` DTO is missing `Total_Amt_Chng_Q4_Q1` / `Total_Ct_Chng_Q4_Q1` fields — defaulted to 1.0 at predict time. FE form should add them and BE DTO needs the matching fields.
-3. `405 Method Not Allowed` still returns Spring's default error shape (BE-05 caveat).
-4. JUnit tests (BE-T1..T6) all BACKLOG.
-5. Stale test file `src/test/java/com/creditminer/service/ClassificationServiceTest.java` references the old 2-arg constructor — fix or delete before running tests; currently bypassed via `-Dmaven.test.skip=true`.
+1. ~~PCA-2D HTTP endpoint~~ → DONE 2026-05-09 (`GET /api/eda/pca-2d`).
+2. ~~`PredictRequest` extra Q4/Q1 fields~~ → DONE 2026-05-09 (optional, default 1.0 retained for old clients).
+3. ~~`405 Method Not Allowed` envelope~~ → already handled in `GlobalExceptionHandler.handleMethodNotSupported`; old caveat was stale.
+4. ~~Stale `ClassificationServiceTest`~~ → DONE 2026-05-09; full suite (12 tests) green via `mvn test`.
+5. JUnit coverage: smoke tests live for Preprocessor / FeatureEngineer / ClusteringService / ClassificationService cold-start paths. Deeper coverage (BE-T2..T6 plus end-to-end against a real model) remains BACKLOG.
+6. Postman/Bruno collection (BE-T5): not started — Swagger UI at `/swagger-ui.html` covers manual checks for now.
+7. Load testing `/predict` (BE-T6): not started.
 
 **When user says "start Phase 9" or anything past Phase 8** — there is no Phase 9 in scope. The 8-phase CRISP-DM pipeline is complete and live. Likely next moves: build FE (FE-01..FE-83 in `docs/FE_Tracker.md`), or address one of the 5 follow-ups above.
 
@@ -312,6 +314,8 @@ Single-customer churn prediction. **The most demo-critical endpoint.**
   "creditLimit": 12500,
   "totalRevolvingBal": 800,
   "totalTransAmt": 4500,
+  "totalAmtChngQ4Q1": 0.7,
+  "totalCtChngQ4Q1": 0.6,
   "totalTransCt": 45,
   "avgUtilizationRatio": 0.064
 }
@@ -448,6 +452,8 @@ interface PredictRequest {
   totalTransAmt: number;          // >= 0
   totalTransCt: number;           // int >= 0
   avgUtilizationRatio: number;    // 0..1
+  totalAmtChngQ4Q1?: number;      // >= 0, optional — Q4/Q1 amount ratio (default 1.0 if omitted)
+  totalCtChngQ4Q1?: number;       // >= 0, optional — Q4/Q1 count ratio (default 1.0 if omitted)
 }
 
 // ---- PredictResponse ----
