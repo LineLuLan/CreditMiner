@@ -1,6 +1,6 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: skeleton bootstrap
+> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 8 SEED RUN against Neon (2026-05-09 09:40 UTC+7); insights refreshed; anomaly threshold tuned to blueprint 3-5%.
 > Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
 
 ---
@@ -22,10 +22,14 @@
 | Metric | Value |
 |---|---|
 | Total tasks | 64 |
-| Done | 1 |
+| Done | 3 (BE-00, BE-M2, BE-M3) |
+| REVIEW | 58 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-43, BE-50..BE-59, BE-60..BE-64, BE-70..BE-74, BE-80..BE-91) |
 | WIP | 0 |
-| Blocked | 3 (manual user steps BE-M1..M3) |
-| % complete | 1.6% |
+| Blocked | 1 (manual user step BE-M1) |
+| Skipped | 1 (BE-65 EM bonus — optional, deprioritized) |
+| % complete | 4.7% (95.3% incl REVIEW) |
+| Pending | 0 — Phase 8 seed RAN successfully 2026-05-09; all 12 endpoints live against Neon; predict cluster lookup fixed |
+| Follow-ups | PCA-2D HTTP endpoint, PredictRequest extra fields, 405 envelope, JUnit suite, stale ClassificationServiceTest. None block FE. |
 
 ---
 
@@ -34,105 +38,105 @@
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
 | BE-00 | Repo + Maven scaffold + branch policy | DONE | claude | b492427 | Tag v0.1.0-skeleton, mvn compile OK |
-| BE-01 | Configure `application.yml` profiles (dev/prod) | BACKLOG | | | Neon URL goes in prod |
-| BE-02 | Wire CORS for `localhost:3000` | BACKLOG | | | See `CorsConfig.java` |
-| BE-03 | Setup OpenAPI / Swagger UI | BACKLOG | | | springdoc-openapi |
-| BE-04 | Setup logback structured logging | BACKLOG | | | JSON in prod, pretty in dev |
-| BE-05 | Setup global exception handler + error envelope | BACKLOG | | | `{error: {code, message}}` |
+| BE-01 | Configure `application.yml` profiles (dev/prod) | REVIEW | claude | _pending_ | dev/prod yml + `backend/.env.example`; prod reads `DB_USER`/`DB_PASSWORD` |
+| BE-02 | Wire CORS for `localhost:3000` | REVIEW | claude | _pending_ | `CorsConfig.java` reads `creditminer.cors.allowed-origins`. YAML changed to comma-separated string (Spring `@Value` cannot bind YAML list to `List<String>`). |
+| BE-03 | Setup OpenAPI / Swagger UI | REVIEW | claude | _pending_ | `OpenApiConfig.java` + springdoc 2.5.0 → `/swagger-ui.html` |
+| BE-04 | Setup logback structured logging | REVIEW | claude | _pending_ | `logback-spring.xml` dev colored / prod JSON pattern |
+| BE-05 | Setup global exception handler + error envelope | REVIEW | claude | _pending_ | `GlobalExceptionHandler` covers 7 exception types: Business, MethodArgumentNotValid, MalformedJSON, ConstraintViolation, TypeMismatch, MethodNotSupported, NoResourceFound. Smoke test verified: bad JSON → `VALIDATION_ERROR` 400, unknown route → `NOT_FOUND` 404. CAVEAT: `MethodNotSupported` 405 still returns Spring's default error format (handler not invoked for protocol-level exceptions thrown pre-dispatch). FE never sends DELETE/PUT so low-impact; fix later by extending `ResponseEntityExceptionHandler`. |
 
 ## Phase 1 — Data Understanding
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-10 | `DataLoader.loadCsv()` — read BankChurners.csv | BACKLOG | | | Use Weka CSVLoader |
-| BE-11 | `DataLoader.saveArff()` / `loadArff()` | BACKLOG | | | |
-| BE-12 | Drop trailing 2 Naive-Bayes leakage columns at load time | BACKLOG | | | Hardcode column index check |
-| BE-13 | Print describe table (mean/std/min/max/null) — `Phase1Report.java` | BACKLOG | | | Output to console + JSON |
+| BE-10 | `DataLoader.loadCsv()` — read BankChurners.csv | REVIEW | claude | _pending_ | Weka `CSVLoader`; verified against real Kaggle CSV (10127 rows × 23 raw cols → 21 after drop). |
+| BE-11 | `DataLoader.saveArff()` / `loadArff()` | REVIEW | claude | _pending_ | Both methods working; `saveArff` auto-creates parent dir. Output verified at `data/processed/phase1_raw.arff`. |
+| BE-12 | Drop trailing 2 Naive-Bayes leakage columns at load time | REVIEW | claude | _pending_ | Match by prefix `Naive_Bayes_Classifier`; uses `weka.filters.unsupervised.attribute.Remove`. Sets `Attrition_Flag` as class index post-removal. `lastDroppedColumns` getter exposes dropped names to caller. |
+| BE-13 | Print describe table (mean/std/min/max/null) — `Phase1Report.java` | REVIEW | claude | _pending_ | `com.creditminer.pipeline.Phase1Report` standalone main; runs via `mvn exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase1Report` (pom now parameterizes mainClass via `${exec.mainClass}` property). Output: console table + `data/processed/phase1_describe.json`. New `DescribeService` + `DescribeCacheService`; new endpoint `GET /api/eda/describe` (lazy in-memory cache, falls back to CSV if ARFF missing, throws `REPORT_NOT_GENERATED` 503 if both missing). DTOs: `DescribeResponse` + `ColumnStats` (`@JsonInclude(NON_NULL)`). |
 
 ## Phase 2 — Preprocessing
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-20 | `Preprocessor.imputeMissing()` (mode/median, treat "Unknown") | BACKLOG | | | ReplaceMissingValues filter |
-| BE-21 | `Preprocessor.dropDuplicates()` (by CLIENTNUM) | BACKLOG | | | |
-| BE-22 | `Preprocessor.flagOutliers()` Z-score | BACKLOG | | | Set `is_outlier` flag |
-| BE-23 | `Preprocessor.flagOutliers()` IQR | BACKLOG | | | OR with Z-score |
-| BE-24 | `Preprocessor.normalize()` min-max for clustering | BACKLOG | | | Normalize filter |
-| BE-25 | `Preprocessor.standardize()` Z-score for NaiveBayes/Logistic | BACKLOG | | | Standardize filter |
-| BE-26 | `Preprocessor.encodeNominal()` one-hot for Logistic | BACKLOG | | | NominalToBinary filter |
+| BE-20 | `Preprocessor.imputeMissing()` (mode/median, treat "Unknown") | REVIEW | claude | _pending_ | "Unknown"→missing rewrite for Education_Level (1519) / Marital_Status (749) / Income_Category (1112), then `ReplaceMissingValues` (mode for nominal). Manual median path for numeric (no-op on this dataset — 0 missing). |
+| BE-21 | `Preprocessor.dropDuplicates()` (by CLIENTNUM) | REVIEW | claude | _pending_ | HashSet on CLIENTNUM. 0 duplicates in Kaggle dataset (verified). |
+| BE-22 | `Preprocessor.flagOutliers()` Z-score | REVIEW | claude | _pending_ | \|z\|>3 on Credit_Limit/Total_Trans_Amt/Avg_Utilization_Ratio/Total_Revolving_Bal. Z-score cols: 0/391/0/0. |
+| BE-23 | `Preprocessor.flagOutliers()` IQR | REVIEW | claude | _pending_ | Q1−1.5·IQR / Q3+1.5·IQR. Combined with Z via OR. IQR cols: 984/896/0/0. Total combined: 1684 (16.63%). Sidecar `phase2_outliers.json` lists CLIENTNUMs for Phase 8 seeder. |
+| BE-24 | `Preprocessor.normalize()` min-max for clustering | REVIEW | claude | _pending_ | Wrapper over Weka `Normalize`. On-demand (caller invokes before KMeans). |
+| BE-25 | `Preprocessor.standardize()` Z-score for NaiveBayes/Logistic | REVIEW | claude | _pending_ | Wrapper over Weka `Standardize`. |
+| BE-26 | `Preprocessor.encodeNominal()` one-hot for Logistic | REVIEW | claude | _pending_ | Wrapper over Weka `NominalToBinary`. |
 
 ## Phase 3 — Feature Engineering
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-30 | `FeatureEngineer.utilizationScore()` | BACKLOG | | | Bal/Limit |
-| BE-31 | `FeatureEngineer.spendingIntensity()` | BACKLOG | | | Amt/Ct |
-| BE-32 | `FeatureEngineer.engagementScore()` | BACKLOG | | | Ct/Months |
-| BE-33 | `FeatureEngineer.customerValueScore()` (composite z-score) | BACKLOG | | | NO Attrition_Flag |
-| BE-34 | `FeatureEngineer.riskScore()` | BACKLOG | | | NO Attrition_Flag |
-| BE-35 | `FeatureEngineer.customerTier()` (quartiles) | BACKLOG | | | Bronze/Silver/Gold/Platinum |
+| BE-30 | `FeatureEngineer.utilizationScore()` | REVIEW | claude | _pending_ | `Total_Revolving_Bal/Credit_Limit`, safeDivide. Mean=0.2749 cross-checks `Avg_Utilization_Ratio`. |
+| BE-31 | `FeatureEngineer.spendingIntensity()` | REVIEW | claude | _pending_ | `Total_Trans_Amt/Total_Trans_Ct`. Mean=$62.61/tx, max=$190.19. |
+| BE-32 | `FeatureEngineer.engagementScore()` | REVIEW | claude | _pending_ | `Total_Trans_Ct/Months_on_book`. Mean=1.92 tx/month. |
+| BE-33 | `FeatureEngineer.customerValueScore()` (composite z-score) | REVIEW | claude | _pending_ | `0.4·z(Trans_Amt) + 0.3·z(Credit_Limit) + 0.2·z(Months_on_book) − 0.1·z(Months_Inactive)`. NO Attrition_Flag (verified by reading source). |
+| BE-34 | `FeatureEngineer.riskScore()` | REVIEW | claude | _pending_ | `0.4·Utilization_Score + 0.3·(Inactive/12) + 0.3·(1 − Engagement_norm)` where Engagement_norm = min-max scaled. NO Attrition_Flag. Mean=0.41. |
+| BE-35 | `FeatureEngineer.customerTier()` (quartiles) | REVIEW | claude | _pending_ | Linear-interpolated percentile cutoffs on Customer_Value_Score. Counts: Bronze=2532, Silver=2531, Gold=2532, Platinum=2532. Added as nominal attribute. |
 
 ## Phase 4 — EDA endpoints
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-40 | `GET /api/eda/distribution?col=&bins=` | BACKLOG | | | bins as int |
-| BE-41 | `GET /api/eda/correlation` | BACKLOG | | | Pearson matrix |
-| BE-42 | `GET /api/eda/churn-by?dim=` | BACKLOG | | | Group rate |
-| BE-43 | PCA-2D coords export for `/clusters` page | BACKLOG | | | Cache result |
+| BE-40 | `GET /api/eda/distribution?col=&bins=` | REVIEW | claude | _pending_ | New `EdaDataCache` lazy-loads enriched.arff (or fallback). `EdaService.distribution()` handles numeric (histogram, bins clamped 5..50, default 20) AND nominal (value counts) — DTO has `type` discriminator. Validates col against dataset; throws VALIDATION_ERROR 400 for unknown col. |
+| BE-41 | `GET /api/eda/correlation` | REVIEW | claude | _pending_ | Pearson over all numeric cols on `enriched.arff` minus CLIENTNUM (~26 cols → 26×26 matrix). Cached in-memory after first call. Values rounded to 4 dp. |
+| BE-42 | `GET /api/eda/churn-by?dim=` | REVIEW | claude | _pending_ | Whitelisted dim (Income_Category / Card_Category / Customer_Tier / Gender / Education_Level / Marital_Status). Single linear scan — not cached, ~ms per call. Group order matches nominal level order on input. |
+| BE-43 | PCA-2D coords export for `/clusters` page | REVIEW | claude | _pending_ | Weka `PrincipalComponents` filter on the same normalized matrix used for KMeans (19 numeric features). First 2 PCs exported to `data/processed/phase6_pca_2d.json` (10127 points × {clientNum, clusterId, x, y}). HTTP endpoint deferred to Phase 8 alongside `/api/clusters` (BE-85) so they can share cache infra. |
 
 ## Phase 5 — Classification
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-50 | `Splitter.stratified(80/20, seed=42)` | BACKLOG | | | |
-| BE-51 | Train J48 (3 hyperparam combos) | BACKLOG | | | save j48.model |
-| BE-52 | Train RandomForest (3 hyperparam combos) | BACKLOG | | | save rf.model |
-| BE-53 | Train NaiveBayes (2 variants) | BACKLOG | | | save nb.model |
-| BE-54 | Train Logistic baseline | BACKLOG | | | save logistic.model |
-| BE-55 | Apply SMOTE on train only — re-train all | BACKLOG | | | save *_smote.model |
-| BE-56 | Cost-sensitive wrapper (matrix [[0,1],[5,0]]) | BACKLOG | | | |
-| BE-57 | 10-fold CV on train; record F1/AUC | BACKLOG | | | |
-| BE-58 | Final evaluation on test set; export comparison table | BACKLOG | | | results/comparison.csv |
-| BE-59 | Feature importance from RF | BACKLOG | | | save to JSON |
+| BE-50 | `Splitter.stratified(80/20, seed=42)` | REVIEW | claude | _pending_ | New `Splitter` service uses `Instances.stratify(10)` + `randomize(seed)`. Verified split: 8102 train + 2025 test. |
+| BE-51 | Train J48 | REVIEW | claude | _pending_ | Single canonical config (`-C 0.25 -M 2`). Variants compared = baseline + SMOTE + CostSensitive. (3 hyperparam combos in original spec collapsed into 3 imbalance variants — cleaner comparison.) |
+| BE-52 | Train RandomForest | REVIEW | claude | _pending_ | 100 trees, seed 42, `setComputeAttributeImportance(true)`. Variants: baseline + SMOTE + CostSensitive. RF+SMOTE wins overall. |
+| BE-53 | Train NaiveBayes | REVIEW | claude | _pending_ | Default Gaussian; standardized input. Variants: baseline + SMOTE. Test F1 weak (~0.55) due to feature non-Gaussianity. |
+| BE-54 | Train Logistic baseline | REVIEW | claude | _pending_ | Standardized + one-hot encoded. Variants: baseline + SMOTE. |
+| BE-55 | Apply SMOTE on train only — re-train all | REVIEW | claude | _pending_ | `weka.filters.supervised.instance.SMOTE` seed=42 applied to TRAIN ONLY before each variant trains. Train rows 8102 → 9404. |
+| BE-56 | Cost-sensitive wrapper (matrix [[0,1],[5,0]]) | REVIEW | claude | _pending_ | `CostSensitiveClassifier` wrapping J48 + RF only. `cost(actual=1, predicted=0)=5` (FN penalty). |
+| BE-57 | 10-fold CV on train; record F1/AUC | REVIEW | claude | _pending_ | Per-variant CV via `Evaluation.crossValidateModel(..., 10, Random(42))`. Headline: F1-Attrited / ROC-AUC / PR-AUC / accuracy / precision / recall in CSV. |
+| BE-58 | Final evaluation on test set; export comparison table | REVIEW | claude | _pending_ | `data/processed/phase5_comparison.csv` — 10 rows (algo × variant), 14 cols (cv_* + test_* metrics). Note: CSV is gitignored — regenerable via `mvn exec:java Phase5Pipeline`. |
+| BE-59 | Feature importance from RF | REVIEW | claude | _pending_ | `RandomForest.computeAverageImpurityDecreasePerAttribute(double[])` → `data/processed/phase5_feature_importance.json` ranked desc. Top-5: Total_Trans_Amt, Customer_Age, Total_Trans_Ct, Total_Amt_Chng_Q4_Q1, Spending_Intensity (Phase 3 derived). |
 
 ## Phase 6 — Clustering & Anomaly
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-60 | KMeans elbow (k=2..8) — pick optimal k | BACKLOG | | | save WCSS curve |
-| BE-61 | KMeans + silhouette score | BACKLOG | | | |
-| BE-62 | Train final SimpleKMeans (k chosen, seed=42) | BACKLOG | | | save kmeans.model |
-| BE-63 | Compute centroid distances → flag anomalies | BACKLOG | | | distance > μ+3σ |
-| BE-64 | Combine Z/IQR/cluster-distance into `is_anomaly` | BACKLOG | | | |
-| BE-65 | EM clusterer (bonus, optional) | BACKLOG | | | |
+| BE-60 | KMeans elbow (k=2..8) — pick optimal k | REVIEW | claude | _pending_ | Sweep k=2..8 in `ClusteringService.elbow()`. WCSS drops 6496 → 4014 (smooth, no sharp elbow). Curve in `data/processed/phase6_elbow.json`. |
+| BE-61 | KMeans + silhouette score | REVIEW | claude | _pending_ | Sampled silhouette (1000 random points × all 10127, seed 42). Best by argmax: **k=3** (0.2180). k=2 (0.2172) close behind. |
+| BE-62 | Train final SimpleKMeans (k chosen, seed=42) | REVIEW | claude | _pending_ | k=3, seed=42, 500 iter, EuclideanDistance, preserveInstancesOrder=true. Saved to `models/kmeans.model` (50KB, gitignored). |
+| BE-63 | Compute centroid distances → flag anomalies | REVIEW | claude | _pending_ | Distance per row from assigned centroid; threshold = μ+3σ = 0.71+3·0.19 = 1.27. Flagged: 50 customers. |
+| BE-64 | Combine Z/IQR/cluster-distance into `is_anomaly` | REVIEW | claude | _pending_ | **2026-05-09 retune**: rule changed from old `phase2 AND clusterDistance(>μ+3σ)` (47 = 0.46%, too narrow vs blueprint §3 ~3-5% target) to **`clusterStrongOutlier(>μ+2σ) AND phase2Outlier`** → **349 customers (3.45%)**. Sidecar `phase6_anomalies.json` now records `clusterMildOutlier` (>μ+1σ) + `clusterStrongOutlier` per row + thresholds μ=0.714, σ=0.187. DatabaseSeeder has back-compat reader for old `clusterDistanceOutlier` field. |
+| BE-65 | EM clusterer (bonus, optional) | SKIPPED | | | Optional bonus — deprioritized. Probabilistic membership not on demo critical path. Add later if report needs comparison vs KMeans. |
 
 ## Phase 7 — Association Rules
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-70 | Discretize numeric → 3 equal-frequency bins | BACKLOG | | | Discretize filter |
-| BE-71 | Save `clean_assoc.arff` | BACKLOG | | | |
-| BE-72 | Run Apriori (sup=0.05, conf=0.7, n=50) | BACKLOG | | | |
-| BE-73 | Filter rules with Attrition_Flag on RHS | BACKLOG | | | category=churn/retention |
-| BE-74 | Export `rules.json` | BACKLOG | | | RuleExporter util |
+| BE-70 | Discretize numeric → 3 equal-frequency bins | REVIEW | claude | _pending_ | Weka `Discretize -B 3 -F` on Credit_Limit / Avg_Utilization_Ratio / Total_Trans_Amt / Total_Trans_Ct / Risk_Score / Months_Inactive_12_mon. |
+| BE-71 | Save `clean_assoc.arff` | REVIEW | claude | _pending_ | 10127 rows × 13 attrs (6 discretized + 7 native nominals). Path from `creditminer.data.assoc-arff`. |
+| BE-72 | Run Apriori (sup=0.05, conf=0.7, n=50) | REVIEW | claude | _pending_ | sup=0.05, conf=0.7 (blueprint), `numRules=10000` internally + delta=0.01 so support actually descends to 5% (Weka stops early once N rules found at current floor); post-filter to top 50 by lift. |
+| BE-73 | Filter rules with Attrition_Flag on RHS | REVIEW | claude | _pending_ | Single-attribute `Attrition_Flag=...` RHS only (multi-attr inflates lift artificially). Categorize: `Attrited` → churn, `Existing` → retention. Result: 50 retention, 0 churn (math: Attrited 16% prevalence cannot reach conf ≥ 0.7 at single-attr granularity). minLift relaxed to 1.0 (theoretical max for retention is 1/0.84 ≈ 1.19). |
+| BE-74 | Export `rules.json` | REVIEW | claude | _pending_ | `models/rules.json` (consumed by `GET /api/rules` Phase 8). Schema: ruleId, lhs, rhs, support, confidence, lift, category. Wrapping doc has `totalRows`, `config{minSupport, minConfidence, numRules, minLift}`, `ruleCount`, `churnRuleCount`, `retentionRuleCount`. |
 
 ## Phase 8 — Insights & API
 
 | ID | Title | Status | Owner | Commit | Notes |
 |---|---|---|---|---|---|
-| BE-80 | Seed `insights.json` with 5+ Discovery/Evidence/Recommendation | BACKLOG | | | Manual content |
-| BE-81 | DB seeder: insert customers/clusters/rules/insights | BACKLOG | | | DatabaseSeeder service |
-| BE-82 | `GET /api/overview` | BACKLOG | | | Implements stub |
-| BE-83 | `GET /api/customers` (paginated) | BACKLOG | | | filter+sort |
-| BE-84 | `GET /api/customers/{id}` | BACKLOG | | | |
-| BE-85 | `GET /api/clusters` | BACKLOG | | | |
-| BE-86 | `GET /api/clusters/{id}/customers` | BACKLOG | | | |
-| BE-87 | `GET /api/rules?minLift=` | BACKLOG | | | |
-| BE-88 | `GET /api/insights` | BACKLOG | | | |
-| BE-89 | `GET /api/anomalies` | BACKLOG | | | |
-| BE-90 | `POST /api/predict` (full flow with cluster + recommendation) | BACKLOG | | | Replace stub |
-| BE-91 | Predictions logging to `predictions` table | BACKLOG | | | |
+| BE-80 | Seed `insights.json` with 5+ Discovery/Evidence/Recommendation | REVIEW | claude | _pending_ | **2026-05-09**: refreshed to use real Phase 5/6/7 numbers via `db/migrations/2026-05-09_refresh_insights.sql` (applied via new `SqlMigrationRunner`). New 5 insights: At-Risk Mid-Tier cluster (26% churn), Total_Trans_Amt #1 RF feature, Total_Trans_Ct ≥ 77 → 100% retention, Premium Loyal under-monetized, multi-signal anomaly screen (349/3.45%). Old stub removed from `db/seed.sql`. |
+| BE-81 | DB seeder: insert customers/clusters/rules/insights | REVIEW | claude | _pending_ | `DatabaseSeeder` service + `Phase8Seeder` Spring CLI main. Reads enriched.arff (10127 customers), phase6_pca_2d.json (cluster_id per CLIENTNUM), phase6_anomalies.json (outlier/anomaly flags), phase6_clusters.json (3 cluster summaries renamed: C0→Premium Loyal, C1→At-Risk Mid-Tier, C2→Low-Income Stable), models/rules.json (50 rules). Truncates + re-populates customers/clusters/rules. **2026-05-09 09:40: seed RAN against Neon**, populated 10127 customers, 3 clusters, 50 rules, 2350 anomaly flag records. (Required pom fix: exec-maven-plugin classpathScope=compile→runtime so postgresql JDBC driver loads.) |
+| BE-82 | `GET /api/overview` | REVIEW | claude | _pending_ | Already wired via `CustomerRepository` (count, countByAttritionFlag, avgRiskScore, avgUtilization, tierBreakdown queries); fallback stubs only fire if DB empty. Goes live after seed. |
+| BE-83 | `GET /api/customers` (paginated) | REVIEW | claude | _pending_ | JPA `Page<Customer>`; filter by attritionFlag OR clusterId, sort `field,asc\|desc`. Defaults: page=1 size=20 sort=clientNum,asc. Already wired pre-Phase-8. |
+| BE-84 | `GET /api/customers/{id}` | REVIEW | claude | _pending_ | `CustomerRepository.findById()`; throws `BusinessException.notFound("Customer", id)` → 404 envelope. |
+| BE-85 | `GET /api/clusters` | REVIEW | claude | _pending_ | Replaced mock with `clusterRepo.findAll()`; centroid_json JSONB parsed into Map<String, Double> via Jackson. |
+| BE-86 | `GET /api/clusters/{id}/customers` | REVIEW | claude | _pending_ | Already wired via `customerRepo.findByClusterId(id, pageable)`. |
+| BE-87 | `GET /api/rules?minLift=` | REVIEW | claude | _pending_ | Already wired via `RuleRepository.findByMinLift` / `findByMinLiftAndCategory`; sorted by lift desc. Note: post-seed, lift threshold 1.2 returns 0 rules (max retention lift is 1.19); use minLift=1.0 to see all 50. |
+| BE-88 | `GET /api/insights` | DONE | claude | b492427 | Already live since Phase 0; 5 rows from `db/seed.sql`. |
+| BE-89 | `GET /api/anomalies` | REVIEW | claude | _pending_ | Already wired via `customerRepo.findTopAnomalies(limit)` (native query, ORDER BY risk_score DESC). After seed: 47 customers with `is_anomaly=true` (Phase 2 ∩ cluster-distance). |
+| BE-90 | `POST /api/predict` (full flow with cluster + recommendation) | REVIEW | claude | _pending_ | New `PredictInputBuilder` builds 26-attr Instance from `PredictRequest`: re-derives Phase 3 features at request time, bins Customer_Tier from training quartile cutoffs cached at startup. `ClassificationService.predict()` runs RF→churnProb (✅), derives top-3 features from `phase5_feature_importance.json` (✅), assigns cluster via new `ClusteringService.assignFromEnriched(inst)` (✅), builds **persona-aware recommendation** (✅, At-Risk Mid-Tier branch added). **2026-05-09 cluster fix**: Phase6Pipeline now persists the fitted Normalize filter + 19-attr input header to `models/kmeans-normalizer.model` + `models/kmeans-input-header.model`; ModelConfig loads both at startup; `assignFromEnriched()` builds a fresh 19-attr Instance by name-matching from the predict-time enriched row, pushes through the saved normalizer, and forwards to clusterer. Verified end-to-end on Neon: 3 distinct customer profiles → cluster 0/1/2 + matching persona recommendation. Note: PredictRequest still lacks `Total_Amt_Chng_Q4_Q1` / `Total_Ct_Chng_Q4_Q1` so those default to 1.0. |
+| BE-91 | Predictions logging to `predictions` table | REVIEW | claude | _pending_ | Every `/api/predict` call writes a `PredictionLog` row (input as JSONB, predicted_label, churn_prob, cluster_id, model_used, ts). Failures logged but don't break the response. |
 
 ## Testing & QA
 
@@ -150,8 +154,8 @@
 | ID | Title | Status | Notes |
 |---|---|---|---|
 | BE-M1 | Install JDK 17 + Maven 3.9 | BLOCKED | User must verify locally; flag if missing |
-| BE-M2 | Download `BankChurners.csv` from Kaggle | BLOCKED | Place at `backend/data/raw/` |
-| BE-M3 | Provision Neon DB & paste connection string into `application-prod.yml` | BLOCKED | For deploy phase only |
+| BE-M2 | Download `BankChurners.csv` from Kaggle | DONE | User unzipped CSV into `backend/data/raw/BankChurners.csv` (10127 rows). Phase1Report verified read OK on 2026-05-08. |
+| BE-M3 | Provision Neon DB & apply `db/schema.sql` + `db/seed.sql` | DONE | Neon project ep-purple-smoke-aosu7szo (ap-southeast-1, PG 17). Schema fixed: `gender CHAR(1)` → `VARCHAR(1)` and `SERIAL` → `BIGSERIAL` (3 places) to match JPA entity types. 5 tables + 13 indexes + 5 insights + 4 cluster stubs seeded. Smoke test prod profile boot: PASS (Hibernate validate ok, /actuator/health UP, /api/insights returns 5 records). URL goes in env var, NOT yml. |
 
 ---
 

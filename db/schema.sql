@@ -19,7 +19,7 @@ CREATE TABLE customers (
 
   -- Demographics
   customer_age              INT,
-  gender                    CHAR(1),
+  gender                    VARCHAR(1),
   dependent_count           INT,
   education_level           VARCHAR(30),
   marital_status            VARCHAR(20),
@@ -81,7 +81,7 @@ CREATE TABLE clusters (
 -- ASSOCIATION RULES — pre-computed (Apriori output)
 -- =====================================================
 CREATE TABLE rules (
-  rule_id        SERIAL PRIMARY KEY,
+  rule_id        BIGSERIAL PRIMARY KEY,
   lhs            TEXT,
   rhs            TEXT,
   support        NUMERIC(6,4),
@@ -97,7 +97,7 @@ CREATE INDEX idx_rules_category ON rules(category);
 -- INSIGHTS — hand-curated (Discovery / Evidence / Recommendation)
 -- =====================================================
 CREATE TABLE insights (
-  insight_id     SERIAL PRIMARY KEY,
+  insight_id     BIGSERIAL PRIMARY KEY,
   title          VARCHAR(200),
   discovery      TEXT,
   evidence       TEXT,
@@ -113,7 +113,7 @@ CREATE INDEX idx_insights_category ON insights(category);
 -- PREDICTIONS — log every prediction call
 -- =====================================================
 CREATE TABLE predictions (
-  prediction_id   SERIAL PRIMARY KEY,
+  prediction_id   BIGSERIAL PRIMARY KEY,
   ts              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   input_json      JSONB,
   predicted_label VARCHAR(20),

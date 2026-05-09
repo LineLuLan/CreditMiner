@@ -1,0 +1,53 @@
+{
+  "totalRowsIn" : 10127,
+  "totalRowsOut" : 10127,
+  "duplicatesDropped" : 0,
+  "unknownRewritten" : {
+    "Education_Level" : 1519,
+    "Marital_Status" : 749,
+    "Income_Category" : 1112
+  },
+  "numericMedianImputed" : { },
+  "outlierByColumn" : {
+    "Credit_Limit" : {
+      "zscoreCount" : 0,
+      "iqrCount" : 984,
+      "combinedCount" : 984,
+      "mean" : 8631.9537,
+      "std" : 9088.7767,
+      "q1" : 2555.0,
+      "q3" : 11067.5
+    },
+    "Total_Trans_Amt" : {
+      "zscoreCount" : 391,
+      "iqrCount" : 896,
+      "combinedCount" : 896,
+      "mean" : 4404.0863,
+      "std" : 3397.1293,
+      "q1" : 2155.5,
+      "q3" : 4741.0
+    },
+    "Avg_Utilization_Ratio" : {
+      "zscoreCount" : 0,
+      "iqrCount" : 0,
+      "combinedCount" : 0,
+      "mean" : 0.2749,
+      "std" : 0.2757,
+      "q1" : 0.023,
+      "q3" : 0.503
+    },
+    "Total_Revolving_Bal" : {
+      "zscoreCount" : 0,
+      "iqrCount" : 0,
+      "combinedCount" : 0,
+      "mean" : 1162.8141,
+      "std" : 814.9873,
+      "q1" : 359.0,
+      "q3" : 1784.0
+    }
+  },
+  "outlierTotalCombined" : 1684,
+  "outlierTotalCombinedPct" : 0.1663,
+  "outputArff" : "data/processed/clean.arff",
+  "generatedAt" : "2026-05-08T15:41:18.406887200Z"
+}
