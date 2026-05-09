@@ -1,6 +1,6 @@
 # Frontend Task Tracker
 
-> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: skeleton bootstrap
+> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-09 — 5 of 7 pages now live with real Neon data; build green; predict result UI + clusters page + customers table + EDA panels + rules table all wired.
 > Update this file in the **same commit** that closes a task. Sync `docs/` to `develop` → `backend` after.
 
 ---
@@ -22,10 +22,11 @@
 | Metric | Value |
 |---|---|
 | Total tasks | 56 |
-| Done | 1 |
-| WIP | 0 |
+| DONE | 1 (FE-00) |
+| REVIEW | 27 (FE-01..06 setup, FE-10..15 layout, FE-20..24 overview, FE-30..34 EDA, FE-40..45 customers, FE-50..52 clusters cards/table, FE-60..64 rules, FE-70..78 predict form+result, FE-80..83 insights) |
+| BACKLOG | 25 (FE-Q1..Q8 polish, FE-50 PCA scatter pending /api/eda/pca-2d endpoint, FE-53 cluster-customers drawer) |
 | Blocked | 3 (manual user steps FE-M1..M3) |
-| % complete | 1.8% |
+| % complete | ~50% live, 100% build-green; remaining is polish + 1 missing endpoint |
 
 ---
 
