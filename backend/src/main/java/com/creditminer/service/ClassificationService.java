@@ -162,9 +162,11 @@ public class ClassificationService {
             String clusterName = "Unknown";
             try {
                 if (modelConfig.getClusterer() != null) {
-                    clusterId = clusteringService.assign(inst);
-                    Cluster cluster = clusterRepo.findById(clusterId).orElse(null);
-                    clusterName = cluster == null ? ("Cluster " + clusterId) : cluster.getPersonaName();
+                    clusterId = clusteringService.assignFromEnriched(inst);
+                    if (clusterId >= 0) {
+                        Cluster cluster = clusterRepo.findById(clusterId).orElse(null);
+                        clusterName = cluster == null ? ("Cluster " + clusterId) : cluster.getPersonaName();
+                    }
                 }
             } catch (Exception clusterEx) {
                 log.warn("Cluster assignment failed: {}", clusterEx.getMessage());
@@ -254,6 +256,9 @@ public class ClassificationService {
         }
         if (churnProb >= 0.4) {
             return "Elevated churn risk — add to monitoring watchlist. Trigger an engagement campaign at next inactivity flag.";
+        }
+        if ("At-Risk Mid-Tier".equalsIgnoreCase(clusterName)) {
+            return "Sits in the highest-churn cluster (At-Risk Mid-Tier, 26% historical churn). Proactively offer a transaction-driving incentive (cashback bump or statement credit) and re-evaluate in 30 days.";
         }
         if ("Premium Loyal".equalsIgnoreCase(clusterName)) {
             return "Stable Premium Loyal customer — eligible for premium upsell and travel-rewards offer.";

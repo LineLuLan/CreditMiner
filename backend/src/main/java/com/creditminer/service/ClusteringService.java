@@ -7,9 +7,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import weka.clusterers.SimpleKMeans;
 import weka.core.Attribute;
+import weka.core.DenseInstance;
 import weka.core.EuclideanDistance;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.Utils;
+import weka.filters.Filter;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -77,6 +80,61 @@ public class ClusteringService {
     public int assign(Instance inst) throws Exception {
         if (modelConfig.getClusterer() == null) return -1;
         return modelConfig.getClusterer().clusterInstance(inst);
+    }
+
+    /**
+     * Predict-time cluster assignment from a full enriched instance (26 attrs).
+     *
+     * <p>The clusterer was trained on a 19-attr subset (numeric only, after dropping
+     * CLIENTNUM + Attrition_Flag + 7 nominals) that was min-max normalized. To assign
+     * a new point we must reproduce that pipeline:</p>
+     * <ol>
+     *   <li>Build a fresh 19-attr {@link Instance} matching the saved input header,
+     *       copying values from {@code enriched} by attribute name.</li>
+     *   <li>Push it through the persisted Normalize filter (so min/max bounds match
+     *       training).</li>
+     *   <li>Hand the normalized instance to the clusterer.</li>
+     * </ol>
+     *
+     * @return cluster id (0..k-1), or -1 if the normalizer/header/clusterer is missing
+     *     or any required attribute is absent from {@code enriched}.
+     */
+    public int assignFromEnriched(Instance enriched) throws Exception {
+        if (modelConfig.getClusterer() == null
+                || modelConfig.getClustererNormalizer() == null
+                || modelConfig.getClustererInputHeader() == null
+                || enriched.dataset() == null) {
+            return -1;
+        }
+
+        Instances headerTemplate = modelConfig.getClustererInputHeader();
+        Instances srcDataset = enriched.dataset();
+
+        Instances buf = new Instances(headerTemplate, 0);
+        double[] vals = new double[buf.numAttributes()];
+        for (int i = 0; i < buf.numAttributes(); i++) {
+            Attribute target = buf.attribute(i);
+            Attribute src = srcDataset.attribute(target.name());
+            if (src == null) {
+                log.warn("Predict-time enriched instance is missing required cluster feature '{}'", target.name());
+                vals[i] = Utils.missingValue();
+            } else {
+                vals[i] = enriched.value(src);
+            }
+        }
+        DenseInstance row = new DenseInstance(1.0, vals);
+        buf.add(row);
+        Instance attached = buf.instance(0);
+
+        Filter normalizer = modelConfig.getClustererNormalizer();
+        normalizer.input(attached);
+        normalizer.batchFinished();
+        Instance normalized = normalizer.output();
+        if (normalized == null) {
+            log.warn("Normalizer produced no output for predict-time row");
+            return -1;
+        }
+        return modelConfig.getClusterer().clusterInstance(normalized);
     }
 
     /**

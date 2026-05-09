@@ -56,6 +56,10 @@ public class Phase6Pipeline {
     private static final String DEFAULT_INPUT = "data/processed/enriched.arff";
     private static final String DEFAULT_PHASE2_OUTLIERS = "data/processed/phase2_outliers.json";
     private static final String MODEL_PATH = "models/kmeans.model";
+    /** Fitted Normalize filter — same min/max bounds the clusterer was trained on. */
+    private static final String NORMALIZER_PATH = "models/kmeans-normalizer.model";
+    /** Empty Instances header (19 attrs) describing the clusterer's input shape. */
+    private static final String INPUT_HEADER_PATH = "models/kmeans-input-header.model";
     private static final String CLUSTERS_JSON = "data/processed/phase6_clusters.json";
     private static final String ANOMALIES_JSON = "data/processed/phase6_anomalies.json";
     private static final String PCA_JSON = "data/processed/phase6_pca_2d.json";
@@ -83,11 +87,16 @@ public class Phase6Pipeline {
         log.info("Loaded {} rows × {} cols", raw.numInstances(), raw.numAttributes());
 
         // Build clustering input: drop nominals + CLIENTNUM, then min-max normalize.
+        // We fit the Normalize filter inline (instead of via Preprocessor.normalize)
+        // so we can persist the fitted filter for predict-time reuse — without it
+        // /api/predict can't normalize a single new row to match the trained centroids.
         Instances clusterIn = removeAttributes(raw, "CLIENTNUM");
         clusterIn = removeAttributesByName(clusterIn, NOMINAL_DROP);
         clusterIn.setClassIndex(-1);
-        Preprocessor pre = new Preprocessor();
-        Instances normalized = pre.normalize(clusterIn);
+        weka.filters.unsupervised.attribute.Normalize normalizer =
+                new weka.filters.unsupervised.attribute.Normalize();
+        normalizer.setInputFormat(clusterIn);
+        Instances normalized = Filter.useFilter(clusterIn, normalizer);
         log.info("Clustering matrix: {} rows × {} numeric features", normalized.numInstances(), normalized.numAttributes());
 
         ClusteringService cs = new ClusteringService(null);
@@ -101,7 +110,9 @@ public class Phase6Pipeline {
         SimpleKMeans finalModel = cs.train(normalized, bestK);
         new File(MODEL_PATH).getParentFile().mkdirs();
         SerializationHelper.write(MODEL_PATH, finalModel);
-        log.info("Saved {}", MODEL_PATH);
+        SerializationHelper.write(NORMALIZER_PATH, normalizer);
+        SerializationHelper.write(INPUT_HEADER_PATH, new Instances(clusterIn, 0));
+        log.info("Saved {} + {} + {}", MODEL_PATH, NORMALIZER_PATH, INPUT_HEADER_PATH);
 
         int[] assignments = finalModel.getAssignments();
 

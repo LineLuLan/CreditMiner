@@ -28,8 +28,8 @@
 | Blocked | 1 (manual user step BE-M1) |
 | Skipped | 1 (BE-65 EM bonus — optional, deprioritized) |
 | % complete | 4.7% (95.3% incl REVIEW) |
-| Pending | 0 — Phase 8 seed RAN successfully 2026-05-09; all 12 endpoints live against Neon |
-| Follow-ups | 1 known issue: `/api/predict` cluster lookup returns -1 (preprocessing mismatch). Other phase-pipeline output is correct. |
+| Pending | 0 — Phase 8 seed RAN successfully 2026-05-09; all 12 endpoints live against Neon; predict cluster lookup fixed |
+| Follow-ups | PCA-2D HTTP endpoint, PredictRequest extra fields, 405 envelope, JUnit suite, stale ClassificationServiceTest. None block FE. |
 
 ---
 
@@ -135,7 +135,7 @@
 | BE-87 | `GET /api/rules?minLift=` | REVIEW | claude | _pending_ | Already wired via `RuleRepository.findByMinLift` / `findByMinLiftAndCategory`; sorted by lift desc. Note: post-seed, lift threshold 1.2 returns 0 rules (max retention lift is 1.19); use minLift=1.0 to see all 50. |
 | BE-88 | `GET /api/insights` | DONE | claude | b492427 | Already live since Phase 0; 5 rows from `db/seed.sql`. |
 | BE-89 | `GET /api/anomalies` | REVIEW | claude | _pending_ | Already wired via `customerRepo.findTopAnomalies(limit)` (native query, ORDER BY risk_score DESC). After seed: 47 customers with `is_anomaly=true` (Phase 2 ∩ cluster-distance). |
-| BE-90 | `POST /api/predict` (full flow with cluster + recommendation) | REVIEW | claude | _pending_ | New `PredictInputBuilder` builds 26-attr Instance from `PredictRequest`: re-derives Phase 3 features at request time, bins Customer_Tier from training quartile cutoffs cached at startup. `ClassificationService.predict()` runs RF→churnProb (✅), derives top-3 features from `phase5_feature_importance.json` (✅), builds rule-based recommendation (✅). **Known issue**: KMeans cluster lookup throws "Src and Dest differ in # of attributes: 26 != 19" because `kmeans.model` was trained on the post-drop+normalize 19-feature matrix but predict feeds the full 26-attr enriched instance. Currently catches the error and returns `cluster=-1, clusterName="Unknown"`. Fix: apply `Phase6Pipeline.removeAttributesByName(NOMINAL_DROP)` + `Preprocessor.normalize()` inside ClusteringService.assign() before forwarding. Note: PredictRequest also lacks `Total_Amt_Chng_Q4_Q1` / `Total_Ct_Chng_Q4_Q1` so those default to 1.0. |
+| BE-90 | `POST /api/predict` (full flow with cluster + recommendation) | REVIEW | claude | _pending_ | New `PredictInputBuilder` builds 26-attr Instance from `PredictRequest`: re-derives Phase 3 features at request time, bins Customer_Tier from training quartile cutoffs cached at startup. `ClassificationService.predict()` runs RF→churnProb (✅), derives top-3 features from `phase5_feature_importance.json` (✅), assigns cluster via new `ClusteringService.assignFromEnriched(inst)` (✅), builds **persona-aware recommendation** (✅, At-Risk Mid-Tier branch added). **2026-05-09 cluster fix**: Phase6Pipeline now persists the fitted Normalize filter + 19-attr input header to `models/kmeans-normalizer.model` + `models/kmeans-input-header.model`; ModelConfig loads both at startup; `assignFromEnriched()` builds a fresh 19-attr Instance by name-matching from the predict-time enriched row, pushes through the saved normalizer, and forwards to clusterer. Verified end-to-end on Neon: 3 distinct customer profiles → cluster 0/1/2 + matching persona recommendation. Note: PredictRequest still lacks `Total_Amt_Chng_Q4_Q1` / `Total_Ct_Chng_Q4_Q1` so those default to 1.0. |
 | BE-91 | Predictions logging to `predictions` table | REVIEW | claude | _pending_ | Every `/api/predict` call writes a `PredictionLog` row (input as JSONB, predicted_label, churn_prob, cluster_id, model_used, ts). Failures logged but don't break the response. |
 
 ## Testing & QA
