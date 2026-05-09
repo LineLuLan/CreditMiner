@@ -64,6 +64,8 @@ function DistributionPanel() {
   const [col, setCol] = React.useState<string>(EDA_NUMERIC_COLS[0]);
   const [bins, setBins] = React.useState<number>(20);
   const { data, isLoading, error } = useEdaDistribution(col, bins);
+  const colId = React.useId();
+  const binsId = React.useId();
 
   return (
     <Card>
@@ -73,9 +75,11 @@ function DistributionPanel() {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Column</Label>
+            <Label htmlFor={colId} className="text-xs text-muted-foreground">
+              Column
+            </Label>
             <Select value={col} onValueChange={setCol}>
-              <SelectTrigger className="w-[260px]">
+              <SelectTrigger id={colId} className="w-[260px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -88,8 +92,11 @@ function DistributionPanel() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Bins ({bins})</Label>
+            <Label htmlFor={binsId} className="text-xs text-muted-foreground">
+              Bins ({bins})
+            </Label>
             <Input
+              id={binsId}
               type="range"
               min={5}
               max={50}
@@ -139,6 +146,7 @@ function CorrelationPanel() {
 function ChurnByPanel() {
   const [dim, setDim] = React.useState<string>(CHURN_BY_DIMS[0]);
   const { data, isLoading, error } = useEdaChurnBy(dim);
+  const dimId = React.useId();
 
   const chartData = React.useMemo(
     () =>
@@ -158,9 +166,11 @@ function ChurnByPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Dimension</Label>
+          <Label htmlFor={dimId} className="text-xs text-muted-foreground">
+            Dimension
+          </Label>
           <Select value={dim} onValueChange={setDim}>
-            <SelectTrigger className="w-[260px]">
+            <SelectTrigger id={dimId} className="w-[260px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

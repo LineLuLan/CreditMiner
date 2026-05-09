@@ -44,6 +44,8 @@ const CATEGORY_OPTIONS = [
 export default function RulesPage() {
   const [minLift, setMinLift] = React.useState<number>(1.0);
   const [category, setCategory] = React.useState<string>("all");
+  const minLiftId = React.useId();
+  const categoryId = React.useId();
   const { data, isLoading, error } = useRules(
     minLift,
     category === "all" ? undefined : category,
@@ -72,10 +74,11 @@ export default function RulesPage() {
         <Card>
           <CardContent className="flex flex-wrap items-end gap-3 pt-6">
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">
+              <Label htmlFor={minLiftId} className="text-xs text-muted-foreground">
                 Min lift ({minLift.toFixed(2)})
               </Label>
               <Input
+                id={minLiftId}
                 type="range"
                 min={1.0}
                 max={2.0}
@@ -89,9 +92,11 @@ export default function RulesPage() {
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Category</Label>
+              <Label htmlFor={categoryId} className="text-xs text-muted-foreground">
+                Category
+              </Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger id={categoryId} className="w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

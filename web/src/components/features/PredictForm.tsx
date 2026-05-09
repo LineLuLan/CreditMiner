@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -122,7 +123,7 @@ export function PredictForm() {
                 value={watch("gender")}
                 onValueChange={(v) => setValue("gender", v as PredictRequest["gender"])}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Gender">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -141,7 +142,7 @@ export function PredictForm() {
                   setValue("educationLevel", v as PredictRequest["educationLevel"])
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Education level">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -160,7 +161,7 @@ export function PredictForm() {
                   setValue("maritalStatus", v as PredictRequest["maritalStatus"])
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Marital status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -179,7 +180,7 @@ export function PredictForm() {
                   setValue("incomeCategory", v as PredictRequest["incomeCategory"])
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Income category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -206,7 +207,7 @@ export function PredictForm() {
                   setValue("cardCategory", v as PredictRequest["cardCategory"])
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Card category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,12 +324,13 @@ function Field({
 }: {
   label: string;
   error?: string;
-  children: React.ReactNode;
+  children: React.ReactElement;
 }) {
+  const id = React.useId();
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
-      {children}
+      <Label htmlFor={id}>{label}</Label>
+      {React.cloneElement(children, { id })}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );

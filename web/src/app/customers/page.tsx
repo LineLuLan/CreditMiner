@@ -92,7 +92,7 @@ export default function CustomersPage() {
           <CardContent className="flex flex-wrap items-end gap-3 pt-6">
             <Filter label="Attrition">
               <Select value={attritionFlag} onValueChange={setAttritionFlag}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger aria-label="Filter by attrition" className="w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -106,7 +106,7 @@ export default function CustomersPage() {
             </Filter>
             <Filter label="Cluster">
               <Select value={clusterId} onValueChange={setClusterId}>
-                <SelectTrigger className="w-[220px]">
+                <SelectTrigger aria-label="Filter by cluster" className="w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -120,7 +120,7 @@ export default function CustomersPage() {
             </Filter>
             <Filter label="Sort">
               <Select value={sort} onValueChange={setSort}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger aria-label="Sort by" className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -134,7 +134,7 @@ export default function CustomersPage() {
             </Filter>
             <Filter label="Page size">
               <Select value={String(size)} onValueChange={(v) => setSize(Number(v))}>
-                <SelectTrigger className="w-[100px]">
+                <SelectTrigger aria-label="Page size" className="w-[100px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,11 +231,14 @@ export default function CustomersPage() {
   );
 }
 
-function Filter({ label, children }: { label: string; children: React.ReactNode }) {
+function Filter({ label, children }: { label: string; children: React.ReactElement }) {
+  const id = React.useId();
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      {children}
+      <Label htmlFor={id} className="text-xs text-muted-foreground">
+        {label}
+      </Label>
+      {React.cloneElement(children, { id })}
     </div>
   );
 }
