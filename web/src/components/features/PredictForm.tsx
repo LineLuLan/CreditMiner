@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertCircle, Loader2, Sparkles, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PredictRequestSchema } from "@/lib/schemas";
 import type { PredictRequest } from "@/types/api.types";
 import { usePredict } from "@/hooks/usePredict";
@@ -38,6 +45,27 @@ const SAMPLE_LOW_RISK: PredictRequest = {
   avgUtilizationRatio: 0.064,
   totalAmtChngQ4Q1: 1.0,
   totalCtChngQ4Q1: 1.0,
+};
+
+const SAMPLE_MID_RISK: PredictRequest = {
+  customerAge: 49,
+  gender: "F",
+  dependentCount: 2,
+  educationLevel: "College",
+  maritalStatus: "Married",
+  incomeCategory: "$40K - $60K",
+  cardCategory: "Blue",
+  monthsOnBook: 30,
+  totalRelationshipCount: 3,
+  monthsInactive12Mon: 3,
+  contactsCount12Mon: 3,
+  creditLimit: 6500,
+  totalRevolvingBal: 1500,
+  totalTransAmt: 2400,
+  totalTransCt: 30,
+  avgUtilizationRatio: 0.42,
+  totalAmtChngQ4Q1: 0.75,
+  totalCtChngQ4Q1: 0.7,
 };
 
 const SAMPLE_HIGH_RISK: PredictRequest = {
@@ -87,12 +115,39 @@ const INCOME_OPTIONS: PredictRequest["incomeCategory"][] = [
   "Unknown",
 ];
 
-/**
- * Form for {@code POST /api/predict}.
- *
- * <p>Wired to React Hook Form + Zod schema and the {@link usePredict} mutation.
- * Result rendering delegated to {@link PredictResult}.</p>
- */
+const SAMPLES: Array<{
+  label: string;
+  buttonText: string;
+  tooltip: string;
+  value: PredictRequest;
+  tone: "success" | "warning" | "destructive";
+}> = [
+  {
+    label: "Low-risk",
+    buttonText: "Load low-risk sample",
+    tooltip:
+      "Mid-career, married, $60-80K income, healthy utilisation (~6%), active transactor. Should predict Existing with low churn probability.",
+    value: SAMPLE_LOW_RISK,
+    tone: "success",
+  },
+  {
+    label: "Mid-risk",
+    buttonText: "Load mid-risk sample",
+    tooltip:
+      "Borderline profile: moderate utilisation (~42%), slipping Q4 spend ratio (~0.75), 3 months inactive. Sits near the 0.5 threshold.",
+    value: SAMPLE_MID_RISK,
+    tone: "warning",
+  },
+  {
+    label: "High-risk",
+    buttonText: "Load high-risk sample",
+    tooltip:
+      "Divorced, low income, near-maxed utilisation (~80%), 5 months inactive, transactions cut in half QoQ. Should predict Attrited.",
+    value: SAMPLE_HIGH_RISK,
+    tone: "destructive",
+  },
+];
+
 export function PredictForm() {
   const form = useForm<PredictRequest>({
     resolver: zodResolver(PredictRequestSchema),
@@ -108,212 +163,302 @@ export function PredictForm() {
       : undefined;
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={onSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Demographics</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <Field label="Customer age" error={formState.errors.customerAge?.message}>
-              <Input type="number" {...register("customerAge", { valueAsNumber: true })} />
-            </Field>
-            <Field label="Gender" error={formState.errors.gender?.message}>
-              <Select
-                value={watch("gender")}
-                onValueChange={(v) => setValue("gender", v as PredictRequest["gender"])}
-              >
-                <SelectTrigger aria-label="Gender">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="M">Male</SelectItem>
-                  <SelectItem value="F">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Dependents" error={formState.errors.dependentCount?.message}>
-              <Input type="number" {...register("dependentCount", { valueAsNumber: true })} />
-            </Field>
-            <Field label="Education level" error={formState.errors.educationLevel?.message}>
-              <Select
-                value={watch("educationLevel")}
-                onValueChange={(v) =>
-                  setValue("educationLevel", v as PredictRequest["educationLevel"])
-                }
-              >
-                <SelectTrigger aria-label="Education level">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {EDUCATION_OPTIONS.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Marital status" error={formState.errors.maritalStatus?.message}>
-              <Select
-                value={watch("maritalStatus")}
-                onValueChange={(v) =>
-                  setValue("maritalStatus", v as PredictRequest["maritalStatus"])
-                }
-              >
-                <SelectTrigger aria-label="Marital status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MARITAL_OPTIONS.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Income category" error={formState.errors.incomeCategory?.message}>
-              <Select
-                value={watch("incomeCategory")}
-                onValueChange={(v) =>
-                  setValue("incomeCategory", v as PredictRequest["incomeCategory"])
-                }
-              >
-                <SelectTrigger aria-label="Income category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {INCOME_OPTIONS.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+    <TooltipProvider delayDuration={200}>
+      <div className="space-y-6">
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2 sm:items-center">
+              <UserCog className="mt-0.5 h-4 w-4 text-muted-foreground sm:mt-0" aria-hidden />
+              <div>
+                <p className="text-sm font-medium">Try a sample customer profile</p>
+                <p className="text-xs text-muted-foreground">
+                  Pre-fills the form with one of three reference profiles.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {SAMPLES.map((sample) => (
+                <Tooltip key={sample.label}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => reset(sample.value)}
+                      className={
+                        sample.tone === "destructive"
+                          ? "border-destructive/40 hover:bg-destructive/10"
+                          : sample.tone === "warning"
+                            ? "border-warning/50 hover:bg-warning/10"
+                            : "border-success/50 hover:bg-success/10"
+                      }
+                    >
+                      <span
+                        className={
+                          sample.tone === "destructive"
+                            ? "mr-2 h-2 w-2 rounded-full bg-destructive"
+                            : sample.tone === "warning"
+                              ? "mr-2 h-2 w-2 rounded-full bg-warning"
+                              : "mr-2 h-2 w-2 rounded-full bg-success"
+                        }
+                        aria-hidden
+                      />
+                      {sample.buttonText}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{sample.tooltip}</TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Account</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <Field label="Card category" error={formState.errors.cardCategory?.message}>
-              <Select
-                value={watch("cardCategory")}
-                onValueChange={(v) =>
-                  setValue("cardCategory", v as PredictRequest["cardCategory"])
-                }
-              >
-                <SelectTrigger aria-label="Card category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Blue">Blue</SelectItem>
-                  <SelectItem value="Silver">Silver</SelectItem>
-                  <SelectItem value="Gold">Gold</SelectItem>
-                  <SelectItem value="Platinum">Platinum</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Months on book" error={formState.errors.monthsOnBook?.message}>
-              <Input type="number" {...register("monthsOnBook", { valueAsNumber: true })} />
-            </Field>
-            <Field label="Months inactive (12mo)" error={formState.errors.monthsInactive12Mon?.message}>
-              <Input
-                type="number"
-                {...register("monthsInactive12Mon", { valueAsNumber: true })}
-              />
-            </Field>
-            <Field label="Total relationships" error={formState.errors.totalRelationshipCount?.message}>
-              <Input
-                type="number"
-                {...register("totalRelationshipCount", { valueAsNumber: true })}
-              />
-            </Field>
-            <Field label="Contacts (12mo)" error={formState.errors.contactsCount12Mon?.message}>
-              <Input
-                type="number"
-                {...register("contactsCount12Mon", { valueAsNumber: true })}
-              />
-            </Field>
-          </CardContent>
-        </Card>
+        <form onSubmit={onSubmit} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Demographics</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Customer age" error={formState.errors.customerAge?.message}>
+                <Input type="number" {...register("customerAge", { valueAsNumber: true })} />
+              </Field>
+              <Field label="Gender" error={formState.errors.gender?.message}>
+                <Select
+                  value={watch("gender")}
+                  onValueChange={(v) => setValue("gender", v as PredictRequest["gender"])}
+                >
+                  <SelectTrigger aria-label="Gender">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="M">Male</SelectItem>
+                    <SelectItem value="F">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Dependents" error={formState.errors.dependentCount?.message}>
+                <Input type="number" {...register("dependentCount", { valueAsNumber: true })} />
+              </Field>
+              <Field label="Education level" error={formState.errors.educationLevel?.message}>
+                <Select
+                  value={watch("educationLevel")}
+                  onValueChange={(v) =>
+                    setValue("educationLevel", v as PredictRequest["educationLevel"])
+                  }
+                >
+                  <SelectTrigger aria-label="Education level">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EDUCATION_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Marital status" error={formState.errors.maritalStatus?.message}>
+                <Select
+                  value={watch("maritalStatus")}
+                  onValueChange={(v) =>
+                    setValue("maritalStatus", v as PredictRequest["maritalStatus"])
+                  }
+                >
+                  <SelectTrigger aria-label="Marital status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MARITAL_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Income category" error={formState.errors.incomeCategory?.message}>
+                <Select
+                  value={watch("incomeCategory")}
+                  onValueChange={(v) =>
+                    setValue("incomeCategory", v as PredictRequest["incomeCategory"])
+                  }
+                >
+                  <SelectTrigger aria-label="Income category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INCOME_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Transactional</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <Field label="Credit limit" error={formState.errors.creditLimit?.message}>
-              <Input type="number" {...register("creditLimit", { valueAsNumber: true })} />
-            </Field>
-            <Field label="Total revolving bal" error={formState.errors.totalRevolvingBal?.message}>
-              <Input type="number" {...register("totalRevolvingBal", { valueAsNumber: true })} />
-            </Field>
-            <Field label="Total trans amount" error={formState.errors.totalTransAmt?.message}>
-              <Input type="number" {...register("totalTransAmt", { valueAsNumber: true })} />
-            </Field>
-            <Field label="Total trans count" error={formState.errors.totalTransCt?.message}>
-              <Input type="number" {...register("totalTransCt", { valueAsNumber: true })} />
-            </Field>
-            <Field label="Avg utilization (0-1)" error={formState.errors.avgUtilizationRatio?.message}>
-              <Input
-                type="number"
-                step="0.001"
-                {...register("avgUtilizationRatio", { valueAsNumber: true })}
-              />
-            </Field>
-            <Field
-              label="Q4/Q1 amount ratio (optional)"
-              error={formState.errors.totalAmtChngQ4Q1?.message}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Account relationship</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Card category" error={formState.errors.cardCategory?.message}>
+                <Select
+                  value={watch("cardCategory")}
+                  onValueChange={(v) =>
+                    setValue("cardCategory", v as PredictRequest["cardCategory"])
+                  }
+                >
+                  <SelectTrigger aria-label="Card category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Blue">Blue</SelectItem>
+                    <SelectItem value="Silver">Silver</SelectItem>
+                    <SelectItem value="Gold">Gold</SelectItem>
+                    <SelectItem value="Platinum">Platinum</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Months on book" error={formState.errors.monthsOnBook?.message}>
+                <Input type="number" {...register("monthsOnBook", { valueAsNumber: true })} />
+              </Field>
+              <Field
+                label="Months inactive (12mo)"
+                error={formState.errors.monthsInactive12Mon?.message}
+              >
+                <Input
+                  type="number"
+                  {...register("monthsInactive12Mon", { valueAsNumber: true })}
+                />
+              </Field>
+              <Field
+                label="Total relationships"
+                error={formState.errors.totalRelationshipCount?.message}
+              >
+                <Input
+                  type="number"
+                  {...register("totalRelationshipCount", { valueAsNumber: true })}
+                />
+              </Field>
+              <Field
+                label="Contacts (12mo)"
+                error={formState.errors.contactsCount12Mon?.message}
+              >
+                <Input
+                  type="number"
+                  {...register("contactsCount12Mon", { valueAsNumber: true })}
+                />
+              </Field>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Transactional behaviour</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Credit limit" error={formState.errors.creditLimit?.message}>
+                <Input type="number" {...register("creditLimit", { valueAsNumber: true })} />
+              </Field>
+              <Field
+                label="Total revolving bal"
+                error={formState.errors.totalRevolvingBal?.message}
+              >
+                <Input
+                  type="number"
+                  {...register("totalRevolvingBal", { valueAsNumber: true })}
+                />
+              </Field>
+              <Field
+                label="Total trans amount"
+                error={formState.errors.totalTransAmt?.message}
+              >
+                <Input
+                  type="number"
+                  {...register("totalTransAmt", { valueAsNumber: true })}
+                />
+              </Field>
+              <Field
+                label="Total trans count"
+                error={formState.errors.totalTransCt?.message}
+              >
+                <Input
+                  type="number"
+                  {...register("totalTransCt", { valueAsNumber: true })}
+                />
+              </Field>
+              <Field
+                label="Avg utilization (0-1)"
+                error={formState.errors.avgUtilizationRatio?.message}
+              >
+                <Input
+                  type="number"
+                  step="0.001"
+                  {...register("avgUtilizationRatio", { valueAsNumber: true })}
+                />
+              </Field>
+              <Field
+                label="Q4/Q1 amount ratio (optional)"
+                error={formState.errors.totalAmtChngQ4Q1?.message}
+              >
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="default 1.0 (no change)"
+                  {...register("totalAmtChngQ4Q1", { valueAsNumber: true })}
+                />
+              </Field>
+              <Field
+                label="Q4/Q1 count ratio (optional)"
+                error={formState.errors.totalCtChngQ4Q1?.message}
+              >
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="default 1.0 (no change)"
+                  {...register("totalCtChngQ4Q1", { valueAsNumber: true })}
+                />
+              </Field>
+            </CardContent>
+          </Card>
+
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="submit"
+              size="lg"
+              disabled={predict.isPending}
+              className="gap-2"
             >
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="default 1.0 (no change)"
-                {...register("totalAmtChngQ4Q1", { valueAsNumber: true })}
-              />
-            </Field>
-            <Field
-              label="Q4/Q1 count ratio (optional)"
-              error={formState.errors.totalCtChngQ4Q1?.message}
-            >
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="default 1.0 (no change)"
-                {...register("totalCtChngQ4Q1", { valueAsNumber: true })}
-              />
-            </Field>
-          </CardContent>
-        </Card>
+              {predict.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Predicting…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" aria-hidden />
+                  Predict
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="submit" disabled={predict.isPending}>
-            {predict.isPending ? "Predicting…" : "Predict"}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => reset(SAMPLE_LOW_RISK)}>
-            Load low-risk sample
-          </Button>
-          <Button type="button" variant="outline" onClick={() => reset(SAMPLE_HIGH_RISK)}>
-            Load high-risk sample
-          </Button>
-        </div>
-      </form>
+        {errorMessage ? (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="flex items-start gap-3 pt-6">
+              <AlertCircle className="mt-0.5 h-4 w-4 text-destructive" aria-hidden />
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            </CardContent>
+          </Card>
+        ) : null}
 
-      {errorMessage ? (
-        <Card className="border-destructive/50">
-          <CardContent className="pt-6">
-            <p className="text-sm text-destructive">{errorMessage}</p>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {predict.data ? <PredictResult data={predict.data} /> : null}
-    </div>
+        {predict.data ? <PredictResult data={predict.data} /> : null}
+      </div>
+    </TooltipProvider>
   );
 }
 

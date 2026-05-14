@@ -1,6 +1,6 @@
 # Frontend Task Tracker
 
-> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-14 — Polish wave 2026-05-14 in progress. FE-P1..P6 (Gói A: design tokens + accent teal + type scale + animated mobile drawer + breadcrumb + error/404 redesign) REVIEW.
+> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-14 — Polish wave 2026-05-14 in progress. Gói A (FE-P1..P6) + Gói B (FE-P7..P10: /predict redesign with animated SVG gauge + tooltipped samples + result hierarchy + shadcn tooltip primitive) REVIEW.
 > Update this file in the **same commit** that closes a task. Sync `docs/` to `develop` → `backend` after.
 
 ---
@@ -150,6 +150,15 @@
 | FE-P4 | Header breadcrumb derived from pathname | REVIEW | claude | _pending_ | `Header.tsx` uses `usePathname()` + `NAV_ITEMS` to render `Home › Section` (hidden on root and on `<sm`). |
 | FE-P5 | error.tsx / not-found.tsx redesigned with icon + card | REVIEW | claude | _pending_ | Both wrap content in `Card`, lead with circular icon badge (AlertTriangle / SearchX), show typed h3 + muted body + branded button with leading icon. error page surfaces `digest` ref when present. |
 | FE-P6 | Sidebar brand badge + footer copy | REVIEW | claude | _pending_ | Sidebar now shows Sparkles in primary-tinted square next to brand name; footer replaces `v0.1.0-skeleton` placeholder with build copy ("CRISP-DM · CreditCard churn · k=3 clusters"). |
+
+## Polish — Wave 2026-05-14 (Gói B: /predict redesign)
+
+| ID | Title | Status | Owner | Commit | Notes |
+|---|---|---|---|---|---|
+| FE-P7 | shadcn Tooltip primitive | REVIEW | claude | _pending_ | Added `web/src/components/ui/tooltip.tsx` wrapping `@radix-ui/react-tooltip` (already in deps). Includes Provider/Root/Trigger/Content with standard data-state animations and `--popover` token. Also wired `popover` color into `tailwind.config.ts`. |
+| FE-P8 | PredictForm — 3-col responsive layout + Mid-risk sample + tooltipped sample row | REVIEW | claude | _pending_ | Fields reflow to `sm:grid-cols-2 lg:grid-cols-3` so each section fills evenly. Added `SAMPLE_MID_RISK` (borderline profile) between low/high. Sample buttons moved into a dedicated "Try a sample customer profile" card with explanatory tooltips and tone-coded borders (success/warning/destructive). Submit button gains Sparkles icon + spinner state. |
+| FE-P9 | Animated semicircle gauge with threshold tick | REVIEW | claude | _pending_ | Replaced div-bar with SVG arc gauge: gradient track (success→warning→destructive), animated `stroke-dasharray` over 700ms, 50% tick + label highlighted, 0/100 endpoint ticks, big inline `<text>` percentage, severity copy underneath. Reads as `role="img"` with `aria-label="Churn probability NN%"`. |
+| FE-P10 | Result hierarchy — gauge primary, 3-2 split row, ranked features | REVIEW | claude | _pending_ | New layout: row 1 = gauge card (primary-tinted, shadow) with side-by-side label + risk score + threshold copy. Row 2 = Recommendation 3-col (primary) + Nearest Cluster 2-col. Row 3 = top features bar with numbered rank chips and width-animated fill. |
 
 ## Manual user steps (FE-side)
 
