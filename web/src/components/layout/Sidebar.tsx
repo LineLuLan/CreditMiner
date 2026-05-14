@@ -28,7 +28,10 @@ export function Sidebar() {
   const pathname = usePathname();
   return (
     <aside className="hidden w-64 shrink-0 border-r bg-card md:flex md:flex-col">
-      <div className="flex h-16 items-center border-b px-6">
+      <div className="flex h-16 items-center gap-2 border-b px-6">
+        <span className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground">
+          <Sparkles className="h-4 w-4" aria-hidden />
+        </span>
         <Link href="/" className="text-lg font-bold tracking-tight">
           {APP_NAME}
         </Link>
@@ -56,7 +59,8 @@ export function Sidebar() {
         })}
       </nav>
       <div className="border-t p-4 text-xs text-muted-foreground">
-        v0.1.0-skeleton
+        <p className="font-medium text-foreground">Demo build</p>
+        <p>CRISP-DM · CreditCard churn · k=3 clusters</p>
       </div>
     </aside>
   );

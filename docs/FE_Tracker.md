@@ -1,6 +1,6 @@
 # Frontend Task Tracker
 
-> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-09 — 7 of 7 pages live, FE-Q1..Q8 polish suite REVIEW (sonner toasts, mobile hamburger, axe + Playwright + Lighthouse audits). PCA scatter on /clusters, cluster-customers drawer, optional Q4/Q1 fields on /predict.
+> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-14 — Polish wave 2026-05-14 in progress. FE-P1..P6 (Gói A: design tokens + accent teal + type scale + animated mobile drawer + breadcrumb + error/404 redesign) REVIEW.
 > Update this file in the **same commit** that closes a task. Sync `docs/` to `develop` → `backend` after.
 
 ---
@@ -139,6 +139,17 @@
 | FE-Q6 | Accessibility audit (axe) | REVIEW | claude | _pending_ | `pnpm test:e2e:a11y` — 7 routes scanned, 0 critical violations. Serious contrast deltas (3 doc'd in `docs/FE_Audits.md`) accepted. |
 | FE-Q7 | Playwright E2E (predict happy path) | REVIEW | claude | _pending_ | `pnpm test:e2e:predict` — 2 happy-path tests (low-risk → Existing, high-risk → Attrited). Both green. |
 | FE-Q8 | Lighthouse score >= 90 | REVIEW | claude | _pending_ | `pnpm lhci` — a11y ≥ 0.94, BP/SEO 1.0 across all 7 routes. Performance: 5/7 routes ≥ 0.95, /clusters 0.58 + /rules 0.73 (Recharts heaviness; tracked). Full per-route table in `docs/FE_Audits.md`. |
+
+## Polish — Wave 2026-05-14 (Gói A: Design system + layout)
+
+| ID | Title | Status | Owner | Commit | Notes |
+|---|---|---|---|---|---|
+| FE-P1 | Tailwind tokens: success/warning/info + accent retuned | REVIEW | claude | _pending_ | `web/tailwind.config.ts` extends 3 semantic colors; `globals.css` adds HSL vars (light + dark) and switches `--accent` from secondary clone to soft teal (192 hue) so nav-hover is distinguishable. |
+| FE-P2 | Type scale `.h1`..`.h5` + `.eyebrow` | REVIEW | claude | _pending_ | `globals.css` `@layer components` adds `.h1` (text-4xl bold tracking-tight, scales md:5xl) through `.h5` plus `.eyebrow` uppercase label utility. |
+| FE-P3 | MobileNav animated slide-in + overlay fade | REVIEW | claude | _pending_ | Drawer uses Tailwind `-translate-x-full`↔`translate-x-0` over 200ms with overlay `opacity-0`↔`opacity-100`; component keeps DOM mounted briefly while closing so the exit animation actually plays. |
+| FE-P4 | Header breadcrumb derived from pathname | REVIEW | claude | _pending_ | `Header.tsx` uses `usePathname()` + `NAV_ITEMS` to render `Home › Section` (hidden on root and on `<sm`). |
+| FE-P5 | error.tsx / not-found.tsx redesigned with icon + card | REVIEW | claude | _pending_ | Both wrap content in `Card`, lead with circular icon badge (AlertTriangle / SearchX), show typed h3 + muted body + branded button with leading icon. error page surfaces `digest` ref when present. |
+| FE-P6 | Sidebar brand badge + footer copy | REVIEW | claude | _pending_ | Sidebar now shows Sparkles in primary-tinted square next to brand name; footer replaces `v0.1.0-skeleton` placeholder with build copy ("CRISP-DM · CreditCard churn · k=3 clusters"). |
 
 ## Manual user steps (FE-side)
 
