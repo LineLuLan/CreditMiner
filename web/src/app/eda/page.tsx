@@ -73,13 +73,13 @@ function DistributionPanel() {
         <CardTitle>Single-column histogram</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="grid items-end gap-3 sm:grid-cols-2 lg:max-w-2xl">
           <div className="space-y-1.5">
             <Label htmlFor={colId} className="text-xs text-muted-foreground">
               Column
             </Label>
             <Select value={col} onValueChange={setCol}>
-              <SelectTrigger id={colId} className="w-[260px]">
+              <SelectTrigger id={colId} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -102,7 +102,7 @@ function DistributionPanel() {
               max={50}
               value={bins}
               onChange={(e) => setBins(Number(e.target.value))}
-              className="w-[200px]"
+              className="w-full"
             />
           </div>
         </div>
@@ -170,7 +170,7 @@ function ChurnByPanel() {
             Dimension
           </Label>
           <Select value={dim} onValueChange={setDim}>
-            <SelectTrigger id={dimId} className="w-[260px]">
+            <SelectTrigger id={dimId} className="w-full sm:w-[260px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

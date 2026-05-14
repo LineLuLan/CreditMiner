@@ -1,6 +1,42 @@
 # Frontend Audit Report
 
-> Generated 2026-05-09 against `localhost:3000` (prod build via `pnpm build && pnpm start`) with the BE running on Neon prod profile.
+> **Re-audited 2026-05-14** after the 3-gói polish wave (design tokens, /predict redesign, page polish + perf). Original 2026-05-09 baseline kept inline for comparison. Generated against `localhost:3000` (prod build via `pnpm build && pnpm start`) with the BE running on Neon prod profile.
+
+## 2026-05-14 — Polish wave results
+
+```
+pnpm test:e2e   → 9 passed (39.7s)
+pnpm lhci       → 0 assertion failures, all thresholds met
+```
+
+| Route | Perf (before → after) | A11y (before → after) | BP | SEO |
+|---|---:|---:|---:|---:|
+| `/` Overview      | 0.98 → **0.99** ↑ | 0.98 → 0.98     | 1.00 | 1.00 |
+| `/eda`            | 0.95 → 0.92 ↓     | 0.94 → 0.94     | 1.00 | 1.00 |
+| `/customers`      | 0.99 → 0.96 ↓     | 0.96 → 0.96     | 1.00 | 1.00 |
+| `/clusters`       | **0.58 → 0.60** ↑ | 0.94 → 0.94     | 1.00 | 1.00 |
+| `/rules`          | **0.73 → 0.73**   | 0.98 → 0.98     | 1.00 | 1.00 |
+| `/predict`        | 0.99 → 0.96 ↓     | 0.98 → 0.98     | 1.00 | 1.00 |
+| `/insights`       | 0.99 → 0.99       | 0.98 → 0.93 ↓   | 1.00 | 1.00 |
+
+**Reading the deltas:**
+- `/clusters` perf moved only 0.58 → 0.60 despite `next/dynamic` import of `PcaScatterCard` and downsampling 500 → 300 pts/cluster. Recharts SVG rendering (persona cards + comparison BarChart + scatter) is still the dominant cost. To break past 0.85 we'd need a canvas-based scatter or on-demand chart rendering — out of scope for this wave.
+- `/rules` perf flat at 0.73 — Recharts ScatterChart + Tooltip still in the main bundle. Same trade-off as `/clusters`.
+- Single-digit dips on `/eda`/`/customers`/`/predict` (≤ 0.03) are within the run-to-run variance we saw across the two 2026-05-09 runs (e.g. `/eda` 0.95 vs 0.92 across reports `04_20_27` and `04_23_29`).
+- `/insights` a11y dropped 0.98 → 0.93. Likely cause: new `border-l-info bg-info/5` section accents and the `bg-primary/10 text-primary` numbered chip. Critical violations still 0 (axe a11y suite green). Worth a contrast pass in a follow-up.
+- Performance gains on the trang-demo `/predict` (animated gauge, tooltipped samples, hierarchy) are visual, not numeric — Lighthouse can't see "nicer".
+
+Re-run command (same as 2026-05-09):
+```powershell
+cd web
+pnpm build; pnpm start
+# new shell
+$env:CHROME_PATH = 'C:\Users\admin\AppData\Local\ms-playwright\chromium-1140\chrome-win\chrome.exe'
+pnpm test:e2e
+pnpm lhci
+```
+
+## 2026-05-09 — Baseline
 
 ## Tooling
 

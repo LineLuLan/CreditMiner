@@ -72,23 +72,36 @@ export default function RulesPage() {
       <Header title="Association Rules" />
       <div className="flex-1 space-y-6 p-6">
         <Card>
-          <CardContent className="flex flex-wrap items-end gap-3 pt-6">
+          <CardContent className="grid items-end gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-[1fr_220px_auto]">
             <div className="space-y-1.5">
-              <Label htmlFor={minLiftId} className="text-xs text-muted-foreground">
-                Min lift ({minLift.toFixed(2)})
-              </Label>
+              <div className="flex items-baseline justify-between">
+                <Label htmlFor={minLiftId} className="text-xs text-muted-foreground">
+                  Min lift
+                </Label>
+                <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums">
+                  ≥ {minLift.toFixed(2)}
+                </span>
+              </div>
               <Input
                 id={minLiftId}
                 type="range"
                 min={1.0}
-                max={2.0}
-                step={0.05}
+                max={1.2}
+                step={0.01}
                 value={minLift}
                 onChange={(e) => setMinLift(Number(e.target.value))}
-                className="w-[220px]"
+                className="w-full"
+                aria-valuemin={1}
+                aria-valuemax={1.2}
+                aria-valuenow={minLift}
               />
-              <p className="text-[10px] text-muted-foreground">
-                BE retention rules cap at 1.19 (1/0.84). Try 1.0 to see all 50.
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span>1.00</span>
+                <span>1.10</span>
+                <span>1.20</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Retention rules cap at lift = 1/p(Existing) ≈ 1.19. Slide to 1.00 to see all 50.
               </p>
             </div>
             <div className="space-y-1.5">
@@ -96,7 +109,7 @@ export default function RulesPage() {
                 Category
               </Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger id={categoryId} className="w-[200px]">
+                <SelectTrigger id={categoryId} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -108,7 +121,7 @@ export default function RulesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="ml-auto text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground sm:text-right">
               {data ? `${data.length} rules` : isLoading ? "Loading…" : "—"}
             </div>
           </CardContent>
@@ -176,47 +189,55 @@ export default function RulesPage() {
                 ))}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40px]">#</TableHead>
-                    <TableHead>LHS (antecedent)</TableHead>
-                    <TableHead>RHS</TableHead>
-                    <TableHead>Cat</TableHead>
-                    <TableHead className="text-right">Support</TableHead>
-                    <TableHead className="text-right">Confidence</TableHead>
-                    <TableHead className="text-right">Lift</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sorted.map((r) => (
-                    <TableRow key={r.ruleId}>
-                      <TableCell className="text-xs text-muted-foreground">{r.ruleId}</TableCell>
-                      <TableCell className="font-mono text-xs">{r.lhs}</TableCell>
-                      <TableCell className="font-mono text-xs">{r.rhs}</TableCell>
-                      <TableCell>
-                        <Badge variant={r.category === "churn" ? "destructive" : "secondary"}>
-                          {r.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatPct(r.support, 2)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatPct(r.confidence, 1)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{r.lift.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                  {sorted.length === 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="py-6 text-center text-sm text-muted-foreground">
-                        No rules to show.
-                      </TableCell>
+                      <TableHead className="w-[40px]">#</TableHead>
+                      <TableHead>LHS (antecedent)</TableHead>
+                      <TableHead className="hidden md:table-cell">RHS</TableHead>
+                      <TableHead className="hidden sm:table-cell">Cat</TableHead>
+                      <TableHead className="hidden text-right sm:table-cell">Support</TableHead>
+                      <TableHead className="text-right">Confidence</TableHead>
+                      <TableHead className="text-right">Lift</TableHead>
                     </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {sorted.map((r) => (
+                      <TableRow key={r.ruleId}>
+                        <TableCell className="text-xs text-muted-foreground">{r.ruleId}</TableCell>
+                        <TableCell className="max-w-[260px] truncate font-mono text-xs" title={r.lhs}>
+                          {r.lhs}
+                        </TableCell>
+                        <TableCell className="hidden max-w-[200px] truncate font-mono text-xs md:table-cell" title={r.rhs}>
+                          {r.rhs}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant={r.category === "churn" ? "destructive" : "secondary"}>
+                            {r.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden text-right tabular-nums sm:table-cell">
+                          {formatPct(r.support, 2)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatPct(r.confidence, 1)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {r.lift.toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {sorted.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-6 text-center text-sm text-muted-foreground">
+                          No rules match the current filter. Try lowering min-lift below {minLift.toFixed(2)} or switching category.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>

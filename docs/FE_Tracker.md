@@ -1,6 +1,6 @@
 # Frontend Task Tracker
 
-> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-14 — Polish wave 2026-05-14 in progress. Gói A (FE-P1..P6) + Gói B (FE-P7..P10: /predict redesign with animated SVG gauge + tooltipped samples + result hierarchy + shadcn tooltip primitive) REVIEW.
+> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-14 — Polish wave 2026-05-14 complete. Gói A (FE-P1..P6: design tokens + layout) + Gói B (FE-P7..P10: /predict redesign) + Gói C (FE-P11..P17: page polish + perf) REVIEW. Full e2e + lhci re-run on 2026-05-14: 9/9 Playwright tests pass, 0 Lighthouse assertion failures. See `docs/FE_Audits.md` for the new per-route table.
 > Update this file in the **same commit** that closes a task. Sync `docs/` to `develop` → `backend` after.
 
 ---
@@ -159,6 +159,18 @@
 | FE-P8 | PredictForm — 3-col responsive layout + Mid-risk sample + tooltipped sample row | REVIEW | claude | _pending_ | Fields reflow to `sm:grid-cols-2 lg:grid-cols-3` so each section fills evenly. Added `SAMPLE_MID_RISK` (borderline profile) between low/high. Sample buttons moved into a dedicated "Try a sample customer profile" card with explanatory tooltips and tone-coded borders (success/warning/destructive). Submit button gains Sparkles icon + spinner state. |
 | FE-P9 | Animated semicircle gauge with threshold tick | REVIEW | claude | _pending_ | Replaced div-bar with SVG arc gauge: gradient track (success→warning→destructive), animated `stroke-dasharray` over 700ms, 50% tick + label highlighted, 0/100 endpoint ticks, big inline `<text>` percentage, severity copy underneath. Reads as `role="img"` with `aria-label="Churn probability NN%"`. |
 | FE-P10 | Result hierarchy — gauge primary, 3-2 split row, ranked features | REVIEW | claude | _pending_ | New layout: row 1 = gauge card (primary-tinted, shadow) with side-by-side label + risk score + threshold copy. Row 2 = Recommendation 3-col (primary) + Nearest Cluster 2-col. Row 3 = top features bar with numbered rank chips and width-animated fill. |
+
+## Polish — Wave 2026-05-14 (Gói C: page polish + perf)
+
+| ID | Title | Status | Owner | Commit | Notes |
+|---|---|---|---|---|---|
+| FE-P11 | DonutChart legend + % labels + responsive radius | REVIEW | claude | _pending_ | Pie now renders inline `<text>` labels (skipped under 4%), Recharts `<Legend>` at bottom (icon=circle), tooltip formatter shows count + share, animated, percentage-based innerRadius/outerRadius so it scales with the container. |
+| FE-P12 | Overview KPI grid 2-col default + 4-col desktop | REVIEW | claude | _pending_ | `grid-cols-2 lg:grid-cols-4` on mobile fits 2 KPI per row instead of stretching to full width. Chart row collapses to single column under `lg`. |
+| FE-P13 | EDA filter widths responsive | REVIEW | claude | _pending_ | Distribution column/bins selectors moved to `sm:grid-cols-2` grid with `w-full`. Churn-by dimension select is `w-full sm:w-[260px]`. No overflow on 375px viewport. |
+| FE-P14 | Customers table — responsive column hide + filter grid | REVIEW | claude | _pending_ | Filters reflow to `sm:grid-cols-2 lg:grid-cols-4` with full-width selects. Table wrapped in horizontal scroll; columns Gender/Card/Tier/Cluster collapse under `sm`/`md` to keep the row readable. Flag badges wrap. |
+| FE-P15 | Clusters — dynamic-import PCA scatter, downsample 500→300, persona hierarchy | REVIEW | claude | _pending_ | Extracted `PcaScatterCard` to `components/features/PcaScatterCard.tsx` and loaded via `next/dynamic({ ssr: false })` with skeleton fallback so Recharts ScatterChart stays out of the initial /clusters chunk. Persona card now leads with `text-3xl` churn rate in semantic token color (success/warning/destructive), secondary stats demoted to `text-xs`. |
+| FE-P16 | Rules — slider rework + responsive table | REVIEW | claude | _pending_ | Min-lift slider now spans [1.00, 1.20] with 0.01 step (matches retention cap 1.19), shows tick marks (1.00/1.10/1.20) under the rail and a value chip above. Table wrapped in horizontal scroll; RHS/Cat/Support columns collapse under `md`/`sm`. Empty-state message references the current min-lift. |
+| FE-P17 | Insights — single accordion + section accents + icons | REVIEW | claude | _pending_ | Accordion switched to `type="single" collapsible` so only one insight expands at a time. Each section (Discovery / Evidence / Recommendation) gains a left border accent (info / muted / primary) plus a lucide icon (Search/FileText/Wrench). Trigger shows a numbered chip + churn-aware badge color. Empty state has Lightbulb illustration. |
 
 ## Manual user steps (FE-side)
 

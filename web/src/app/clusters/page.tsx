@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ClusterCustomersDialog } from "@/components/features/ClusterCustomersDialog";
 import { useClusters } from "@/hooks/useClusters";
-import { useEdaPca2d } from "@/hooks/useEda";
 import { CLUSTER_COLORS } from "@/lib/constants";
 import { formatInt, formatPct, formatUsd } from "@/lib/utils";
 import {
@@ -17,14 +17,28 @@ import {
   Cell,
   Legend,
   ResponsiveContainer,
-  Scatter,
-  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
-  ZAxis,
 } from "recharts";
-import type { Cluster, PcaPoint } from "@/types/api.types";
+import type { Cluster } from "@/types/api.types";
+
+const PcaScatterCard = dynamic(
+  () => import("@/components/features/PcaScatterCard").then((m) => m.PcaScatterCard),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">PCA-2D scatter</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-80" />
+        </CardContent>
+      </Card>
+    ),
+  },
+);
 
 const CENTROID_HIGHLIGHTS: Array<{ key: string; label: string; format: (v: number) => string }> = [
   { key: "Credit_Limit", label: "Credit limit", format: (v) => formatUsd(v) },
@@ -95,9 +109,9 @@ export default function ClustersPage() {
 function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => void }) {
   const color = CLUSTER_COLORS[cluster.clusterId % CLUSTER_COLORS.length];
   const churnSeverity =
-    cluster.churnRate > 0.2 ? "text-red-600 dark:text-red-400" :
-    cluster.churnRate > 0.1 ? "text-amber-600 dark:text-amber-400" :
-    "text-emerald-600 dark:text-emerald-400";
+    cluster.churnRate > 0.2 ? "text-destructive" :
+    cluster.churnRate > 0.1 ? "text-warning" :
+    "text-success";
 
   return (
     <Card
@@ -124,19 +138,30 @@ function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => v
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <Stat label="Size" value={formatInt(cluster.size)} />
-          <Stat
-            label="Churn rate"
-            value={formatPct(cluster.churnRate)}
-            valueClass={churnSeverity}
-          />
-          <Stat label="Avg risk" value={cluster.avgRisk.toFixed(2)} />
+        <div className="space-y-3">
+          <div>
+            <p className="eyebrow">Churn rate</p>
+            <p className={`text-3xl font-bold tabular-nums leading-tight ${churnSeverity}`}>
+              {formatPct(cluster.churnRate)}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 border-t pt-3 text-xs">
+            <div>
+              <p className="text-muted-foreground">Size</p>
+              <p className="font-medium tabular-nums text-foreground">
+                {formatInt(cluster.size)}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Avg risk</p>
+              <p className="font-medium tabular-nums text-foreground">
+                {cluster.avgRisk.toFixed(2)}
+              </p>
+            </div>
+          </div>
         </div>
         <div className="space-y-1.5 border-t pt-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Centroid
-          </p>
+          <p className="eyebrow">Centroid</p>
           {CENTROID_HIGHLIGHTS.map((h) => {
             const v = cluster.centroid[h.key];
             if (v === undefined || v === null) return null;
@@ -153,112 +178,6 @@ function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => v
   );
 }
 
-function Stat({
-  label,
-  value,
-  valueClass,
-}: {
-  label: string;
-  value: string;
-  valueClass?: string;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`text-lg font-semibold tabular-nums ${valueClass ?? ""}`}>{value}</p>
-    </div>
-  );
-}
-
-/**
- * PCA-2D scatter colored by cluster. The full /api/eda/pca-2d response is 10127
- * points; we deterministically downsample to ~1500 per cluster to keep Recharts
- * responsive without losing the shape.
- */
-function PcaScatterCard() {
-  const { data, isLoading, error } = useEdaPca2d();
-
-  const grouped = React.useMemo(() => {
-    if (!data) return new Map<number, PcaPoint[]>();
-    const targetPerCluster = 500;
-    const buckets = new Map<number, PcaPoint[]>();
-    // Group then stride-sample so the spatial distribution is preserved.
-    for (const p of data) {
-      const arr = buckets.get(p.clusterId) ?? [];
-      arr.push(p);
-      buckets.set(p.clusterId, arr);
-    }
-    const sampled = new Map<number, PcaPoint[]>();
-    for (const [k, arr] of buckets.entries()) {
-      const stride = Math.max(1, Math.floor(arr.length / targetPerCluster));
-      const out: PcaPoint[] = [];
-      for (let i = 0; i < arr.length; i += stride) out.push(arr[i]);
-      sampled.set(k, out);
-    }
-    return sampled;
-  }, [data]);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>PCA-2D scatter — first 2 principal components, colored by cluster</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-80" />
-        ) : error ? (
-          <p className="text-sm text-destructive">
-            {(error as { message?: string }).message ?? "Failed to load PCA-2D data"}
-          </p>
-        ) : data && data.length > 0 ? (
-          <ResponsiveContainer width="100%" height={400}>
-            <ScatterChart margin={{ top: 16, right: 16, bottom: 32, left: 16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis
-                type="number"
-                dataKey="x"
-                name="PC1"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
-              />
-              <YAxis
-                type="number"
-                dataKey="y"
-                name="PC2"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
-              />
-              <ZAxis range={[20, 20]} />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3" }}
-                contentStyle={{
-                  background: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 6,
-                  fontSize: 12,
-                }}
-                formatter={(value: number, name: string) => [value.toFixed(3), name]}
-              />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              {[...grouped.entries()].sort(([a], [b]) => a - b).map(([clusterId, pts]) => (
-                <Scatter
-                  key={clusterId}
-                  name={`C${clusterId}`}
-                  data={pts}
-                  fill={CLUSTER_COLORS[clusterId % CLUSTER_COLORS.length]}
-                  fillOpacity={0.55}
-                />
-              ))}
-            </ScatterChart>
-          </ResponsiveContainer>
-        ) : null}
-        <p className="mt-2 text-xs text-muted-foreground">
-          Showing ~500 sampled points per cluster (full source has 10,127 points).
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
 
 function ClusterComparisonChart({ clusters }: { clusters: Cluster[] }) {
   const chartData = clusters.map((c) => ({
