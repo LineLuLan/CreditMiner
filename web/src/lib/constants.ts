@@ -51,6 +51,7 @@ export const NAV_ITEMS = [
   { href: "/customers", label: "Customers", icon: "Users" },
   { href: "/clusters", label: "Clusters", icon: "Network" },
   { href: "/rules", label: "Rules", icon: "Filter" },
+  { href: "/mining-report", label: "Mining Report", icon: "FileText" },
   { href: "/predict", label: "Predict", icon: "Sparkles" },
   { href: "/insights", label: "Insights", icon: "Lightbulb" },
 ] as const;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  FileText,
   Filter,
   LayoutDashboard,
   Lightbulb,
@@ -17,6 +18,7 @@ import { APP_NAME, NAV_ITEMS } from "@/lib/constants";
 const ICON_MAP = {
   LayoutDashboard,
   BarChart3,
+  FileText,
   Users,
   Network,
   Filter,

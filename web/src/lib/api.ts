@@ -6,6 +6,7 @@ import type {
   Cluster,
   CustomerSummary,
   Insight,
+  MiningReport,
   OverviewResponse,
   PageResponse,
   PcaPoint,
@@ -107,6 +108,9 @@ export const api = {
 
   anomalies: (limit = 50) =>
     client.get<Anomaly[]>(`/anomalies`, { params: { limit } }).then((r) => r.data),
+
+  miningReport: () =>
+    client.get<MiningReport>(`/mining-report`).then((r) => r.data),
 };
 
 export type ApiClient = typeof api;

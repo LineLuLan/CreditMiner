@@ -5,7 +5,7 @@
 - Date: 2026-06-02
 - Working branch: `codex/reacquaint-cleanup` from `origin/develop`
 - Source of truth branch for re-onboarding: `develop`
-- Worktree goal: cleanup, review, project memory, safe local init, and verification readiness
+- Worktree goal: cleanup, review, project memory, safe local init, verification readiness, and a consolidated data-mining report feature
 - Safety scope: no production writes, no DB seed/reset/train, no `.env` reads, no deploy, no GitHub writes
 
 ## Re-Onboarding Findings
@@ -26,13 +26,16 @@
   - TODO/stub scan found placeholder or stale comments in backend pipeline/report/anomaly/overview areas.
   - DB write scan confirmed destructive or mutating SQL in `db/schema.sql`, `db/reset.sql`, and `db/migrations/2026-05-09_refresh_insights.sql`.
   - API scan confirmed frontend uses typed API client and documented backend endpoints.
-- Frontend safe init/verification: pending until `corepack pnpm install --frozen-lockfile` can complete in this environment.
 - Frontend safe init/verification:
   - `corepack pnpm install --frozen-lockfile`: passed; lockfile was already up to date.
   - `corepack pnpm typecheck`: passed.
   - `corepack pnpm lint`: passed with no warnings or errors.
-  - `corepack pnpm build`: passed; all 10 static pages generated.
-- Backend tests: blocked because `java` and `mvn` are not installed.
+  - `corepack pnpm build`: passed; `/mining-report` included, all 11 static pages generated.
+- Backend tests: blocked because `mvn` is not installed; `mvn -B test` fails before execution.
+- Data-mining report feature:
+  - Backend added read-only `GET /api/mining-report` via `MiningReportController` and `MiningReportService`.
+  - Frontend added `/mining-report` with dataset, classification, clustering, rules, anomaly, and insight evidence tabs.
+  - Frontend contract mirrored in `web/src/lib/schemas.ts`, `web/src/types/api.types.ts`, `web/src/lib/api.ts`, and `web/src/hooks/useMiningReport.ts`.
 - DB verification: intentionally not run in this pass.
 - DB/dev tooling checks: `docker`, `psql`, and `codegraph` are not installed.
 - Secret scan: path/line-only scan found no tracked or untracked worktree hits for configured high-risk patterns.
@@ -47,6 +50,7 @@
 - Add a test datasource so `CreditMinerApplicationTests` can run in CI without a live Postgres dependency.
 - Decide whether `ReportService` is still needed for W8 deliverables; implement or remove the placeholder service.
 - Review stale backend comments in `OverviewController` and `AnomalyService`; avoid behavior changes until current API responses are re-verified.
+- Backend-verify `GET /api/mining-report` with JDK 17 + Maven available; then run a local API smoke against a safe dev database or approved hosted credentials.
 
 ## Next Actions
 

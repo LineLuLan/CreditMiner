@@ -2,7 +2,7 @@
 
 ## Product Scope
 
-CreditMiner is an academic full-stack data mining system for credit card customer behavior analysis. It turns the BankChurners dataset into a dashboard and prediction workflow for churn risk, customer segments, association rules, anomaly review, and insight recommendations.
+CreditMiner is an academic full-stack data mining system for credit card customer behavior analysis. It turns the BankChurners dataset into a dashboard, consolidated data-mining evidence report, and prediction workflow for churn risk, customer segments, association rules, anomaly review, and insight recommendations.
 
 ## Target Users
 
@@ -13,7 +13,7 @@ CreditMiner is an academic full-stack data mining system for credit card custome
 ## Success Criteria
 
 - The backend exposes the documented REST API for overview, EDA, customers, clusters, rules, insights, anomalies, and prediction.
-- The frontend provides the 7-page dashboard: overview, EDA, customers, clusters, rules, predict, and insights.
+- The frontend provides the 8-page dashboard: overview, EDA, customers, clusters, rules, predict, insights, and data-mining report.
 - Data mining outputs are reproducible from source data and documented with evaluation metrics.
 - Demo-critical `/api/predict` returns churn probability, label, top features, cluster/persona, recommendation, and logs predictions.
 - Repo state is safe to resume after a long break: branch policy, setup steps, toolchain gaps, known risks, and validation status are clear.

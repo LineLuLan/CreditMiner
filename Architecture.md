@@ -5,8 +5,8 @@
 CreditMiner follows a train-offline, infer-online architecture.
 
 - Offline pipeline: raw BankChurners CSV is loaded, cleaned, feature engineered, evaluated, clustered, mined for rules, and exported to model/data artifacts.
-- Backend API: Spring Boot serves database-backed dashboard endpoints and Weka-backed prediction. Models are loaded from local artifact paths at startup; missing models degrade prediction endpoints with model-not-loaded behavior.
-- Frontend: Next.js dashboard uses a typed API client, Zod schemas/types, React Query hooks, and chart/table components to render all demo views.
+- Backend API: Spring Boot serves database-backed dashboard endpoints, Weka-backed prediction, and a read-only mining report aggregate endpoint. Models are loaded from local artifact paths at startup; missing models degrade prediction endpoints with model-not-loaded behavior.
+- Frontend: Next.js dashboard uses a typed API client, Zod schemas/types, React Query hooks, and chart/table components to render all demo views, including a consolidated data-mining report page.
 - Database: PostgreSQL stores customers, clusters, rules, insights, and prediction logs. Hibernate runs in `validate` mode.
 
 ## Data Flow
@@ -20,7 +20,7 @@ CreditMiner follows a train-offline, infer-online architecture.
 ## Module Boundaries
 
 - `backend/src/main/java/com/creditminer/controller`: REST endpoints.
-- `backend/src/main/java/com/creditminer/service`: inference, EDA, preprocessing, feature engineering, seeding, and business services.
+- `backend/src/main/java/com/creditminer/service`: inference, EDA, mining-report aggregation, preprocessing, feature engineering, seeding, and business services.
 - `backend/src/main/java/com/creditminer/pipeline`: standalone offline phase runners and DB maintenance entry points.
 - `backend/src/main/java/com/creditminer/entity` and `repository`: JPA persistence.
 - `web/src/app`: App Router pages and route-level UI.
@@ -44,3 +44,4 @@ CreditMiner follows a train-offline, infer-online architecture.
 - `db/reset.sql`, the insights migration, `Phase8Seeder`, and `SqlMigrationRunner` are DB-mutating and require explicit confirmation plus backup/rollback planning.
 - `ReportService` export methods are placeholders for W8 deliverables.
 - Backend context boot test is disabled until a test datasource is configured.
+- `MiningReportService` is intentionally read-only and tolerant of missing generated artifacts, but backend compile/tests still require JDK 17 and Maven before the new endpoint can be considered fully verified.
