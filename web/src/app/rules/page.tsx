@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +38,8 @@ const RULE_FIELD_LABELS: Record<string, string> = {
   Card_Category: "Card tier",
   Credit_Limit: "Credit limit",
   Gender: "Gender",
+  Income_Category: "Income Category",
+  Risk_Score: "Risk Score",
   Total_Revolving_Bal: "Revolving balance",
   Total_Relationship_Count: "Relationship count",
   Total_Trans_Amt: "Transaction amount",
@@ -68,7 +72,7 @@ export default function RulesPage() {
       })),
     [sorted],
   );
-  const conditionData = React.useMemo(() => conditionFrequency(sorted).slice(0, 8), [sorted]);
+  const conditionData = React.useMemo(() => conditionFrequency(sorted), [sorted]);
 
   return (
     <div className="flex flex-col">
@@ -173,8 +177,8 @@ export default function RulesPage() {
               />
             </section>
 
-            <section className="grid items-start gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-              <Card>
+            <section className="grid min-w-0 items-start gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+              <Card className="min-w-0">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Top rules by support</CardTitle>
                   <CardDescription>
@@ -182,7 +186,7 @@ export default function RulesPage() {
                     affect more customers.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent>
                   <ResponsiveContainer width="100%" height={320}>
                     <BarChart
                       data={supportData}
@@ -206,29 +210,18 @@ export default function RulesPage() {
                       />
                     </BarChart>
                   </ResponsiveContainer>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {sorted.slice(0, 3).map((rule, index) => (
-                      <TopRuleSummary key={rule.ruleId} rule={rule} rank={index + 1} />
-                    ))}
-                  </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="min-w-0">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Most repeated rule conditions</CardTitle>
                   <CardDescription>
                     Shows what Apriori repeatedly discovered across the selected rule set.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {conditionData.map((condition) => (
-                    <ConditionRow
-                      key={`${condition.label}-${condition.value}`}
-                      condition={condition}
-                      max={conditionData[0]?.count ?? 1}
-                    />
-                  ))}
+                <CardContent className="min-w-0">
+                  <ConditionSlider conditions={conditionData} />
                 </CardContent>
               </Card>
             </section>
@@ -318,25 +311,6 @@ function RuleCard({ rule, rank }: { rule: Rule; rank: number }) {
   );
 }
 
-function TopRuleSummary({ rule, rank }: { rule: Rule; rank: number }) {
-  const label = describeRule(rule);
-
-  return (
-    <div className="rounded-lg border bg-muted/15 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <Badge variant="secondary">#{rank}</Badge>
-        <span className="text-xs font-semibold tabular-nums">{formatPct(rule.support, 2)}</span>
-      </div>
-      <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5" title={label.headline}>
-        {label.headline}
-      </p>
-      <p className="mt-2 text-[11px] text-muted-foreground">
-        Lift {rule.lift.toFixed(2)} · confidence {formatPct(rule.confidence)}
-      </p>
-    </div>
-  );
-}
-
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md bg-muted/25 p-2">
@@ -346,7 +320,85 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ConditionRow({
+function ConditionSlider({
+  conditions,
+}: {
+  conditions: { label: string; value: string; count: number }[];
+}) {
+  const scrollerRef = React.useRef<HTMLDivElement>(null);
+  const dragRef = React.useRef({ active: false, startX: 0, scrollLeft: 0 });
+  const max = conditions[0]?.count ?? 1;
+
+  const scroll = (direction: "left" | "right") => {
+    scrollerRef.current?.scrollBy({
+      left: direction === "left" ? -320 : 320,
+      behavior: "smooth",
+    });
+  };
+
+  return (
+    <div className="min-w-0 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          Drag horizontally to inspect all conditions.
+        </p>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Previous conditions"
+            onClick={() => scroll("left")}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Next conditions"
+            onClick={() => scroll("right")}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      <div
+        ref={scrollerRef}
+        className="flex max-w-full cursor-grab snap-x gap-3 overflow-x-auto scroll-smooth pb-2 active:cursor-grabbing"
+        onPointerDown={(event) => {
+          const target = event.currentTarget;
+          dragRef.current = {
+            active: true,
+            startX: event.clientX,
+            scrollLeft: target.scrollLeft,
+          };
+          target.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          if (!dragRef.current.active) return;
+          event.currentTarget.scrollLeft =
+            dragRef.current.scrollLeft - (event.clientX - dragRef.current.startX);
+        }}
+        onPointerUp={(event) => {
+          dragRef.current.active = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => {
+          dragRef.current.active = false;
+        }}
+      >
+        {conditions.map((condition) => (
+          <ConditionCard
+            key={`${condition.label}-${condition.value}`}
+            condition={condition}
+            max={max}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ConditionCard({
   condition,
   max,
 }: {
@@ -356,7 +408,7 @@ function ConditionRow({
   const pct = max > 0 ? (condition.count / max) * 100 : 0;
 
   return (
-    <div className="rounded-lg border bg-background/70 p-3">
+    <div className="min-h-28 flex-[0_0_260px] select-none snap-start rounded-lg border bg-background/70 p-3 sm:flex-[0_0_300px]">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{condition.value}</p>
@@ -364,7 +416,7 @@ function ConditionRow({
         </div>
         <span className="text-sm font-semibold tabular-nums">{condition.count}</span>
       </div>
-      <div className="mt-2 h-2 rounded-full bg-muted">
+      <div className="mt-3 h-2 rounded-full bg-muted">
         <div className="h-2 rounded-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -386,7 +438,7 @@ function RuleSupportTooltip({
       <p className="mb-2 text-xs font-semibold">{row.rank}</p>
       <p className="text-xs leading-5">{row.rule}</p>
       <div style={CHART_TOOLTIP_ITEM_STYLE}>
-        Support {row.supportPct.toFixed(2)}% · Lift {row.lift.toFixed(2)}
+        Support {row.supportPct.toFixed(2)}% - Lift {row.lift.toFixed(2)}
       </div>
     </div>
   );
