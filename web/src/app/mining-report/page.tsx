@@ -96,9 +96,9 @@ function ReportContent({ report }: { report: MiningReport }) {
 
   return (
     <>
-      <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+      <section className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <Card className="overflow-hidden border-primary/35 bg-primary/5">
-          <CardContent className="space-y-5 p-5">
+          <CardContent className="space-y-4 p-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="gap-1.5">
                 <FileText className="h-3.5 w-3.5" />
@@ -109,25 +109,25 @@ function ReportContent({ report }: { report: MiningReport }) {
               </span>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[1fr_280px] lg:items-end">
+            <div className="grid gap-3 lg:grid-cols-[1fr_300px] lg:items-start">
               <div>
                 <p className="text-xs font-semibold uppercase text-primary">Mining question</p>
-                <h2 className="mt-2 max-w-4xl text-2xl font-bold tracking-tight md:text-3xl">
+                <h2 className="mt-2 max-w-4xl text-xl font-semibold tracking-tight md:text-2xl">
                   Which customers are likely to churn, why, and which retention actions should be
                   prioritized?
                 </h2>
-                <p className="mt-3 max-w-4xl text-sm leading-6 text-muted-foreground">
+                <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-foreground">
                   This report combines classification, customer segmentation, association rules,
                   anomaly detection, and business insights into one evidence dashboard for the
                   BankChurners dataset.
                 </p>
               </div>
 
-              <div className="rounded-lg border bg-background/60 p-4">
+              <div className="rounded-lg border border-primary/25 bg-background/60 p-3">
                 <p className="text-xs font-semibold uppercase text-muted-foreground">
                   Executive answer
                 </p>
-                <p className="mt-2 text-sm leading-6">
+                <p className="mt-2 text-sm leading-6 text-foreground/90">
                   Churn is concentrated in a minority class of{" "}
                   <strong>{formatPct(report.dataset.churnRate)}</strong>. The best model is{" "}
                   <strong>{report.classification.bestModel}</strong>, customer segments resolve to{" "}
@@ -175,11 +175,13 @@ function ReportContent({ report }: { report: MiningReport }) {
         </Card>
 
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-base">Report health</CardTitle>
-            <CardDescription>Data coverage and artifact status.</CardDescription>
+            <CardDescription className="text-xs">
+              Data coverage and artifact status.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             <HealthRow label="Rows analyzed" value={formatInt(report.dataset.totalRows)} />
             <HealthRow label="Features used" value={formatInt(report.dataset.totalColumns)} />
             <HealthRow
@@ -192,7 +194,7 @@ function ReportContent({ report }: { report: MiningReport }) {
                 <div className="flex items-start gap-2">
                   <AlertCircle className="mt-0.5 h-4 w-4 text-warning" />
                   <div>
-                    <p className="font-medium">Artifact note</p>
+                    <p className="text-sm font-medium">Artifact note</p>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       {report.warnings[0]}
                     </p>
@@ -625,7 +627,7 @@ function InsightEvidence({ insights }: { insights: Insight[] }) {
         <CardTitle className="text-base">Actionable insights</CardTitle>
         <CardDescription>Business recommendations backed by the mining evidence.</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <CardContent className="grid gap-3 lg:grid-cols-2">
         {insights
           .slice()
           .sort((a, b) => a.priority - b.priority)
@@ -662,8 +664,8 @@ function SignalTile({
 
 function HealthRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
+    <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-1.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-sm font-semibold tabular-nums">{value}</span>
     </div>
   );
@@ -792,23 +794,51 @@ function RulesTable({ rules }: { rules: Rule[] }) {
 
 function InsightCard({ insight }: { insight: Insight }) {
   return (
-    <div className="rounded-lg border bg-card/60 p-4">
+    <div className="rounded-lg border bg-card/60 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <p className="font-semibold leading-5">{insight.title}</p>
-        <Badge variant="secondary">{insight.category}</Badge>
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={insight.priority <= 2 ? "default" : "secondary"}>
+              P{insight.priority}
+            </Badge>
+            <Badge variant="secondary">{insight.category}</Badge>
+          </div>
+          <p className="mt-2 font-semibold leading-5">{insight.title}</p>
+        </div>
       </div>
-      <EvidenceBlock title="Discovery" body={insight.discovery} />
-      <EvidenceBlock title="Evidence" body={insight.evidence} />
-      <EvidenceBlock title="Action" body={insight.recommendation} />
+
+      <div className="mt-4 rounded-md border border-primary/30 bg-primary/5 p-3">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase text-primary">
+          <Lightbulb className="h-3.5 w-3.5" />
+          Recommended action
+        </div>
+        <p className="mt-2 text-sm font-medium leading-6">{insight.recommendation}</p>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <EvidenceBlock icon={Search} title="Discovery" body={insight.discovery} />
+        <EvidenceBlock icon={CheckCircle2} title="Evidence" body={insight.evidence} />
+      </div>
     </div>
   );
 }
 
-function EvidenceBlock({ title, body }: { title: string; body: string }) {
+function EvidenceBlock({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  body: string;
+}) {
   return (
-    <div className="mt-3 border-l-2 border-primary/60 pl-3">
-      <p className="text-[11px] font-semibold uppercase text-muted-foreground">{title}</p>
-      <p className="mt-1 text-xs leading-5">{body}</p>
+    <div className="rounded-md bg-muted/25 p-3">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase text-muted-foreground">
+        <Icon className="h-3.5 w-3.5 text-primary" />
+        {title}
+      </div>
+      <p className="mt-2 text-xs leading-5 text-foreground/90">{body}</p>
     </div>
   );
 }
