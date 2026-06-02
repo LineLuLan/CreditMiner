@@ -1,24 +1,25 @@
 # Project Roadmap — CreditMiner
 
 > **Master timeline & milestone tracker.** Updated weekly by the lead.
-> Current pointer: **Week 1 — Skeleton Bootstrap ✅**
+> Current pointer: **Re-onboarding cleanup - develop is source of truth (2026-06-02)**
 
 ---
 
 ## Current Status
 
 ```
-[████░░░░░░░░░░░░░░░░] 5% — Skeleton bootstrap complete
+[####################] Demo implementation complete; re-onboarding cleanup in progress
 ```
 
 | Field | Value |
 |---|---|
-| Sprint week | 1 / 8 |
-| Phase | Phase 0 — Setup |
-| Branch state | main + develop + backend + frontend all in sync |
-| Tag | `v0.1.0-skeleton` |
-| Next milestone | Phase 1 — Data Understanding (BE) + Layout (FE) |
-| Active blockers | 0 |
+| Current focus | Re-onboarding cleanup, safe local init, docs/memory refresh |
+| Source branch | `develop` |
+| Cleanup branch | `codex/reacquaint-cleanup` |
+| Backend state | Phase 8 API documented as complete; local re-verification blocked by missing JDK/Maven |
+| Frontend state | 7 pages documented as live; Corepack/pnpm install, typecheck, lint, and build passed 2026-06-02 |
+| Security state | Previously exposed Neon password redacted from current docs; rotate credential before shared/hosted use |
+| Active blockers | Missing local JDK 17, Maven, Docker, psql, CodeGraph CLI |
 
 ---
 
@@ -61,9 +62,9 @@ If `/api/predict` slips, the demo loses its centerpiece. Protect it.
 | ID | Name | Target | Status |
 |---|---|---|---|
 | M1 | Skeleton bootstrap | end W1 | ✅ DONE 2026-05-08 — tag `v0.1.0-skeleton`, all 4 branches pushed to origin |
-| M2 | Models trained (3 classifiers + KMeans + Apriori) | end W5 | PENDING |
-| M3 | Backend API complete (all 12 endpoints) | end W6 | PENDING |
-| M4 | Frontend MVP (all 7 pages live) | mid W7 | PENDING |
+| M2 | Models trained (3 classifiers + KMeans + Apriori) | end W5 | DONE per BE handoff; re-run requires local data/toolchain |
+| M3 | Backend API complete (all 12 endpoints) | end W6 | DONE per BE handoff; local verification blocked by JDK/Maven |
+| M4 | Frontend MVP (all 7 pages live) | mid W7 | DONE per FE tracker/audit; local verification pending pnpm |
 | M5 | E2E demo recorded | mid W8 | PENDING |
 | M6 | Submit + report + slides | end W8 | PENDING |
 

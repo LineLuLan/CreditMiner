@@ -16,10 +16,16 @@
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 192 75% 92%;
+    --accent-foreground: 196 80% 22%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
+    --success: 152 60% 36%;
+    --success-foreground: 152 70% 96%;
+    --warning: 35 92% 50%;
+    --warning-foreground: 30 80% 12%;
+    --info: 199 89% 48%;
+    --info-foreground: 200 95% 96%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
@@ -39,10 +45,16 @@
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 192 55% 22%;
+    --accent-foreground: 192 80% 88%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
+    --success: 152 55% 45%;
+    --success-foreground: 152 70% 12%;
+    --warning: 38 92% 58%;
+    --warning-foreground: 30 80% 10%;
+    --info: 199 85% 60%;
+    --info-foreground: 200 95% 12%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
@@ -56,5 +68,26 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .h1 {
+    @apply text-4xl font-bold tracking-tight md:text-5xl;
+  }
+  .h2 {
+    @apply text-3xl font-bold tracking-tight;
+  }
+  .h3 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+  .h4 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+  .h5 {
+    @apply text-lg font-semibold;
+  }
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
   }
 }

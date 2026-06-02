@@ -10,6 +10,7 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
+import { CHART_AXIS_TICK, CHART_TOOLTIP_PROPS } from "@/components/charts/chart-theme";
 import { CLUSTER_COLORS } from "@/lib/constants";
 
 export interface ScatterPoint {
@@ -40,10 +41,10 @@ export function ScatterPlot({ data, xLabel, yLabel, height = 360 }: Props) {
     <ResponsiveContainer width="100%" height={height}>
       <ScatterChart margin={{ top: 16, right: 16, bottom: 32, left: 16 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-        <XAxis type="number" dataKey="x" name={xLabel} />
-        <YAxis type="number" dataKey="y" name={yLabel} />
+        <XAxis type="number" dataKey="x" name={xLabel} tick={CHART_AXIS_TICK} />
+        <YAxis type="number" dataKey="y" name={yLabel} tick={CHART_AXIS_TICK} />
         <ZAxis type="number" dataKey="z" range={[40, 120]} />
-        <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+        <Tooltip cursor={{ strokeDasharray: "3 3" }} {...CHART_TOOLTIP_PROPS} />
         {[...groups.entries()].map(([cluster, pts]) => (
           <Scatter
             key={cluster}

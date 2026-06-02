@@ -1,0 +1,28 @@
+# =============================================================================
+# Demo profile
+# In-memory H2 database seeded from local artifacts at startup.
+# This is for one-command local demo only; it does not touch Postgres/Neon.
+# =============================================================================
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:creditminer_demo;MODE=PostgreSQL;DATABASE_TO_UPPER=false;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 1
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: false
+
+logging:
+  level:
+    root: INFO
+    com.creditminer: INFO
+    org.hibernate.SQL: WARN

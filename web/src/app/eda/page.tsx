@@ -16,13 +16,10 @@ import {
 } from "@/components/ui/select";
 import { HistogramChart } from "@/components/charts/HistogramChart";
 import { HeatmapChart } from "@/components/charts/HeatmapChart";
+import { CHART_AXIS_TICK, CHART_TOOLTIP_PROPS } from "@/components/charts/chart-theme";
 import { CHURN_BY_DIMS, EDA_NUMERIC_COLS } from "@/lib/constants";
 import { formatInt, formatPct } from "@/lib/utils";
-import {
-  useEdaChurnBy,
-  useEdaCorrelation,
-  useEdaDistribution,
-} from "@/hooks/useEda";
+import { useEdaChurnBy, useEdaCorrelation, useEdaDistribution } from "@/hooks/useEda";
 import {
   Bar,
   BarChart,
@@ -38,9 +35,9 @@ export default function EdaPage() {
   return (
     <div className="flex flex-col">
       <Header title="Exploratory Data Analysis" />
-      <div className="flex-1 space-y-6 p-6">
+      <div className="min-w-0 flex-1 space-y-4 p-4 xl:p-5">
         <Tabs defaultValue="distribution">
-          <TabsList>
+          <TabsList className="h-10">
             <TabsTrigger value="distribution">Distribution</TabsTrigger>
             <TabsTrigger value="correlation">Correlation</TabsTrigger>
             <TabsTrigger value="churn-by">Churn by dimension</TabsTrigger>
@@ -69,17 +66,17 @@ function DistributionPanel() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Single-column histogram</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Single-column histogram</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="grid items-end gap-3 sm:grid-cols-2 lg:max-w-2xl">
           <div className="space-y-1.5">
             <Label htmlFor={colId} className="text-xs text-muted-foreground">
               Column
             </Label>
             <Select value={col} onValueChange={setCol}>
-              <SelectTrigger id={colId} className="w-[260px]">
+              <SelectTrigger id={colId} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -102,18 +99,18 @@ function DistributionPanel() {
               max={50}
               value={bins}
               onChange={(e) => setBins(Number(e.target.value))}
-              className="w-[200px]"
+              className="w-full"
             />
           </div>
         </div>
         {isLoading ? (
-          <Skeleton className="h-80" />
+          <Skeleton className="h-72" />
         ) : error ? (
           <p className="text-sm text-destructive">
             {(error as { message?: string }).message ?? "Failed to load distribution"}
           </p>
         ) : data ? (
-          <HistogramChart binEdges={data.binEdges} counts={data.counts} />
+          <HistogramChart binEdges={data.binEdges} counts={data.counts} height={280} />
         ) : null}
       </CardContent>
     </Card>
@@ -125,12 +122,12 @@ function CorrelationPanel() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Pearson correlation heatmap (numeric features)</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Pearson correlation heatmap (numeric features)</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0">
         {isLoading ? (
-          <Skeleton className="h-[600px]" />
+          <Skeleton className="h-[520px]" />
         ) : error ? (
           <p className="text-sm text-destructive">
             {(error as { message?: string }).message ?? "Failed to load correlation"}
@@ -161,16 +158,16 @@ function ChurnByPanel() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Churn rate grouped by dimension</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Churn rate grouped by dimension</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 sm:w-[260px]">
           <Label htmlFor={dimId} className="text-xs text-muted-foreground">
             Dimension
           </Label>
           <Select value={dim} onValueChange={setDim}>
-            <SelectTrigger id={dimId} className="w-[260px]">
+            <SelectTrigger id={dimId} className="w-full sm:w-[260px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -183,63 +180,62 @@ function ChurnByPanel() {
           </Select>
         </div>
         {isLoading ? (
-          <Skeleton className="h-80" />
+          <Skeleton className="h-64" />
         ) : error ? (
           <p className="text-sm text-destructive">
             {(error as { message?: string }).message ?? "Failed to load churn-by data"}
           </p>
         ) : data ? (
           <>
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={chartData} margin={{ top: 8, right: 16, left: -10, bottom: 8 }}>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={chartData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="group" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} unit="%" />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--popover))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: 6,
-                    fontSize: 12,
-                  }}
+                <XAxis
+                  dataKey="group"
+                  stroke="hsl(var(--muted-foreground))"
+                  tick={CHART_AXIS_TICK}
                 />
-                <Bar dataKey="churnPct" name="Churn %" radius={[4, 4, 0, 0]}>
+                <YAxis stroke="hsl(var(--muted-foreground))" tick={CHART_AXIS_TICK} unit="%" />
+                <Tooltip {...CHART_TOOLTIP_PROPS} />
+                <Bar
+                  dataKey="churnPct"
+                  name="Churn %"
+                  maxBarSize={96}
+                  radius={[4, 4, 0, 0]}
+                  isAnimationActive={false}
+                >
                   {chartData.map((row, i) => (
                     <Cell
                       key={i}
                       fill={
-                        row.churnPct >= 25
-                          ? "#ef4444"
-                          : row.churnPct >= 18
-                            ? "#f59e0b"
-                            : "#10b981"
+                        row.churnPct >= 25 ? "#ef4444" : row.churnPct >= 18 ? "#f59e0b" : "#10b981"
                       }
                     />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-md border">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="py-2 pr-4 font-medium">Group</th>
-                    <th className="py-2 pr-4 text-right font-medium">Count</th>
-                    <th className="py-2 pr-4 text-right font-medium">Attrited</th>
-                    <th className="py-2 pr-4 text-right font-medium">Churn rate</th>
+                  <tr className="border-b bg-muted/20 text-left text-muted-foreground">
+                    <th className="px-3 py-2 font-medium">Group</th>
+                    <th className="px-3 py-2 text-right font-medium">Count</th>
+                    <th className="px-3 py-2 text-right font-medium">Attrited</th>
+                    <th className="px-3 py-2 text-right font-medium">Churn rate</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.map((row) => (
                     <tr key={row.group} className="border-b last:border-b-0">
-                      <td className="py-1.5 pr-4 font-medium">{row.group}</td>
-                      <td className="py-1.5 pr-4 text-right tabular-nums">
+                      <td className="px-3 py-1.5 font-medium">{row.group}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">
                         {formatInt(row.count)}
                       </td>
-                      <td className="py-1.5 pr-4 text-right tabular-nums">
+                      <td className="px-3 py-1.5 text-right tabular-nums">
                         {formatInt(row.attritedCount)}
                       </td>
-                      <td className="py-1.5 pr-4 text-right tabular-nums">
+                      <td className="px-3 py-1.5 text-right tabular-nums">
                         {formatPct(row.churnRate)}
                       </td>
                     </tr>

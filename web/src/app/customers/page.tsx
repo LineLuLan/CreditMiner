@@ -89,64 +89,66 @@ export default function CustomersPage() {
       <Header title="Customers" />
       <div className="flex-1 space-y-4 p-6">
         <Card>
-          <CardContent className="flex flex-wrap items-end gap-3 pt-6">
-            <Filter label="Attrition">
-              <Select value={attritionFlag} onValueChange={setAttritionFlag}>
-                <SelectTrigger aria-label="Filter by attrition" className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ATTRITION_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Filter>
-            <Filter label="Cluster">
-              <Select value={clusterId} onValueChange={setClusterId}>
-                <SelectTrigger aria-label="Filter by cluster" className="w-[220px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLUSTER_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Filter>
-            <Filter label="Sort">
-              <Select value={sort} onValueChange={setSort}>
-                <SelectTrigger aria-label="Sort by" className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Filter>
-            <Filter label="Page size">
-              <Select value={String(size)} onValueChange={(v) => setSize(Number(v))}>
-                <SelectTrigger aria-label="Page size" className="w-[100px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGE_SIZE_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={String(s)}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Filter>
-            <div className="ml-auto text-sm text-muted-foreground">
+          <CardContent className="space-y-3 pt-6">
+            <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Filter label="Attrition">
+                <Select value={attritionFlag} onValueChange={setAttritionFlag}>
+                  <SelectTrigger aria-label="Filter by attrition" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ATTRITION_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Filter>
+              <Filter label="Cluster">
+                <Select value={clusterId} onValueChange={setClusterId}>
+                  <SelectTrigger aria-label="Filter by cluster" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CLUSTER_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Filter>
+              <Filter label="Sort">
+                <Select value={sort} onValueChange={setSort}>
+                  <SelectTrigger aria-label="Sort by" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Filter>
+              <Filter label="Page size">
+                <Select value={String(size)} onValueChange={(v) => setSize(Number(v))}>
+                  <SelectTrigger aria-label="Page size" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Filter>
+            </div>
+            <div className="text-sm text-muted-foreground">
               {data ? `${formatInt(data.total)} total` : isLoading ? "Loading…" : "—"}
               {isFetching && !isLoading ? " · refreshing…" : ""}
             </div>
@@ -160,41 +162,43 @@ export default function CustomersPage() {
                 {(error as { message?: string }).message ?? "Failed to load customers"}
               </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client #</TableHead>
-                    <TableHead>Attrition</TableHead>
-                    <TableHead className="text-right">Age</TableHead>
-                    <TableHead>Gender</TableHead>
-                    <TableHead>Card</TableHead>
-                    <TableHead>Tier</TableHead>
-                    <TableHead className="text-right">Risk</TableHead>
-                    <TableHead className="text-right">Cluster</TableHead>
-                    <TableHead>Flags</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading
-                    ? Array.from({ length: size }).map((_, i) => (
-                        <TableRow key={i}>
-                          <TableCell colSpan={9}>
-                            <Skeleton className="h-6" />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    : data?.items.map((c) => (
-                        <CustomerRow key={c.clientNum} c={c} onClick={() => setOpenId(c.clientNum)} />
-                      ))}
-                  {!isLoading && data && data.items.length === 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-                        No customers match the selected filters.
-                      </TableCell>
+                      <TableHead>Client #</TableHead>
+                      <TableHead>Attrition</TableHead>
+                      <TableHead className="text-right">Age</TableHead>
+                      <TableHead className="hidden sm:table-cell">Gender</TableHead>
+                      <TableHead className="hidden md:table-cell">Card</TableHead>
+                      <TableHead className="hidden sm:table-cell">Tier</TableHead>
+                      <TableHead className="text-right">Risk</TableHead>
+                      <TableHead className="hidden text-right md:table-cell">Cluster</TableHead>
+                      <TableHead>Flags</TableHead>
                     </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading
+                      ? Array.from({ length: size }).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell colSpan={9}>
+                              <Skeleton className="h-6" />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      : data?.items.map((c) => (
+                          <CustomerRow key={c.clientNum} c={c} onClick={() => setOpenId(c.clientNum)} />
+                        ))}
+                    {!isLoading && data && data.items.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
+                          No customers match the selected filters.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -253,18 +257,20 @@ function CustomerRow({ c, onClick }: { c: CustomerSummary; onClick: () => void }
         </Badge>
       </TableCell>
       <TableCell className="text-right tabular-nums">{c.customerAge ?? "—"}</TableCell>
-      <TableCell>{c.gender ?? "—"}</TableCell>
-      <TableCell>{c.cardCategory ?? "—"}</TableCell>
-      <TableCell>{c.customerTier ?? "—"}</TableCell>
+      <TableCell className="hidden sm:table-cell">{c.gender ?? "—"}</TableCell>
+      <TableCell className="hidden md:table-cell">{c.cardCategory ?? "—"}</TableCell>
+      <TableCell className="hidden sm:table-cell">{c.customerTier ?? "—"}</TableCell>
       <TableCell className="text-right tabular-nums">
         {c.riskScore != null ? c.riskScore.toFixed(2) : "—"}
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="hidden text-right tabular-nums md:table-cell">
         {c.clusterId != null ? `C${c.clusterId}` : "—"}
       </TableCell>
-      <TableCell className="space-x-1">
-        {c.isOutlier ? <Badge variant="outline" className="text-[10px]">outlier</Badge> : null}
-        {c.isAnomaly ? <Badge variant="destructive" className="text-[10px]">anomaly</Badge> : null}
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          {c.isOutlier ? <Badge variant="outline" className="text-[10px]">outlier</Badge> : null}
+          {c.isAnomaly ? <Badge variant="destructive" className="text-[10px]">anomaly</Badge> : null}
+        </div>
       </TableCell>
     </TableRow>
   );

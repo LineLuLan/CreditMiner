@@ -25,6 +25,12 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     long countByAttritionFlag(String attritionFlag);
 
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.isOutlier = true")
+    long countOutliers();
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.isAnomaly = true")
+    long countAnomalies();
+
     @Query("SELECT AVG(c.riskScore) FROM Customer c")
     Double avgRiskScore();
 

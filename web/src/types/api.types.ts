@@ -13,6 +13,7 @@ import {
   IncomeCategory,
   InsightSchema,
   MaritalStatus,
+  MiningReportSchema,
   OverviewResponseSchema,
   PcaPointSchema,
   PredictRequestSchema,
@@ -41,6 +42,7 @@ export type Rule = z.infer<typeof RuleSchema>;
 export type Insight = z.infer<typeof InsightSchema>;
 export type Anomaly = z.infer<typeof AnomalySchema>;
 export type PcaPoint = z.infer<typeof PcaPointSchema>;
+export type MiningReport = z.infer<typeof MiningReportSchema>;
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 
 export interface PageResponse<T> {

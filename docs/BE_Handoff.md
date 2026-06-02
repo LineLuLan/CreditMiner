@@ -40,6 +40,7 @@
 | `GET /api/eda/distribution\|correlation\|churn-by` | ✅ Live | (already real) — see §3.2 / §3.3 / §3.4 |
 | `GET /api/eda/describe` | ✅ Live | (already real) — see §3.13 |
 | `GET /api/eda/pca-2d` | ✅ Live — 10127 points × `{clientNum, clusterId, x, y}` from `phase6_pca_2d.json` (cached after first call) | new 2026-05-09 |
+| `GET /api/mining-report` | implemented locally; read-only aggregate for dataset, classification, clustering, rules, anomalies, and insights | new 2026-06-02; backend test blocked until Maven/JDK available |
 
 ### Error envelope status
 
@@ -51,26 +52,32 @@ Working today (verified by smoke test on `3ac1d37` + JUnit on 2026-05-09):
 
 ### Database
 
-Neon Postgres (project `ep-purple-smoke-aosu7szo`, region `ap-southeast-1`, PG 17). Schema applied via `db/schema.sql` + `db/seed.sql`. Connection via `DATABASE_URL` + `DB_USER` + `DB_PASSWORD` env vars (see `backend/.env.example`). Hibernate runs in `validate` mode — schema tweaks must land in `db/schema.sql` AND match JPA entity types.
+Neon Postgres is the production-like hosted database (region `ap-southeast-1`, PG 17). Schema applied via `db/schema.sql` + `db/seed.sql`. Connection is via `DATABASE_URL` + `DB_USER` + `DB_PASSWORD` environment variables; values must stay in the secret manager or local shell only.
+
+Security note: a database password was previously present in this handoff document. Treat that value as compromised, rotate it in Neon before further shared use, and do not rely on repository history as a secret store.
+
+Hibernate runs in `validate` mode — schema tweaks must land in `db/schema.sql` AND match JPA entity types.
 
 ### Pick-up notes for the next session
 
-**BE is fully operational against Neon as of 2026-05-09 09:47 UTC+7.** All 12 endpoints respond with real data. No remaining hard blockers. To re-run seed (e.g., after Phase 6/7 re-trains):
+**BE was last verified against Neon on 2026-05-09 09:47 UTC+7.** All 12 endpoints responded with real data at that time. Current local re-verification requires JDK 17, Maven, and credentials from the approved secret manager. To run a backend smoke locally:
 
 ```powershell
-# From backend/ directory, env vars saved in user memory reference_neon_db.md:
-$env:DATABASE_URL  = 'jdbc:postgresql://ep-purple-smoke-aosu7szo-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-$env:DB_USER       = 'neondb_owner'
-$env:DB_PASSWORD   = 'npg_I2zHTPYgaN5B'   # rotate this if leaked
+# From backend/ directory, set these values in your local shell only.
+# Retrieve real values from the approved secret manager; do not paste them into docs, chat, commits, or logs.
+$env:DATABASE_URL = '<jdbc-postgres-url-from-secret-manager>'
+$env:DB_USER = '<database-user-from-secret-manager>'
+$env:DB_PASSWORD = '<database-password-from-secret-manager>'
 $env:SPRING_PROFILES_ACTIVE = 'prod'
-mvn -q -Dmaven.test.skip=true exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase8Seeder
-# Insights are NOT touched by the seed. To refresh them:
-mvn -q -Dmaven.test.skip=true exec:java -Dexec.mainClass=com.creditminer.pipeline.SqlMigrationRunner -Dexec.args=../db/migrations/2026-05-09_refresh_insights.sql
-# Spring Boot:
+
+# Safe runtime smoke only after credentials are loaded locally:
 mvn -q -Dmaven.test.skip=true spring-boot:run
+
+# DB-mutating maintenance such as Phase8Seeder or SqlMigrationRunner requires a separate explicit DB confirmation,
+# target database identification, backup/restore plan, and rollback notes before execution.
 ```
 
-Note: `pom.xml` `exec-maven-plugin` `<classpathScope>` is now `runtime` (was `compile`) so postgresql JDBC driver loads. `-Dmaven.test.skip=true` is required because `src/test/java/com/creditminer/service/ClassificationServiceTest.java` uses an outdated 2-arg constructor (real signature is now 5-arg post-Phase-8) — fix the test or delete it before turning tests back on.
+Note: `pom.xml` `exec-maven-plugin` `<classpathScope>` is now `runtime` (was `compile`) so the PostgreSQL JDBC driver loads for DB-aware pipeline mains. The stale `ClassificationServiceTest` constructor issue is documented as resolved; when JDK 17 and Maven are available, run `mvn -B test` before relying on backend status.
 
 **Outstanding follow-ups (none block FE):**
 1. ~~PCA-2D HTTP endpoint~~ → DONE 2026-05-09 (`GET /api/eda/pca-2d`).
@@ -419,6 +426,80 @@ Phase 1 describe table — column-by-column stats for the post-leakage-drop data
 - All numeric stats rounded to 4 decimals.
 
 **Response 503**: `REPORT_NOT_GENERATED` when neither raw CSV nor processed ARFF is present.
+
+### 3.14 `GET /api/mining-report`
+
+Consolidated data-mining evidence endpoint for report/demo screens. This is read-only: it combines existing API/DB services with generated artifact summaries when available, and returns warnings instead of failing the whole response when an optional artifact is missing.
+
+**Response 200**:
+```json
+{
+  "generatedAt": "2026-06-02T10:00:00Z",
+  "dataset": {
+    "totalRows": 10127,
+    "totalColumns": 27,
+    "classColumn": "Attrition_Flag",
+    "numericColumns": 20,
+    "categoricalColumns": 7,
+    "totalMissingValues": 3380,
+    "dbCustomerRows": 10127,
+    "attritedCustomers": 1627,
+    "churnRate": 0.1607,
+    "attritionBreakdown": [{ "name": "Existing Customer", "count": 8500 }],
+    "topMissingColumns": [{ "name": "Education_Level", "missing": 1519, "missingPct": 0.15 }],
+    "tierBreakdown": { "Bronze": 2532, "Silver": 2531, "Gold": 2532, "Platinum": 2532 },
+    "leakageColumnsDropped": []
+  },
+  "classification": {
+    "bestModel": "RandomForest",
+    "bestVariant": "SMOTE",
+    "metricSource": "data/processed/phase5_comparison.csv",
+    "modelMetrics": [{ "model": "RandomForest", "variant": "SMOTE", "testF1": 0.8758, "testRocAuc": 0.9888, "testPrAuc": 0.9429 }],
+    "featureImportance": [{ "name": "Total_Trans_Amt", "importance": 0.23, "share": 0.18 }]
+  },
+  "clustering": {
+    "bestK": 3,
+    "strategy": "sampled silhouette",
+    "totalClusters": 3,
+    "clusters": [],
+    "elbowScores": [{ "k": 3, "wcss": 1234.5, "silhouette": 0.218 }]
+  },
+  "rules": {
+    "totalRules": 50,
+    "churnRules": 0,
+    "retentionRules": 50,
+    "avgSupport": 0.06,
+    "avgConfidence": 0.91,
+    "avgLift": 1.12,
+    "minLift": 1.0,
+    "maxLift": 1.19,
+    "topRules": []
+  },
+  "anomalies": {
+    "dbOutlierCount": 1684,
+    "dbAnomalyCount": 349,
+    "phase2OutlierCount": 1684,
+    "clusterStrongOutlierCount": 400,
+    "clusterMildOutlierCount": 1560,
+    "combinedAnomalyCount": 349,
+    "combinedAnomalyPct": 0.0345,
+    "clusterDistanceMu": 0.714,
+    "clusterDistanceSigma": 0.187,
+    "strongThreshold": 1.087,
+    "mildThreshold": 0.9,
+    "rule": "clusterStrongOutlier AND phase2Outlier",
+    "topAnomalies": []
+  },
+  "insights": [],
+  "warnings": []
+}
+```
+
+**Notes for FE**:
+- `clusters`, `topRules`, `topAnomalies`, and `insights` reuse existing response shapes.
+- Nullable anomaly fields are represented as `null` when the generated summary artifact is unavailable.
+- `warnings` is an array of non-secret status strings, usually missing artifact paths or DB read failures.
+- The endpoint is DB-first but read-only. If cluster/rule/insight rows are empty or unavailable, it falls back to `data/processed/phase6_clusters.json`, `models/rules.json`, and `insights.json`.
 
 ---
 

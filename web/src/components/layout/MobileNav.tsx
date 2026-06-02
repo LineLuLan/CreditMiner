@@ -5,7 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  FileText,
   Filter,
+  GitBranch,
   LayoutDashboard,
   Lightbulb,
   Menu,
@@ -21,27 +23,33 @@ import { APP_NAME, NAV_ITEMS } from "@/lib/constants";
 const ICON_MAP = {
   LayoutDashboard,
   BarChart3,
+  FileText,
   Users,
   Network,
   Filter,
+  GitBranch,
   Sparkles,
   Lightbulb,
 } as const;
 
-/**
- * Mobile-only navigation: hamburger button + slide-in drawer.
- * Hidden at md+ where the desktop {@code Sidebar} takes over.
- */
 export function MobileNav() {
   const [open, setOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const pathname = usePathname();
 
-  // Close on navigation
+  React.useEffect(() => {
+    if (open) {
+      setMounted(true);
+    } else {
+      const t = setTimeout(() => setMounted(false), 220);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
   React.useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  // Close on Escape
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -51,7 +59,6 @@ export function MobileNav() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  // Lock body scroll while open
   React.useEffect(() => {
     if (typeof document === "undefined") return;
     if (open) {
@@ -75,7 +82,7 @@ export function MobileNav() {
         <Menu className="h-5 w-5" />
       </Button>
 
-      {open ? (
+      {mounted ? (
         <div
           className="fixed inset-0 z-50 md:hidden"
           role="dialog"
@@ -83,17 +90,28 @@ export function MobileNav() {
           aria-label="Site navigation"
         >
           <div
-            className="absolute inset-0 bg-black/50"
+            className={cn(
+              "absolute inset-0 bg-black/50 transition-opacity duration-200",
+              open ? "opacity-100" : "opacity-0",
+            )}
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
-          <aside className="relative flex h-full w-72 max-w-[80vw] flex-col border-r bg-card shadow-lg">
+          <aside
+            className={cn(
+              "relative flex h-full w-72 max-w-[80vw] flex-col border-r bg-card shadow-xl transition-transform duration-200 ease-out",
+              open ? "translate-x-0" : "-translate-x-full",
+            )}
+          >
             <div className="flex h-16 items-center justify-between border-b px-4">
               <Link
                 href="/"
-                className="text-lg font-bold tracking-tight"
+                className="flex items-center gap-2 text-lg font-bold tracking-tight"
                 onClick={() => setOpen(false)}
               >
+                <span className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground">
+                  <Sparkles className="h-4 w-4" aria-hidden />
+                </span>
                 {APP_NAME}
               </Link>
               <Button
@@ -109,8 +127,7 @@ export function MobileNav() {
               {NAV_ITEMS.map((item) => {
                 const Icon = ICON_MAP[item.icon as keyof typeof ICON_MAP];
                 const active =
-                  pathname === item.href ||
-                  (item.href !== "/" && pathname.startsWith(item.href));
+                  pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
                 return (
                   <Link
                     key={item.href}
@@ -128,7 +145,10 @@ export function MobileNav() {
                 );
               })}
             </nav>
-            <div className="border-t p-4 text-xs text-muted-foreground">v0.1.0-skeleton</div>
+            <div className="border-t p-4 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">Demo build</p>
+              <p>CRISP-DM · CreditCard churn</p>
+            </div>
           </aside>
         </div>
       ) : null}

@@ -154,6 +154,101 @@ export const PcaPointSchema = z.object({
   y: z.number(),
 });
 
+// ---------- Mining Report ----------
+export const NameCountSchema = z.object({
+  name: z.string(),
+  count: z.number(),
+});
+
+export const ColumnMissingSchema = z.object({
+  name: z.string(),
+  missing: z.number().int(),
+  missingPct: z.number(),
+});
+
+export const ModelMetricSchema = z.object({
+  model: z.string(),
+  variant: z.string(),
+  testF1: z.number().nullable().optional(),
+  testRocAuc: z.number().nullable().optional(),
+  testPrAuc: z.number().nullable().optional(),
+  testAccuracy: z.number().nullable().optional(),
+  source: z.string(),
+});
+
+export const FeatureImportanceReportSchema = z.object({
+  name: z.string(),
+  importance: z.number(),
+  share: z.number(),
+});
+
+export const ElbowPointSchema = z.object({
+  k: z.number().int(),
+  wcss: z.number(),
+  silhouette: z.number(),
+});
+
+export const MiningReportSchema = z.object({
+  generatedAt: z.string(),
+  dataset: z.object({
+    totalRows: z.number().int(),
+    totalColumns: z.number().int(),
+    classColumn: z.string(),
+    numericColumns: z.number().int(),
+    categoricalColumns: z.number().int(),
+    totalMissingValues: z.number().int(),
+    dbCustomerRows: z.number(),
+    attritedCustomers: z.number(),
+    churnRate: z.number(),
+    attritionBreakdown: z.array(NameCountSchema),
+    topMissingColumns: z.array(ColumnMissingSchema),
+    tierBreakdown: z.record(z.number()),
+    leakageColumnsDropped: z.array(z.string()),
+  }),
+  classification: z.object({
+    bestModel: z.string(),
+    bestVariant: z.string(),
+    metricSource: z.string(),
+    modelMetrics: z.array(ModelMetricSchema),
+    featureImportance: z.array(FeatureImportanceReportSchema),
+  }),
+  clustering: z.object({
+    bestK: z.number().int(),
+    strategy: z.string(),
+    totalClusters: z.number().int(),
+    clusters: z.array(ClusterSchema),
+    elbowScores: z.array(ElbowPointSchema),
+  }),
+  rules: z.object({
+    totalRules: z.number(),
+    churnRules: z.number(),
+    retentionRules: z.number(),
+    avgSupport: z.number(),
+    avgConfidence: z.number(),
+    avgLift: z.number(),
+    minLift: z.number(),
+    maxLift: z.number(),
+    topRules: z.array(RuleSchema),
+  }),
+  anomalies: z.object({
+    dbOutlierCount: z.number(),
+    dbAnomalyCount: z.number(),
+    phase2OutlierCount: z.number().nullable().optional(),
+    clusterStrongOutlierCount: z.number().nullable().optional(),
+    clusterMildOutlierCount: z.number().nullable().optional(),
+    combinedAnomalyCount: z.number().nullable().optional(),
+    combinedAnomalyPct: z.number().nullable().optional(),
+    clusterDistanceMu: z.number().nullable().optional(),
+    clusterDistanceSigma: z.number().nullable().optional(),
+    strongThreshold: z.number().nullable().optional(),
+    mildThreshold: z.number().nullable().optional(),
+    rule: z.string().nullable().optional(),
+    topAnomalies: z.array(AnomalySchema),
+  }),
+  insights: z.array(InsightSchema),
+  warnings: z.array(z.string()),
+});
+
 // ---------- Error envelope ----------
 export const ApiErrorSchema = z.object({
   error: z.object({

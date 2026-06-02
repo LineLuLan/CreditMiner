@@ -1,7 +1,7 @@
 # Frontend Task Tracker
 
-> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-09 — 7 of 7 pages live, FE-Q1..Q8 polish suite REVIEW (sonner toasts, mobile hamburger, axe + Playwright + Lighthouse audits). PCA scatter on /clusters, cluster-customers drawer, optional Q4/Q1 fields on /predict.
-> Update this file in the **same commit** that closes a task. Sync `docs/` to `develop` → `backend` after.
+> **Branch**: `frontend` - **Owner**: FE team - **Last sync**: 2026-06-02 re-onboarding review. 2026-05-14 polish/audit results remain the latest recorded FE validation; local re-run completed on 2026-06-02 with Corepack/pnpm install, typecheck, lint, and build passing.
+> Update this file in the **same commit** that closes a task. Sync `docs/` to `develop` -> `backend` after.
 
 ---
 
@@ -17,16 +17,16 @@
 
 ---
 
-## Quick Stats
+## Quick Stats (re-onboarding summary)
 
 | Metric | Value |
 |---|---|
-| Total tasks | 56 |
-| DONE | 1 (FE-00) |
-| REVIEW | 39 (Phase 0..8 page wiring + FE-50 PCA scatter + FE-53 cluster-customers drawer + FE-Q1..Q8 polish suite) |
-| BACKLOG | 13 (FE-13 dedicated `loading.tsx` per route, FE-14 dedicated `error.tsx` per route, a few minor polish items) |
-| Blocked | 3 (manual user steps FE-M1..M3) |
-| % complete | All 7 pages live, audits green, demo-ready. Backlog items are nice-to-have. |
+| UI status | 7 dashboard pages documented live and demo-ready |
+| Latest recorded audit | 2026-05-14: 9/9 Playwright tests passed; Lighthouse assertions passed |
+| Current source branch | `develop` |
+| Local verification | PASSED 2026-06-02: Corepack pnpm install, typecheck, lint, and build |
+| Known follow-ups | `/clusters` and `/rules` remain Recharts-heavy; `/insights` contrast follow-up from 2026-05-14 audit |
+| Manual blockers | Node/pnpm environment, local API URL, deploy env vars |
 
 ---
 
@@ -139,6 +139,38 @@
 | FE-Q6 | Accessibility audit (axe) | REVIEW | claude | _pending_ | `pnpm test:e2e:a11y` — 7 routes scanned, 0 critical violations. Serious contrast deltas (3 doc'd in `docs/FE_Audits.md`) accepted. |
 | FE-Q7 | Playwright E2E (predict happy path) | REVIEW | claude | _pending_ | `pnpm test:e2e:predict` — 2 happy-path tests (low-risk → Existing, high-risk → Attrited). Both green. |
 | FE-Q8 | Lighthouse score >= 90 | REVIEW | claude | _pending_ | `pnpm lhci` — a11y ≥ 0.94, BP/SEO 1.0 across all 7 routes. Performance: 5/7 routes ≥ 0.95, /clusters 0.58 + /rules 0.73 (Recharts heaviness; tracked). Full per-route table in `docs/FE_Audits.md`. |
+
+## Polish — Wave 2026-05-14 (Gói A: Design system + layout)
+
+| ID | Title | Status | Owner | Commit | Notes |
+|---|---|---|---|---|---|
+| FE-P1 | Tailwind tokens: success/warning/info + accent retuned | REVIEW | claude | _pending_ | `web/tailwind.config.ts` extends 3 semantic colors; `globals.css` adds HSL vars (light + dark) and switches `--accent` from secondary clone to soft teal (192 hue) so nav-hover is distinguishable. |
+| FE-P2 | Type scale `.h1`..`.h5` + `.eyebrow` | REVIEW | claude | _pending_ | `globals.css` `@layer components` adds `.h1` (text-4xl bold tracking-tight, scales md:5xl) through `.h5` plus `.eyebrow` uppercase label utility. |
+| FE-P3 | MobileNav animated slide-in + overlay fade | REVIEW | claude | _pending_ | Drawer uses Tailwind `-translate-x-full`↔`translate-x-0` over 200ms with overlay `opacity-0`↔`opacity-100`; component keeps DOM mounted briefly while closing so the exit animation actually plays. |
+| FE-P4 | Header breadcrumb derived from pathname | REVIEW | claude | _pending_ | `Header.tsx` uses `usePathname()` + `NAV_ITEMS` to render `Home › Section` (hidden on root and on `<sm`). |
+| FE-P5 | error.tsx / not-found.tsx redesigned with icon + card | REVIEW | claude | _pending_ | Both wrap content in `Card`, lead with circular icon badge (AlertTriangle / SearchX), show typed h3 + muted body + branded button with leading icon. error page surfaces `digest` ref when present. |
+| FE-P6 | Sidebar brand badge + footer copy | REVIEW | claude | _pending_ | Sidebar now shows Sparkles in primary-tinted square next to brand name; footer replaces `v0.1.0-skeleton` placeholder with build copy ("CRISP-DM · CreditCard churn · k=3 clusters"). |
+
+## Polish — Wave 2026-05-14 (Gói B: /predict redesign)
+
+| ID | Title | Status | Owner | Commit | Notes |
+|---|---|---|---|---|---|
+| FE-P7 | shadcn Tooltip primitive | REVIEW | claude | _pending_ | Added `web/src/components/ui/tooltip.tsx` wrapping `@radix-ui/react-tooltip` (already in deps). Includes Provider/Root/Trigger/Content with standard data-state animations and `--popover` token. Also wired `popover` color into `tailwind.config.ts`. |
+| FE-P8 | PredictForm — 3-col responsive layout + Mid-risk sample + tooltipped sample row | REVIEW | claude | _pending_ | Fields reflow to `sm:grid-cols-2 lg:grid-cols-3` so each section fills evenly. Added `SAMPLE_MID_RISK` (borderline profile) between low/high. Sample buttons moved into a dedicated "Try a sample customer profile" card with explanatory tooltips and tone-coded borders (success/warning/destructive). Submit button gains Sparkles icon + spinner state. |
+| FE-P9 | Animated semicircle gauge with threshold tick | REVIEW | claude | _pending_ | Replaced div-bar with SVG arc gauge: gradient track (success→warning→destructive), animated `stroke-dasharray` over 700ms, 50% tick + label highlighted, 0/100 endpoint ticks, big inline `<text>` percentage, severity copy underneath. Reads as `role="img"` with `aria-label="Churn probability NN%"`. |
+| FE-P10 | Result hierarchy — gauge primary, 3-2 split row, ranked features | REVIEW | claude | _pending_ | New layout: row 1 = gauge card (primary-tinted, shadow) with side-by-side label + risk score + threshold copy. Row 2 = Recommendation 3-col (primary) + Nearest Cluster 2-col. Row 3 = top features bar with numbered rank chips and width-animated fill. |
+
+## Polish — Wave 2026-05-14 (Gói C: page polish + perf)
+
+| ID | Title | Status | Owner | Commit | Notes |
+|---|---|---|---|---|---|
+| FE-P11 | DonutChart legend + % labels + responsive radius | REVIEW | claude | _pending_ | Pie now renders inline `<text>` labels (skipped under 4%), Recharts `<Legend>` at bottom (icon=circle), tooltip formatter shows count + share, animated, percentage-based innerRadius/outerRadius so it scales with the container. |
+| FE-P12 | Overview KPI grid 2-col default + 4-col desktop | REVIEW | claude | _pending_ | `grid-cols-2 lg:grid-cols-4` on mobile fits 2 KPI per row instead of stretching to full width. Chart row collapses to single column under `lg`. |
+| FE-P13 | EDA filter widths responsive | REVIEW | claude | _pending_ | Distribution column/bins selectors moved to `sm:grid-cols-2` grid with `w-full`. Churn-by dimension select is `w-full sm:w-[260px]`. No overflow on 375px viewport. |
+| FE-P14 | Customers table — responsive column hide + filter grid | REVIEW | claude | _pending_ | Filters reflow to `sm:grid-cols-2 lg:grid-cols-4` with full-width selects. Table wrapped in horizontal scroll; columns Gender/Card/Tier/Cluster collapse under `sm`/`md` to keep the row readable. Flag badges wrap. |
+| FE-P15 | Clusters — dynamic-import PCA scatter, downsample 500→300, persona hierarchy | REVIEW | claude | _pending_ | Extracted `PcaScatterCard` to `components/features/PcaScatterCard.tsx` and loaded via `next/dynamic({ ssr: false })` with skeleton fallback so Recharts ScatterChart stays out of the initial /clusters chunk. Persona card now leads with `text-3xl` churn rate in semantic token color (success/warning/destructive), secondary stats demoted to `text-xs`. |
+| FE-P16 | Rules — slider rework + responsive table | REVIEW | claude | _pending_ | Min-lift slider now spans [1.00, 1.20] with 0.01 step (matches retention cap 1.19), shows tick marks (1.00/1.10/1.20) under the rail and a value chip above. Table wrapped in horizontal scroll; RHS/Cat/Support columns collapse under `md`/`sm`. Empty-state message references the current min-lift. |
+| FE-P17 | Insights — single accordion + section accents + icons | REVIEW | claude | _pending_ | Accordion switched to `type="single" collapsible` so only one insight expands at a time. Each section (Discovery / Evidence / Recommendation) gains a left border accent (info / muted / primary) plus a lucide icon (Search/FileText/Wrench). Trigger shows a numbered chip + churn-aware badge color. Empty state has Lightbulb illustration. |
 
 ## Manual user steps (FE-side)
 

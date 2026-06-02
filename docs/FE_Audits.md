@@ -1,6 +1,42 @@
 # Frontend Audit Report
 
-> Generated 2026-05-09 against `localhost:3000` (prod build via `pnpm build && pnpm start`) with the BE running on Neon prod profile.
+> **Re-audited 2026-05-14** after the 3-gói polish wave (design tokens, /predict redesign, page polish + perf). Original 2026-05-09 baseline kept inline for comparison. Generated against `localhost:3000` (prod build via `pnpm build && pnpm start`) with the BE running on Neon prod profile.
+
+## 2026-05-14 — Polish wave results
+
+```
+corepack pnpm test:e2e   → 9 passed (39.7s)
+corepack pnpm lhci       → 0 assertion failures, all thresholds met
+```
+
+| Route | Perf (before → after) | A11y (before → after) | BP | SEO |
+|---|---:|---:|---:|---:|
+| `/` Overview      | 0.98 → **0.99** ↑ | 0.98 → 0.98     | 1.00 | 1.00 |
+| `/eda`            | 0.95 → 0.92 ↓     | 0.94 → 0.94     | 1.00 | 1.00 |
+| `/customers`      | 0.99 → 0.96 ↓     | 0.96 → 0.96     | 1.00 | 1.00 |
+| `/clusters`       | **0.58 → 0.60** ↑ | 0.94 → 0.94     | 1.00 | 1.00 |
+| `/rules`          | **0.73 → 0.73**   | 0.98 → 0.98     | 1.00 | 1.00 |
+| `/predict`        | 0.99 → 0.96 ↓     | 0.98 → 0.98     | 1.00 | 1.00 |
+| `/insights`       | 0.99 → 0.99       | 0.98 → 0.93 ↓   | 1.00 | 1.00 |
+
+**Reading the deltas:**
+- `/clusters` perf moved only 0.58 → 0.60 despite `next/dynamic` import of `PcaScatterCard` and downsampling 500 → 300 pts/cluster. Recharts SVG rendering (persona cards + comparison BarChart + scatter) is still the dominant cost. To break past 0.85 we'd need a canvas-based scatter or on-demand chart rendering — out of scope for this wave.
+- `/rules` perf flat at 0.73 — Recharts ScatterChart + Tooltip still in the main bundle. Same trade-off as `/clusters`.
+- Single-digit dips on `/eda`/`/customers`/`/predict` (≤ 0.03) are within the run-to-run variance we saw across the two 2026-05-09 runs (e.g. `/eda` 0.95 vs 0.92 across reports `04_20_27` and `04_23_29`).
+- `/insights` a11y dropped 0.98 → 0.93. Likely cause: new `border-l-info bg-info/5` section accents and the `bg-primary/10 text-primary` numbered chip. Critical violations still 0 (axe a11y suite green). Worth a contrast pass in a follow-up.
+- Performance gains on the trang-demo `/predict` (animated gauge, tooltipped samples, hierarchy) are visual, not numeric — Lighthouse can't see "nicer".
+
+Re-run command (same as 2026-05-09):
+```powershell
+cd web
+corepack pnpm build; corepack pnpm start
+# new shell
+$env:CHROME_PATH = 'C:\Users\admin\AppData\Local\ms-playwright\chromium-1140\chrome-win\chrome.exe'
+corepack pnpm test:e2e
+corepack pnpm lhci
+```
+
+## 2026-05-09 — Baseline
 
 ## Tooling
 
@@ -16,9 +52,7 @@
 ```powershell
 # 1. Spin BE on 8080 (with localhost CORS)
 cd backend
-$env:DATABASE_URL = '<see ~/.claude/.../reference_neon_db.md>'
-$env:DB_USER = 'neondb_owner'
-$env:DB_PASSWORD = '...'
+# Load DATABASE_URL, DB_USER, and DB_PASSWORD from the approved secret manager into this shell only.
 $env:SPRING_PROFILES_ACTIVE = 'prod'
 $env:CM_FRONTEND_URL = 'http://localhost:3000,http://127.0.0.1:3000'
 mvn -q -Dmaven.test.skip=true spring-boot:run
@@ -30,14 +64,14 @@ pnpm start
 
 # 3. In a third shell: run audits
 cd web
-pnpm test:e2e               # Playwright (predict + a11y)
+corepack pnpm test:e2e               # Playwright (predict + a11y)
 $env:CHROME_PATH = 'C:\Users\admin\AppData\Local\ms-playwright\chromium-1140\chrome-win\chrome.exe'
-pnpm lhci                   # Lighthouse on all 7 routes
+corepack pnpm lhci                   # Lighthouse on all 7 routes
 ```
 
 ## Playwright E2E
 
-`pnpm test:e2e` — 9 tests / 9 passing (~30s).
+`corepack pnpm test:e2e` — 9 tests / 9 passing (~30s).
 
 | Spec | Test | Status |
 |---|---|---|
@@ -72,7 +106,7 @@ The test fails on **critical** violations (currently 0 across all routes) and to
 
 ## Lighthouse
 
-`pnpm lhci` — 7 routes × 1 run each on the desktop preset, headless Chromium. Assertions: a11y ≥ 0.9 (error), performance ≥ 0.5 (warn), best-practices ≥ 0.9 (warn), SEO ≥ 0.9 (warn). All assertions pass.
+`corepack pnpm lhci` — 7 routes × 1 run each on the desktop preset, headless Chromium. Assertions: a11y ≥ 0.9 (error), performance ≥ 0.5 (warn), best-practices ≥ 0.9 (warn), SEO ≥ 0.9 (warn). All assertions pass.
 
 | Route | Performance | Accessibility | Best Practices | SEO |
 |---|---:|---:|---:|---:|
@@ -101,4 +135,4 @@ These don't block the demo — KPI / Predict / Insights / Customers all score 0.
 
 - Playwright traces / screenshots / reports: `web/test-results/` (gitignored)
 - Lighthouse reports (HTML + JSON per route): `web/.lighthouseci/` (gitignored)
-- Re-running `pnpm test:e2e` and `pnpm lhci` regenerates everything.
+- Re-running `corepack pnpm test:e2e` and `corepack pnpm lhci` regenerates everything.

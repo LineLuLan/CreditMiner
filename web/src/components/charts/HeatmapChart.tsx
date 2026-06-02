@@ -6,38 +6,44 @@ interface Props {
 }
 
 /**
- * Custom Recharts-free heatmap (cleaner for square correlation matrices).
- *
- * <p>Color scale: red (negative) → white (0) → blue (positive),
- * mapped over [-1, 1].</p>
+ * Custom Recharts-free heatmap for square correlation matrices.
+ * Wide matrices scroll inside this component instead of stretching the page.
  */
 export function HeatmapChart({ columns, matrix }: Props) {
-  const cell = "h-10 w-10 rounded-sm";
+  const cell = "h-8 w-8 rounded-sm";
+
   return (
-    <div className="overflow-auto">
-      <table className="text-xs">
+    <div className="max-w-full overflow-auto rounded-md border bg-background/30">
+      <table className="min-w-max border-separate border-spacing-1 p-3 text-xs">
         <thead>
           <tr>
-            <th />
-            {columns.map((c) => (
-              <th key={c} className="px-2 pb-2 text-left font-normal text-muted-foreground">
-                <span className="block max-w-[80px] truncate">{c}</span>
+            <th className="sticky left-0 z-10 bg-background" />
+            {columns.map((column) => (
+              <th key={column} className="pb-1 text-left font-normal text-muted-foreground">
+                <span className="block max-w-20 truncate text-[11px]" title={column}>
+                  {column}
+                </span>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {matrix.map((row, i) => (
-            <tr key={i}>
-              <th className="pr-2 text-right font-normal text-muted-foreground">{columns[i]}</th>
+            <tr key={columns[i] ?? i}>
+              <th
+                className="sticky left-0 z-10 max-w-44 bg-background pr-2 text-right text-[11px] font-normal text-muted-foreground"
+                title={columns[i]}
+              >
+                <span className="block truncate">{columns[i]}</span>
+              </th>
               {row.map((value, j) => (
-                <td key={j} className="p-0.5">
+                <td key={`${columns[i]}-${columns[j]}`} className="p-0">
                   <div
                     className={cell}
                     style={{ backgroundColor: corrColor(value) }}
-                    title={`${columns[i]} × ${columns[j]} = ${value.toFixed(2)}`}
+                    title={`${columns[i]} x ${columns[j]} = ${value.toFixed(2)}`}
                   >
-                    <span className="block h-full w-full text-center leading-10 text-[10px] text-foreground/70">
+                    <span className="block h-full w-full text-center text-[10px] leading-8 text-foreground/80">
                       {value.toFixed(1)}
                     </span>
                   </div>
@@ -52,13 +58,9 @@ export function HeatmapChart({ columns, matrix }: Props) {
 }
 
 function corrColor(value: number): string {
-  // value in [-1, 1] -> hsl
   const clamped = Math.max(-1, Math.min(1, value));
   if (clamped >= 0) {
-    const a = clamped; // 0..1
-    return `rgba(59, 130, 246, ${a.toFixed(2)})`;
-  } else {
-    const a = -clamped;
-    return `rgba(239, 68, 68, ${a.toFixed(2)})`;
+    return `rgba(59, 130, 246, ${clamped.toFixed(2)})`;
   }
+  return `rgba(239, 68, 68, ${Math.abs(clamped).toFixed(2)})`;
 }
