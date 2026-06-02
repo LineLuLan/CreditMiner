@@ -49,11 +49,16 @@ const FEATURE_LABELS: Record<string, string> = {
   Total_Amt_Chng_Q4_Q1: "Amount change Q4/Q1",
   Spending_Intensity: "Spending intensity",
   Total_Ct_Chng_Q4_Q1: "Count change Q4/Q1",
+  Total_Relationship_Count: "Relationship count",
+  Months_on_book: "Account age",
   Credit_Limit: "Credit limit",
   Risk_Score: "Risk score",
   Avg_Utilization_Ratio: "Utilization",
   Customer_Value_Score: "Customer value",
   Engagement_Score: "Engagement score",
+  Attrition_Flag: "Attrition status",
+  Card_Category: "Card tier",
+  Gender: "Gender",
 };
 
 export default function MiningReportPage() {
@@ -300,26 +305,45 @@ function ModelEvidence({ report }: { report: MiningReport }) {
         </div>
 
         {features.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={features}
-              layout="vertical"
-              margin={{ top: 4, right: 18, left: 126, bottom: 4 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis type="number" unit="%" tick={CHART_AXIS_TICK} />
-              <YAxis type="category" dataKey="name" width={126} tick={CHART_AXIS_TICK} />
-              <Tooltip {...CHART_TOOLTIP_PROPS} />
-              <Bar
-                dataKey="sharePct"
-                name="Importance share"
-                fill="hsl(var(--primary))"
-                maxBarSize={22}
-                radius={[0, 4, 4, 0]}
-                isAnimationActive={false}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="grid gap-4 lg:grid-cols-[180px_1fr] lg:items-center">
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">
+                Strongest drivers
+              </p>
+              <div className="mt-3 space-y-2">
+                {features.slice(0, 3).map((feature, index) => (
+                  <div key={feature.name} className="flex items-center justify-between gap-3">
+                    <span className="text-xs leading-5 text-muted-foreground">
+                      {index + 1}. {feature.name}
+                    </span>
+                    <span className="text-xs font-semibold tabular-nums">
+                      {feature.sharePct.toFixed(1)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={features}
+                layout="vertical"
+                margin={{ top: 4, right: 18, left: 8, bottom: 4 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" unit="%" tick={CHART_AXIS_TICK} />
+                <YAxis type="category" dataKey="name" width={138} tick={CHART_AXIS_TICK} />
+                <Tooltip {...CHART_TOOLTIP_PROPS} />
+                <Bar
+                  dataKey="sharePct"
+                  name="Importance share"
+                  fill="hsl(var(--primary))"
+                  maxBarSize={22}
+                  radius={[0, 4, 4, 0]}
+                  isAnimationActive={false}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         ) : (
           <EmptyState text="Feature-importance artifact is not available." />
         )}
@@ -518,6 +542,8 @@ function SegmentationEvidence({ report }: { report: MiningReport }) {
 }
 
 function RulesEvidence({ report, strongestRule }: { report: MiningReport; strongestRule?: Rule }) {
+  const strongestRuleLabel = strongestRule ? describeRule(strongestRule) : null;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -536,12 +562,19 @@ function RulesEvidence({ report, strongestRule }: { report: MiningReport; strong
         {strongestRule ? (
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
             <p className="text-xs font-semibold uppercase text-primary">Strongest rule</p>
-            <p className="mt-2 font-mono text-xs leading-5">{strongestRule.lhs}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              then <span className="font-mono text-foreground">{strongestRule.rhs}</span> with{" "}
-              {formatPct(strongestRule.confidence)} confidence and {strongestRule.lift.toFixed(2)}{" "}
+            <p className="mt-2 text-sm font-semibold leading-6">{strongestRuleLabel?.headline}</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              {formatPct(strongestRule.confidence)} confidence,{" "}
+              {formatPct(strongestRule.support, 2)} support, and {strongestRule.lift.toFixed(2)}{" "}
               lift.
             </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {strongestRuleLabel?.conditions.map((condition) => (
+                <Badge key={condition.raw} variant="secondary" className="font-normal">
+                  {condition.label}: {condition.value}
+                </Badge>
+              ))}
+            </div>
           </div>
         ) : null}
         <RulesTable rules={report.rules.topRules.slice(0, 8)} />
@@ -759,37 +792,115 @@ function RulesTable({ rules }: { rules: Rule[] }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b bg-muted/20 text-left text-muted-foreground">
-            <th className="px-3 py-2 font-medium">If</th>
-            <th className="px-3 py-2 font-medium">Then</th>
-            <th className="px-3 py-2 text-right font-medium">Support</th>
-            <th className="px-3 py-2 text-right font-medium">Confidence</th>
-            <th className="px-3 py-2 text-right font-medium">Lift</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rules.map((rule) => (
-            <tr key={rule.ruleId} className="border-b last:border-b-0">
-              <td className="max-w-[260px] truncate px-3 py-2 font-mono" title={rule.lhs}>
-                {rule.lhs}
-              </td>
-              <td className="max-w-[180px] truncate px-3 py-2 font-mono" title={rule.rhs}>
-                {rule.rhs}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">{formatPct(rule.support, 2)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{formatPct(rule.confidence)}</td>
-              <td className="px-3 py-2 text-right font-medium tabular-nums">
-                {rule.lift.toFixed(2)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="grid gap-2">
+      {rules.map((rule) => (
+        <RuleCard key={rule.ruleId} rule={rule} />
+      ))}
     </div>
   );
+}
+
+function RuleCard({ rule }: { rule: Rule }) {
+  const ruleLabel = describeRule(rule);
+
+  return (
+    <div className="rounded-lg border bg-background/70 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-5">{ruleLabel.headline}</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {ruleLabel.conditions.map((condition) => (
+              <span
+                key={condition.raw}
+                className="rounded-md bg-muted/45 px-2 py-1 text-[11px] text-muted-foreground"
+                title={condition.raw}
+              >
+                {condition.label}:{" "}
+                <span className="font-medium text-foreground">{condition.value}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+        <Badge variant={rule.category === "retention" ? "default" : "secondary"}>
+          {rule.category}
+        </Badge>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <MiniMetric label="Support" value={formatPct(rule.support, 2)} />
+        <MiniMetric label="Confidence" value={formatPct(rule.confidence)} />
+        <MiniMetric label="Lift" value={rule.lift.toFixed(2)} />
+      </div>
+    </div>
+  );
+}
+
+function describeRule(rule: Rule) {
+  const conditions = parseRuleSide(rule.lhs);
+  const outcome = parseRuleSide(rule.rhs)[0];
+  const outcomeValue = outcome ? outcome.value : friendlyRuleValue(rule.rhs);
+
+  return {
+    headline: `${conditions.map((condition) => condition.value).join(" + ")} -> ${outcomeValue}`,
+    conditions,
+  };
+}
+
+function parseRuleSide(value: string) {
+  return value
+    .split(/\s*,\s*/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const separatorIndex = part.indexOf("=");
+      if (separatorIndex === -1) {
+        return {
+          raw: part,
+          label: "Condition",
+          value: friendlyRuleValue(part),
+        };
+      }
+
+      const field = part.slice(0, separatorIndex).trim();
+      const rawValue = part.slice(separatorIndex + 1).trim();
+
+      return {
+        raw: part,
+        label: FEATURE_LABELS[field] ?? field.replaceAll("_", " "),
+        value: friendlyRuleValue(rawValue, field),
+      };
+    });
+}
+
+function friendlyRuleValue(value: string, field?: string) {
+  const cleanValue = value.trim().replace(/^['"]|['"]$/g, "");
+
+  if (field === "Gender") {
+    if (cleanValue === "F") return "Female";
+    if (cleanValue === "M") return "Male";
+  }
+
+  if (field === "Card_Category" && cleanValue === "Blue") return "Blue card";
+  if (cleanValue === "Existing Customer") return "Existing customer";
+  if (cleanValue === "Attrited Customer") return "Attrited customer";
+
+  const upperBound = cleanValue.match(/^\(-inf-([\d.]+)\]$/);
+  if (upperBound) return `up to ${formatRuleNumber(upperBound[1])}`;
+
+  const lowerBound = cleanValue.match(/^\(([\d.]+)-inf\)$/);
+  if (lowerBound) return `above ${formatRuleNumber(lowerBound[1])}`;
+
+  const range = cleanValue.match(/^\(([\d.]+)-([\d.]+)\]$/);
+  if (range) return `${formatRuleNumber(range[1])} to ${formatRuleNumber(range[2])}`;
+
+  return cleanValue.replaceAll("_", " ");
+}
+
+function formatRuleNumber(value: string) {
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) return value;
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: numericValue >= 100 ? 0 : 1,
+  }).format(numericValue);
 }
 
 function InsightCard({ insight }: { insight: Insight }) {
