@@ -36,6 +36,9 @@
   - Backend added read-only `GET /api/mining-report` via `MiningReportController` and `MiningReportService`.
   - Frontend added `/mining-report` with dataset, classification, clustering, rules, anomaly, and insight evidence tabs.
   - Frontend contract mirrored in `web/src/lib/schemas.ts`, `web/src/types/api.types.ts`, `web/src/lib/api.ts`, and `web/src/hooks/useMiningReport.ts`.
+- Local runner:
+  - `scripts/run-local.bat` starts backend and frontend dev servers in separate terminal windows when prerequisites are available.
+  - The runner has a `--check` mode and intentionally does not run setup, seed, reset, train, deploy, or read `.env` files.
 - DB verification: intentionally not run in this pass.
 - DB/dev tooling checks: `docker`, `psql`, and `codegraph` are not installed.
 - Secret scan: path/line-only scan found no tracked or untracked worktree hits for configured high-risk patterns.
