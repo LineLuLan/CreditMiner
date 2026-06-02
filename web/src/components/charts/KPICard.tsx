@@ -12,11 +12,11 @@ interface KPICardProps {
 export function KPICard({ label, value, hint, trend, className }: KPICardProps) {
   return (
     <Card className={cn("transition-shadow hover:shadow-md", className)}>
-      <CardHeader className="pb-2">
+      <CardHeader className="p-5 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold tracking-tight">{value}</div>
+      <CardContent className="p-5 pt-0">
+        <div className="text-2xl font-bold tracking-tight">{value}</div>
         {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
       </CardContent>
     </Card>

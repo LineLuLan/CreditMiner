@@ -31,24 +31,24 @@ export default function OverviewPage() {
   return (
     <div className="flex flex-col">
       <Header title="Overview" />
-      <div className="flex-1 space-y-6 p-6">
+      <div className="min-w-0 flex-1 space-y-4 p-4 xl:p-5">
         {isLoading || !data ? (
           <OverviewSkeleton />
         ) : (
           <>
-            <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
+            <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
               <Card className="overflow-hidden border-primary/30 bg-primary/5">
-                <CardContent className="grid gap-6 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
-                  <div className="space-y-5">
-                    <div className="space-y-2">
+                <CardContent className="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
                       <Badge variant="secondary" className="w-fit">
                         Demo dataset
                       </Badge>
                       <div>
-                        <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
+                        <h2 className="text-xl font-bold tracking-tight md:text-2xl">
                           {formatInt(data.totalCustomers)} customer records mined
                         </h2>
-                        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                        <p className="mt-2 max-w-3xl text-sm leading-5 text-muted-foreground">
                           Historical churn, customer tiers, risk score, and utilization are loaded
                           from the local demo backend so the dashboard can explain the BankChurners
                           dataset without touching an external database.
@@ -92,11 +92,11 @@ export default function OverviewPage() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-base">Mining signals</CardTitle>
                   <CardDescription>Quick read for the report narrative.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   <SignalRow
                     icon={ShieldAlert}
                     label="Churn pressure"
@@ -151,7 +151,7 @@ export default function OverviewPage() {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-base">Churn split</CardTitle>
                   <CardDescription>
                     Class balance used by classification and report metrics.
@@ -159,7 +159,7 @@ export default function OverviewPage() {
                 </CardHeader>
                 <CardContent>
                   <DonutChart
-                    height={300}
+                    height={250}
                     data={[
                       { name: "Existing", value: existingCount },
                       { name: "Attrited", value: data.attritedCount },
@@ -168,7 +168,7 @@ export default function OverviewPage() {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-base">Tier breakdown</CardTitle>
                   <CardDescription>
                     Customer-value tiers used for segmentation context.
@@ -176,7 +176,7 @@ export default function OverviewPage() {
                 </CardHeader>
                 <CardContent>
                   <DonutChart
-                    height={300}
+                    height={250}
                     data={Object.entries(data.tierBreakdown).map(([name, value]) => ({
                       name,
                       value,
@@ -187,7 +187,7 @@ export default function OverviewPage() {
             </div>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-base">CRISP-DM evidence path</CardTitle>
                 <CardDescription>
                   How this dashboard turns the dataset into reportable mining evidence.
@@ -227,9 +227,9 @@ export default function OverviewPage() {
 
 function SignalStat({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="rounded-lg border bg-card/60 p-4">
+    <div className="rounded-lg border bg-card/60 p-3">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="mt-1.5 text-xl font-bold tracking-tight">{value}</p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">{note}</p>
     </div>
   );
@@ -248,7 +248,7 @@ function SignalRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
+      <div className="mt-0.5 rounded-md bg-primary/10 p-1.5 text-primary">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
@@ -264,7 +264,7 @@ function SignalRow({
 
 function PipelineStep({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-lg border bg-muted/20 p-4">
+    <div className="rounded-lg border bg-muted/20 p-3">
       <p className="text-sm font-semibold">{title}</p>
       <p className="mt-2 text-xs leading-5 text-muted-foreground">{body}</p>
     </div>

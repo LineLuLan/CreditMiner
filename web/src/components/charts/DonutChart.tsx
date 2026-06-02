@@ -64,8 +64,7 @@ export function DonutChart({ data, height = 260 }: Props) {
           paddingAngle={2}
           labelLine={false}
           label={renderLabel}
-          isAnimationActive
-          animationDuration={500}
+          isAnimationActive={false}
         >
           {data.map((_, i) => (
             <Cell key={i} fill={CLUSTER_COLORS[i % CLUSTER_COLORS.length]} />
