@@ -14,8 +14,9 @@
 - Project memory files were absent and have now been added: `ProjectBrief.md`, `Architecture.md`, `ACTIVE_STATE.md`.
 - `.codegraph/` was absent and `codegraph` CLI is not installed; `.codegraph/` is now ignored.
 - A database password was present in `docs/BE_Handoff.md`; the current tracked doc has been redacted. Treat the exposed value as compromised and rotate it in Neon.
-- Toolchain available locally: `git`, `node`, `corepack`.
-- Toolchain missing locally: `java`, `mvn`, `pnpm`, `docker`, `psql`, `codegraph`.
+- Toolchain available locally: `git`, `node`, `corepack`; user shell now has JDK 21.0.11 and Maven 3.9.16.
+- Toolchain missing locally: `pnpm` standalone, `docker`, `psql`, `codegraph`.
+- Current Codex process was started before the JDK/Maven PATH update; restart Codex/terminal sessions before relying on plain `java`/`mvn` lookup inside this agent.
 - Node local version is v24.16.0; CI uses Node 20 and `web/package.json` requires `>=20`.
 
 ## Validation Log
@@ -31,7 +32,8 @@
   - `corepack pnpm typecheck`: passed.
   - `corepack pnpm lint`: passed with no warnings or errors.
   - `corepack pnpm build`: passed; `/mining-report` included, all 11 static pages generated.
-- Backend tests: blocked because `mvn` is not installed; `mvn -B test` fails before execution.
+- Backend tests:
+  - `mvn -B test`: passed via explicit Maven path after JDK/Maven install; 12 tests run, 0 failures, 0 errors, 1 skipped.
 - Data-mining report feature:
   - Backend added read-only `GET /api/mining-report` via `MiningReportController` and `MiningReportService`.
   - Frontend added `/mining-report` with dataset, classification, clustering, rules, anomaly, and insight evidence tabs.
