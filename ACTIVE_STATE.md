@@ -45,7 +45,9 @@
   - `scripts/run-local.bat` starts backend and frontend dev servers in separate terminal windows when prerequisites are available.
   - The runner has a `--check` mode and intentionally does not run setup, train, deploy, or read `.env` files.
   - Backend now starts with Spring `demo` profile, using an in-memory H2 database seeded from local artifacts/resources at startup.
+  - Runner now checks existing `8080`/`3000` services, waits for backend health before opening frontend, and avoids duplicate dev server windows when rerun.
   - Demo backend boot smoke passed: `/actuator/health` was `UP`; `/api/mining-report` returned 10127 rows, 3 clusters, 50 rules, and 5 insights.
+  - Local dashboard browser smoke passed against `http://localhost:3000`: overview rendered 10,127 customers with no `Network Error` text and no console/page errors.
 - Artifact training runner:
   - `scripts/train-artifacts.bat` runs Phase 1, 2, 3, 5, 6, and 7 via Maven and writes output to `docs/TRAINING_LOG.md`.
   - It is artifact-only and intentionally does not seed/reset databases, run SQL, deploy, or read `.env` files.

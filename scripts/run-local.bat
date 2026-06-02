@@ -87,15 +87,35 @@ if "%CHECK_ONLY%"=="1" (
 
 echo.
 if "%BACKEND_READY%"=="1" (
-  echo Starting backend window...
-  start "CreditMiner Backend :8080" powershell -NoExit -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath '%ROOT%\backend'; $env:SPRING_PROFILES_ACTIVE='demo'; mvn spring-boot:run"
+  echo Checking backend health on http://localhost:8080...
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $h = Invoke-RestMethod -Uri 'http://localhost:8080/actuator/health' -TimeoutSec 3; if ($h.status -eq 'UP') { exit 0 } } catch { }; exit 1"
+  if errorlevel 1 (
+    echo Starting backend window...
+    start "CreditMiner Backend :8080" powershell -NoExit -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath '%ROOT%\backend'; $env:SPRING_PROFILES_ACTIVE='demo'; mvn spring-boot:run"
+    echo Waiting for backend to become healthy...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$deadline = (Get-Date).AddSeconds(120); do { try { $h = Invoke-RestMethod -Uri 'http://localhost:8080/actuator/health' -TimeoutSec 3; if ($h.status -eq 'UP') { exit 0 } } catch { }; Start-Sleep -Seconds 2 } while ((Get-Date) -lt $deadline); exit 1"
+    if errorlevel 1 (
+      echo Backend did not report healthy within 120 seconds.
+      echo Frontend will still start, but refresh the browser after backend finishes booting.
+    ) else (
+      echo Backend health is UP.
+    )
+  ) else (
+    echo Backend is already healthy on http://localhost:8080.
+  )
 ) else (
   echo Skipping backend because prerequisites are missing.
 )
 
 if "%FRONTEND_READY%"=="1" (
-  echo Starting frontend window...
-  start "CreditMiner Frontend :3000" powershell -NoExit -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath '%ROOT%\web'; if (-not (Test-Path -LiteralPath 'node_modules')) { corepack pnpm install --frozen-lockfile }; corepack pnpm dev"
+  echo Checking frontend on http://localhost:3000...
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-WebRequest -Uri 'http://localhost:3000' -UseBasicParsing -TimeoutSec 3; if ([int]$r.StatusCode -lt 500) { exit 0 } } catch { }; exit 1"
+  if errorlevel 1 (
+    echo Starting frontend window...
+    start "CreditMiner Frontend :3000" powershell -NoExit -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath '%ROOT%\web'; if (-not (Test-Path -LiteralPath 'node_modules')) { corepack pnpm install --frozen-lockfile }; corepack pnpm dev"
+  ) else (
+    echo Frontend is already running on http://localhost:3000.
+  )
 ) else (
   echo Skipping frontend because prerequisites are missing.
 )
