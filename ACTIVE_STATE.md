@@ -34,17 +34,20 @@
   - `corepack pnpm build`: passed; `/mining-report` included, all 11 static pages generated.
 - Backend tests:
   - `mvn -B test`: passed via explicit Maven path after JDK/Maven install; 12 tests run, 0 failures, 0 errors, 1 skipped.
+  - `mvn -B test`: passed again after mining-report artifact fallback; 12 tests run, 0 failures, 0 errors, 1 skipped.
 - Data-mining report feature:
   - Backend added read-only `GET /api/mining-report` via `MiningReportController` and `MiningReportService`.
   - Frontend added `/mining-report` with dataset, classification, clustering, rules, anomaly, and insight evidence tabs.
   - Frontend contract mirrored in `web/src/lib/schemas.ts`, `web/src/types/api.types.ts`, `web/src/lib/api.ts`, and `web/src/hooks/useMiningReport.ts`.
+  - `MiningReportService` falls back to local artifacts/resources for clusters, rules, and insights when DB rows are unavailable, so artifact-only training can still feed the report page.
 - Local runner:
   - `scripts/run-local.bat` starts backend and frontend dev servers in separate terminal windows when prerequisites are available.
   - The runner has a `--check` mode and intentionally does not run setup, seed, reset, train, deploy, or read `.env` files.
 - Artifact training runner:
   - `scripts/train-artifacts.bat` runs Phase 1, 2, 3, 5, 6, and 7 via Maven and writes output to `docs/TRAINING_LOG.md`.
   - It is artifact-only and intentionally does not seed/reset databases, run SQL, deploy, or read `.env` files.
-  - Current workspace is missing `backend/data/raw/BankChurners.csv`; full retraining is blocked until the raw Kaggle CSV is placed there.
+  - Full artifact training completed on 2026-06-02 from `backend/data/raw/BankChurners.csv`; summary lives in `docs/TRAINING_LOG.md`.
+  - Generated local artifacts under `backend/data/processed` and `backend/models`; these are intentionally gitignored.
 - DB verification: intentionally not run in this pass.
 - DB/dev tooling checks: `docker`, `psql`, and `codegraph` are not installed.
 - Secret scan: path/line-only scan found no tracked or untracked worktree hits for configured high-risk patterns.

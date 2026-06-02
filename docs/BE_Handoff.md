@@ -499,6 +499,7 @@ Consolidated data-mining evidence endpoint for report/demo screens. This is read
 - `clusters`, `topRules`, `topAnomalies`, and `insights` reuse existing response shapes.
 - Nullable anomaly fields are represented as `null` when the generated summary artifact is unavailable.
 - `warnings` is an array of non-secret status strings, usually missing artifact paths or DB read failures.
+- The endpoint is DB-first but read-only. If cluster/rule/insight rows are empty or unavailable, it falls back to `data/processed/phase6_clusters.json`, `models/rules.json`, and `insights.json`.
 
 ---
 

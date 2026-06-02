@@ -18,10 +18,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -61,6 +63,12 @@ public class MiningReportService {
 
     @Value("${creditminer.data.phase6-anomalies-json:data/processed/phase6_anomalies.json}")
     private String anomalySummaryPath;
+
+    @Value("${creditminer.data.phase6-clusters-json:data/processed/phase6_clusters.json}")
+    private String clustersPath;
+
+    @Value("${creditminer.models.rules-json:models/rules.json}")
+    private String rulesPath;
 
     public MiningReportResponse report() {
         List<String> warnings = new ArrayList<>();
@@ -249,14 +257,18 @@ public class MiningReportService {
 
     private List<ClusterResponse> clusters(List<String> warnings) {
         try {
-            return clusterRepository.findAll().stream()
+            List<ClusterResponse> rows = clusterRepository.findAll().stream()
                     .sorted(Comparator.comparing(Cluster::getClusterId))
                     .map(this::clusterResponse)
                     .toList();
+            if (!rows.isEmpty()) {
+                return rows;
+            }
+            warnings.add("Cluster DB summary empty; using phase6_clusters.json fallback.");
         } catch (Exception ex) {
             warnings.add("Cluster DB summary unavailable: " + ex.getMessage());
-            return List.of();
         }
+        return clusterArtifactFallback(warnings);
     }
 
     private ClusterResponse clusterResponse(Cluster c) {
@@ -278,6 +290,35 @@ public class MiningReportService {
                 .churnRate(toDouble(c.getChurnRate()))
                 .description(c.getDescription())
                 .build();
+    }
+
+    private List<ClusterResponse> clusterArtifactFallback(List<String> warnings) {
+        File f = new File(clustersPath);
+        if (!f.exists()) {
+            warnings.add("Cluster artifact missing at " + clustersPath);
+            return List.of();
+        }
+        try {
+            JsonNode arr = mapper.readTree(f);
+            List<ClusterResponse> out = new ArrayList<>();
+            for (JsonNode n : arr) {
+                out.add(ClusterResponse.builder()
+                        .clusterId(n.path("clusterId").asInt())
+                        .personaName(n.path("personaName").asText("Cluster " + n.path("clusterId").asInt()))
+                        .size(n.path("size").asInt())
+                        .centroid(mapper.convertValue(n.path("centroid"), CENTROID_TYPE))
+                        .avgRisk(n.path("avgRisk").asDouble())
+                        .churnRate(n.path("churnRate").asDouble())
+                        .description(n.path("description").asText())
+                        .build());
+            }
+            return out.stream()
+                    .sorted(Comparator.comparing(ClusterResponse::getClusterId))
+                    .toList();
+        } catch (Exception ex) {
+            warnings.add("Failed to read cluster artifact: " + ex.getMessage());
+            return List.of();
+        }
     }
 
     private ElbowData elbow(List<String> warnings) {
@@ -304,25 +345,31 @@ public class MiningReportService {
     }
 
     private MiningReportResponse.RulesEvidence rules(List<String> warnings) {
-        List<Rule> entities;
+        List<RuleResponse> rules;
         try {
-            entities = ruleRepository.findAll();
+            rules = ruleRepository.findAll().stream()
+                    .map(this::ruleResponse)
+                    .toList();
+            if (rules.isEmpty()) {
+                warnings.add("Rules DB table empty; using models/rules.json fallback.");
+                rules = ruleArtifactFallback(warnings);
+            }
         } catch (Exception ex) {
             warnings.add("Rules unavailable: " + ex.getMessage());
-            entities = List.of();
+            rules = ruleArtifactFallback(warnings);
         }
 
         double support = 0;
         double confidence = 0;
         double lift = 0;
-        double minLift = entities.isEmpty() ? 0 : Double.POSITIVE_INFINITY;
+        double minLift = rules.isEmpty() ? 0 : Double.POSITIVE_INFINITY;
         double maxLift = 0;
         long churn = 0;
         long retention = 0;
-        for (Rule r : entities) {
-            double s = toDouble(r.getSupport());
-            double c = toDouble(r.getConfidence());
-            double l = toDouble(r.getLift());
+        for (RuleResponse r : rules) {
+            double s = r.getSupport();
+            double c = r.getConfidence();
+            double l = r.getLift();
             support += s;
             confidence += c;
             lift += l;
@@ -331,11 +378,10 @@ public class MiningReportService {
             if ("churn".equalsIgnoreCase(r.getCategory())) churn++;
             if ("retention".equalsIgnoreCase(r.getCategory())) retention++;
         }
-        int n = entities.size();
-        List<RuleResponse> top = entities.stream()
-                .sorted(Comparator.comparing((Rule r) -> toDouble(r.getLift())).reversed())
+        int n = rules.size();
+        List<RuleResponse> top = rules.stream()
+                .sorted(Comparator.comparing(RuleResponse::getLift).reversed())
                 .limit(12)
-                .map(this::ruleResponse)
                 .toList();
         return MiningReportResponse.RulesEvidence.builder()
                 .totalRules(n)
@@ -352,7 +398,7 @@ public class MiningReportService {
 
     private RuleResponse ruleResponse(Rule r) {
         return RuleResponse.builder()
-                .ruleId(r.getRuleId())
+                .ruleId(r.getRuleId() == null ? 0L : r.getRuleId())
                 .lhs(r.getLhs())
                 .rhs(r.getRhs())
                 .support(toDouble(r.getSupport()))
@@ -360,6 +406,34 @@ public class MiningReportService {
                 .lift(toDouble(r.getLift()))
                 .category(r.getCategory())
                 .build();
+    }
+
+    private List<RuleResponse> ruleArtifactFallback(List<String> warnings) {
+        File f = new File(rulesPath);
+        if (!f.exists()) {
+            warnings.add("Rules artifact missing at " + rulesPath);
+            return List.of();
+        }
+        try {
+            JsonNode arr = mapper.readTree(f).path("rules");
+            List<RuleResponse> out = new ArrayList<>();
+            long id = 1;
+            for (JsonNode n : arr) {
+                out.add(RuleResponse.builder()
+                        .ruleId(id++)
+                        .lhs(n.path("lhs").asText())
+                        .rhs(n.path("rhs").asText())
+                        .support(n.path("support").asDouble())
+                        .confidence(n.path("confidence").asDouble())
+                        .lift(n.path("lift").asDouble())
+                        .category(n.path("category").asText())
+                        .build());
+            }
+            return out;
+        } catch (Exception ex) {
+            warnings.add("Failed to read rules artifact: " + ex.getMessage());
+            return List.of();
+        }
     }
 
     private MiningReportResponse.AnomalyEvidence anomalies(List<String> warnings) {
@@ -396,9 +470,36 @@ public class MiningReportService {
 
     private List<InsightResponse> safeInsights(List<String> warnings) {
         try {
-            return insightService.findAll();
+            List<InsightResponse> rows = insightService.findAll();
+            if (!rows.isEmpty()) {
+                return rows;
+            }
+            warnings.add("Insights DB table empty; using insights.json fallback.");
         } catch (Exception ex) {
             warnings.add("Insights unavailable: " + ex.getMessage());
+        }
+        return insightResourceFallback(warnings);
+    }
+
+    private List<InsightResponse> insightResourceFallback(List<String> warnings) {
+        try (InputStream in = new ClassPathResource("insights.json").getInputStream()) {
+            JsonNode arr = mapper.readTree(in);
+            List<InsightResponse> out = new ArrayList<>();
+            long id = 1;
+            for (JsonNode n : arr) {
+                out.add(InsightResponse.builder()
+                        .insightId(id++)
+                        .title(n.path("title").asText())
+                        .discovery(n.path("discovery").asText())
+                        .evidence(n.path("evidence").asText())
+                        .recommendation(n.path("recommendation").asText())
+                        .category(n.path("category").asText())
+                        .priority(n.path("priority").asInt())
+                        .build());
+            }
+            return out;
+        } catch (Exception ex) {
+            warnings.add("Failed to read insights resource fallback: " + ex.getMessage());
             return List.of();
         }
     }

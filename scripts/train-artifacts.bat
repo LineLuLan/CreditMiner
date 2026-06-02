@@ -82,7 +82,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "('## %PHASE_LABEL%') | Add-Content -LiteralPath $log;" ^
   "'```text' | Add-Content -LiteralPath $log;" ^
   "Set-Location -LiteralPath '%ROOT%\backend';" ^
-  "& mvn -q exec:java '-Dexec.mainClass=%MAIN_CLASS%' 2>&1 | Tee-Object -FilePath $log -Append;" ^
+  "& mvn -q exec:java '-Dexec.mainClass=%MAIN_CLASS%' 2>&1 | ForEach-Object { $_; $_ | Out-File -LiteralPath $log -Append -Encoding utf8 };" ^
   "$code = $LASTEXITCODE;" ^
   "'```' | Add-Content -LiteralPath $log;" ^
   "exit $code"
