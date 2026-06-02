@@ -16,13 +16,10 @@ import {
 } from "@/components/ui/select";
 import { HistogramChart } from "@/components/charts/HistogramChart";
 import { HeatmapChart } from "@/components/charts/HeatmapChart";
+import { CHART_AXIS_TICK, CHART_TOOLTIP_PROPS } from "@/components/charts/chart-theme";
 import { CHURN_BY_DIMS, EDA_NUMERIC_COLS } from "@/lib/constants";
 import { formatInt, formatPct } from "@/lib/utils";
-import {
-  useEdaChurnBy,
-  useEdaCorrelation,
-  useEdaDistribution,
-} from "@/hooks/useEda";
+import { useEdaChurnBy, useEdaCorrelation, useEdaDistribution } from "@/hooks/useEda";
 import {
   Bar,
   BarChart,
@@ -193,26 +190,19 @@ function ChurnByPanel() {
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={chartData} margin={{ top: 8, right: 16, left: -10, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="group" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} unit="%" />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--popover))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: 6,
-                    fontSize: 12,
-                  }}
+                <XAxis
+                  dataKey="group"
+                  stroke="hsl(var(--muted-foreground))"
+                  tick={CHART_AXIS_TICK}
                 />
+                <YAxis stroke="hsl(var(--muted-foreground))" tick={CHART_AXIS_TICK} unit="%" />
+                <Tooltip {...CHART_TOOLTIP_PROPS} />
                 <Bar dataKey="churnPct" name="Churn %" radius={[4, 4, 0, 0]}>
                   {chartData.map((row, i) => (
                     <Cell
                       key={i}
                       fill={
-                        row.churnPct >= 25
-                          ? "#ef4444"
-                          : row.churnPct >= 18
-                            ? "#f59e0b"
-                            : "#10b981"
+                        row.churnPct >= 25 ? "#ef4444" : row.churnPct >= 18 ? "#f59e0b" : "#10b981"
                       }
                     />
                   ))}

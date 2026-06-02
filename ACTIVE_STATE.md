@@ -32,6 +32,9 @@
   - `corepack pnpm typecheck`: passed.
   - `corepack pnpm lint`: passed with no warnings or errors.
   - `corepack pnpm build`: passed; `/mining-report` included, all 11 static pages generated.
+  - Overview UI was refreshed into a clearer mining dashboard with dataset summary, mining signals, action links, readable chart labels, and a CRISP-DM evidence path.
+  - Shared Recharts/Radix tooltip styling was updated so dark-mode chart and small-control tooltips render readable foreground text.
+  - Browser smoke passed in dark mode against `http://localhost:3000`: overview rendered the refreshed dashboard, donut tooltip showed `Attrited : 1,627 (16.1%)`, no `Network Error`, and no console/page errors.
 - Backend tests:
   - `mvn -B test`: passed via explicit Maven path after JDK/Maven install; 12 tests run, 0 failures, 0 errors, 1 skipped.
   - `mvn -B test`: passed again after mining-report artifact fallback; 12 tests run, 0 failures, 0 errors, 1 skipped.

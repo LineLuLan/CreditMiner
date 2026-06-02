@@ -16,6 +16,11 @@ import {
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { DonutChart } from "@/components/charts/DonutChart";
+import {
+  CHART_AXIS_TICK,
+  CHART_LEGEND_STYLE,
+  CHART_TOOLTIP_PROPS,
+} from "@/components/charts/chart-theme";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -68,11 +73,31 @@ function ReportContent({ report }: { report: MiningReport }) {
     <>
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
         <MetricCard label="Rows" value={formatInt(report.dataset.totalRows)} note="BankChurners" />
-        <MetricCard label="Features" value={formatInt(report.dataset.totalColumns)} note="after leakage drop" />
-        <MetricCard label="Churn" value={formatPct(report.dataset.churnRate)} note={`${formatInt(report.dataset.attritedCustomers)} attrited`} />
-        <MetricCard label="Best model" value={report.classification.bestModel} note={report.classification.bestVariant} />
-        <MetricCard label="Clusters" value={`k=${report.clustering.bestK || "?"}`} note={report.clustering.strategy} />
-        <MetricCard label="Rules" value={formatInt(report.rules.totalRules)} note={`${formatInt(report.rules.retentionRules)} retention`} />
+        <MetricCard
+          label="Features"
+          value={formatInt(report.dataset.totalColumns)}
+          note="after leakage drop"
+        />
+        <MetricCard
+          label="Churn"
+          value={formatPct(report.dataset.churnRate)}
+          note={`${formatInt(report.dataset.attritedCustomers)} attrited`}
+        />
+        <MetricCard
+          label="Best model"
+          value={report.classification.bestModel}
+          note={report.classification.bestVariant}
+        />
+        <MetricCard
+          label="Clusters"
+          value={`k=${report.clustering.bestK || "?"}`}
+          note={report.clustering.strategy}
+        />
+        <MetricCard
+          label="Rules"
+          value={formatInt(report.rules.totalRules)}
+          note={`${formatInt(report.rules.retentionRules)} retention`}
+        />
       </div>
 
       {report.warnings.length > 0 ? (
@@ -144,8 +169,14 @@ function DatasetTab({ report }: { report: MiningReport }) {
         <CardContent className="grid gap-3 sm:grid-cols-2">
           <EvidenceRow label="Class column" value={report.dataset.classColumn} />
           <EvidenceRow label="Numeric features" value={formatInt(report.dataset.numericColumns)} />
-          <EvidenceRow label="Categorical features" value={formatInt(report.dataset.categoricalColumns)} />
-          <EvidenceRow label="Missing values" value={formatInt(report.dataset.totalMissingValues)} />
+          <EvidenceRow
+            label="Categorical features"
+            value={formatInt(report.dataset.categoricalColumns)}
+          />
+          <EvidenceRow
+            label="Missing values"
+            value={formatInt(report.dataset.totalMissingValues)}
+          />
           <EvidenceRow label="DB customer rows" value={formatInt(report.dataset.dbCustomerRows)} />
           <EvidenceRow
             label="Leakage columns removed"
@@ -172,9 +203,15 @@ function DatasetTab({ report }: { report: MiningReport }) {
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={missing} margin={{ top: 8, right: 12, left: -12, bottom: 36 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" angle={-25} textAnchor="end" height={70} fontSize={11} />
-                <YAxis fontSize={11} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <XAxis
+                  dataKey="name"
+                  angle={-25}
+                  textAnchor="end"
+                  height={74}
+                  tick={CHART_AXIS_TICK}
+                />
+                <YAxis tick={CHART_AXIS_TICK} />
+                <Tooltip {...CHART_TOOLTIP_PROPS} />
                 <Bar dataKey="missing" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -192,9 +229,9 @@ function DatasetTab({ report }: { report: MiningReport }) {
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={tiers} margin={{ top: 8, right: 12, left: -12, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" fontSize={11} />
-              <YAxis fontSize={11} />
-              <Tooltip contentStyle={tooltipStyle} />
+              <XAxis dataKey="name" tick={CHART_AXIS_TICK} />
+              <YAxis tick={CHART_AXIS_TICK} />
+              <Tooltip {...CHART_TOOLTIP_PROPS} />
               <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -215,10 +252,26 @@ function ClassificationTab({ report }: { report: MiningReport }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-4">
-        <MetricCard label="Best algorithm" value={report.classification.bestModel} note={report.classification.bestVariant} />
-        <MetricCard label="Test F1" value={metric?.testF1 ? formatPct(metric.testF1) : "n/a"} note="attrited class" />
-        <MetricCard label="ROC-AUC" value={metric?.testRocAuc?.toFixed(4) ?? "n/a"} note="ranking quality" />
-        <MetricCard label="PR-AUC" value={metric?.testPrAuc?.toFixed(4) ?? "n/a"} note="imbalanced class" />
+        <MetricCard
+          label="Best algorithm"
+          value={report.classification.bestModel}
+          note={report.classification.bestVariant}
+        />
+        <MetricCard
+          label="Test F1"
+          value={metric?.testF1 ? formatPct(metric.testF1) : "n/a"}
+          note="attrited class"
+        />
+        <MetricCard
+          label="ROC-AUC"
+          value={metric?.testRocAuc?.toFixed(4) ?? "n/a"}
+          note="ranking quality"
+        />
+        <MetricCard
+          label="PR-AUC"
+          value={metric?.testPrAuc?.toFixed(4) ?? "n/a"}
+          note="imbalanced class"
+        />
       </div>
 
       <Card>
@@ -228,12 +281,21 @@ function ClassificationTab({ report }: { report: MiningReport }) {
         <CardContent>
           {features.length > 0 ? (
             <ResponsiveContainer width="100%" height={360}>
-              <BarChart data={features} layout="vertical" margin={{ top: 8, right: 20, left: 130, bottom: 8 }}>
+              <BarChart
+                data={features}
+                layout="vertical"
+                margin={{ top: 8, right: 20, left: 130, bottom: 8 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" unit="%" fontSize={11} />
-                <YAxis type="category" dataKey="name" width={130} fontSize={11} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="sharePct" name="Importance share" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                <XAxis type="number" unit="%" tick={CHART_AXIS_TICK} />
+                <YAxis type="category" dataKey="name" width={130} tick={CHART_AXIS_TICK} />
+                <Tooltip {...CHART_TOOLTIP_PROPS} />
+                <Bar
+                  dataKey="sharePct"
+                  name="Importance share"
+                  fill="hsl(var(--primary))"
+                  radius={[0, 4, 4, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -291,15 +353,32 @@ function ClusteringTab({ report }: { report: MiningReport }) {
           <CardContent>
             {report.clustering.elbowScores.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={report.clustering.elbowScores} margin={{ top: 8, right: 20, left: -8, bottom: 8 }}>
+                <LineChart
+                  data={report.clustering.elbowScores}
+                  margin={{ top: 8, right: 20, left: -8, bottom: 8 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="k" fontSize={11} />
-                  <YAxis yAxisId="left" fontSize={11} />
-                  <YAxis yAxisId="right" orientation="right" fontSize={11} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend />
-                  <Line yAxisId="left" type="monotone" dataKey="wcss" name="WCSS" stroke="#3b82f6" strokeWidth={2} />
-                  <Line yAxisId="right" type="monotone" dataKey="silhouette" name="Silhouette" stroke="#10b981" strokeWidth={2} />
+                  <XAxis dataKey="k" tick={CHART_AXIS_TICK} />
+                  <YAxis yAxisId="left" tick={CHART_AXIS_TICK} />
+                  <YAxis yAxisId="right" orientation="right" tick={CHART_AXIS_TICK} />
+                  <Tooltip {...CHART_TOOLTIP_PROPS} />
+                  <Legend wrapperStyle={CHART_LEGEND_STYLE} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="wcss"
+                    name="WCSS"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="silhouette"
+                    name="Silhouette"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -316,16 +395,28 @@ function ClusteringTab({ report }: { report: MiningReport }) {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={clusterBars} margin={{ top: 8, right: 12, left: -12, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" angle={-20} textAnchor="end" height={64} fontSize={11} />
-                <YAxis unit="%" fontSize={11} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Legend />
+                <XAxis
+                  dataKey="name"
+                  angle={-20}
+                  textAnchor="end"
+                  height={68}
+                  tick={CHART_AXIS_TICK}
+                />
+                <YAxis unit="%" tick={CHART_AXIS_TICK} />
+                <Tooltip {...CHART_TOOLTIP_PROPS} />
+                <Legend wrapperStyle={CHART_LEGEND_STYLE} />
                 <Bar dataKey="churnPct" name="Churn" radius={[4, 4, 0, 0]}>
                   {clusterBars.map((_, i) => (
                     <Cell key={i} fill={CLUSTER_COLORS[i % CLUSTER_COLORS.length]} />
                   ))}
                 </Bar>
-                <Bar dataKey="riskPct" name="Avg risk" fill="#f59e0b" fillOpacity={0.7} radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="riskPct"
+                  name="Avg risk"
+                  fill="#f59e0b"
+                  fillOpacity={0.7}
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -383,7 +474,10 @@ function AnomaliesTab({ report }: { report: MiningReport }) {
       <div className="grid gap-4 md:grid-cols-4">
         <MetricCard label="DB outliers" value={formatInt(anomaly.dbOutlierCount)} />
         <MetricCard label="DB anomalies" value={formatInt(anomaly.dbAnomalyCount)} />
-        <MetricCard label="Combined rate" value={anomaly.combinedAnomalyPct ? formatPct(anomaly.combinedAnomalyPct) : "n/a"} />
+        <MetricCard
+          label="Combined rate"
+          value={anomaly.combinedAnomalyPct ? formatPct(anomaly.combinedAnomalyPct) : "n/a"}
+        />
         <MetricCard label="Strong threshold" value={anomaly.strongThreshold?.toFixed(3) ?? "n/a"} />
       </div>
 
@@ -396,9 +490,9 @@ function AnomaliesTab({ report }: { report: MiningReport }) {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={signalData} margin={{ top: 8, right: 12, left: -12, bottom: 28 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" fontSize={11} />
-                <YAxis fontSize={11} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <XAxis dataKey="name" tick={CHART_AXIS_TICK} />
+                <YAxis tick={CHART_AXIS_TICK} />
+                <Tooltip {...CHART_TOOLTIP_PROPS} />
                 <Bar dataKey="value" fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -549,7 +643,9 @@ function RulesTable({ rules }: { rules: Rule[] }) {
             </td>
             <td className="py-2 pr-4 text-right tabular-nums">{formatPct(rule.support, 2)}</td>
             <td className="py-2 pr-4 text-right tabular-nums">{formatPct(rule.confidence)}</td>
-            <td className="py-2 pr-4 text-right tabular-nums font-medium">{rule.lift.toFixed(2)}</td>
+            <td className="py-2 pr-4 text-right font-medium tabular-nums">
+              {rule.lift.toFixed(2)}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -573,10 +669,3 @@ function ReportSkeleton() {
     </div>
   );
 }
-
-const tooltipStyle = {
-  background: "hsl(var(--popover))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: 6,
-  fontSize: 12,
-};

@@ -8,6 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  CHART_AXIS_TICK,
+  CHART_TOOLTIP_PROPS,
+  chartTooltipContentStyle,
+} from "@/components/charts/chart-theme";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -46,17 +51,11 @@ export default function RulesPage() {
   const [category, setCategory] = React.useState<string>("all");
   const minLiftId = React.useId();
   const categoryId = React.useId();
-  const { data, isLoading, error } = useRules(
-    minLift,
-    category === "all" ? undefined : category,
-  );
+  const { data, isLoading, error } = useRules(minLift, category === "all" ? undefined : category);
 
   // Sort by lift descending; tie-break by confidence.
   const sorted = React.useMemo(
-    () =>
-      (data ?? [])
-        .slice()
-        .sort((a, b) => b.lift - a.lift || b.confidence - a.confidence),
+    () => (data ?? []).slice().sort((a, b) => b.lift - a.lift || b.confidence - a.confidence),
     [data],
   );
 
@@ -152,7 +151,7 @@ export default function RulesPage() {
                     name="Support"
                     unit="%"
                     stroke="hsl(var(--muted-foreground))"
-                    fontSize={11}
+                    tick={CHART_AXIS_TICK}
                   />
                   <YAxis
                     type="number"
@@ -160,18 +159,13 @@ export default function RulesPage() {
                     name="Confidence"
                     unit="%"
                     stroke="hsl(var(--muted-foreground))"
-                    fontSize={11}
+                    tick={CHART_AXIS_TICK}
                   />
                   <ZAxis type="number" dataKey="lift" range={[60, 360]} name="Lift" />
                   <Tooltip
                     cursor={{ strokeDasharray: "3 3" }}
-                    contentStyle={{
-                      background: "hsl(var(--popover))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 6,
-                      fontSize: 12,
-                      maxWidth: 320,
-                    }}
+                    {...CHART_TOOLTIP_PROPS}
+                    contentStyle={chartTooltipContentStyle({ maxWidth: 320 })}
                   />
                   <Scatter data={scatterData} fill="#3b82f6" fillOpacity={0.6} />
                 </ScatterChart>
@@ -206,10 +200,16 @@ export default function RulesPage() {
                     {sorted.map((r) => (
                       <TableRow key={r.ruleId}>
                         <TableCell className="text-xs text-muted-foreground">{r.ruleId}</TableCell>
-                        <TableCell className="max-w-[260px] truncate font-mono text-xs" title={r.lhs}>
+                        <TableCell
+                          className="max-w-[260px] truncate font-mono text-xs"
+                          title={r.lhs}
+                        >
                           {r.lhs}
                         </TableCell>
-                        <TableCell className="hidden max-w-[200px] truncate font-mono text-xs md:table-cell" title={r.rhs}>
+                        <TableCell
+                          className="hidden max-w-[200px] truncate font-mono text-xs md:table-cell"
+                          title={r.rhs}
+                        >
                           {r.rhs}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
@@ -223,15 +223,19 @@ export default function RulesPage() {
                         <TableCell className="text-right tabular-nums">
                           {formatPct(r.confidence, 1)}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">
+                        <TableCell className="text-right font-medium tabular-nums">
                           {r.lift.toFixed(2)}
                         </TableCell>
                       </TableRow>
                     ))}
                     {sorted.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="py-6 text-center text-sm text-muted-foreground">
-                          No rules match the current filter. Try lowering min-lift below {minLift.toFixed(2)} or switching category.
+                        <TableCell
+                          colSpan={7}
+                          className="py-6 text-center text-sm text-muted-foreground"
+                        >
+                          No rules match the current filter. Try lowering min-lift below{" "}
+                          {minLift.toFixed(2)} or switching category.
                         </TableCell>
                       </TableRow>
                     ) : null}

@@ -12,6 +12,13 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
+import {
+  CHART_AXIS_TICK,
+  CHART_LEGEND_STYLE,
+  CHART_TOOLTIP_ITEM_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+  chartTooltipContentStyle,
+} from "@/components/charts/chart-theme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEdaPca2d } from "@/hooks/useEda";
@@ -67,36 +74,35 @@ export function PcaScatterCard() {
                 dataKey="x"
                 name="PC1"
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
+                tick={CHART_AXIS_TICK}
               />
               <YAxis
                 type="number"
                 dataKey="y"
                 name="PC2"
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
+                tick={CHART_AXIS_TICK}
               />
               <ZAxis range={[20, 20]} />
               <Tooltip
                 cursor={{ strokeDasharray: "3 3" }}
-                contentStyle={{
-                  background: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 6,
-                  fontSize: 12,
-                }}
+                contentStyle={chartTooltipContentStyle()}
+                itemStyle={CHART_TOOLTIP_ITEM_STYLE}
+                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
                 formatter={(value: number, name: string) => [value.toFixed(3), name]}
               />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              {[...grouped.entries()].sort(([a], [b]) => a - b).map(([clusterId, pts]) => (
-                <Scatter
-                  key={clusterId}
-                  name={`C${clusterId}`}
-                  data={pts}
-                  fill={CLUSTER_COLORS[clusterId % CLUSTER_COLORS.length]}
-                  fillOpacity={0.55}
-                />
-              ))}
+              <Legend wrapperStyle={CHART_LEGEND_STYLE} />
+              {[...grouped.entries()]
+                .sort(([a], [b]) => a - b)
+                .map(([clusterId, pts]) => (
+                  <Scatter
+                    key={clusterId}
+                    name={`C${clusterId}`}
+                    data={pts}
+                    fill={CLUSTER_COLORS[clusterId % CLUSTER_COLORS.length]}
+                    fillOpacity={0.55}
+                  />
+                ))}
             </ScatterChart>
           </ResponsiveContainer>
         ) : null}

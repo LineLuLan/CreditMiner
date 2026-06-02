@@ -1,13 +1,12 @@
 "use client";
 
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+  CHART_LEGEND_STYLE,
+  CHART_TOOLTIP_ITEM_STYLE,
+  CHART_TOOLTIP_LABEL_STYLE,
+  chartTooltipContentStyle,
+} from "@/components/charts/chart-theme";
 import { CLUSTER_COLORS } from "@/lib/constants";
 
 interface Props {
@@ -43,8 +42,8 @@ function renderLabel({
       textAnchor={x > cx ? "start" : "end"}
       dominantBaseline="central"
       className="fill-foreground"
-      fontSize={11}
-      fontWeight={600}
+      fontSize={13}
+      fontWeight={700}
     >
       {(percent * 100).toFixed(1)}%
     </text>
@@ -73,22 +72,15 @@ export function DonutChart({ data, height = 260 }: Props) {
           ))}
         </Pie>
         <Tooltip
-          contentStyle={{
-            background: "hsl(var(--popover))",
-            border: "1px solid hsl(var(--border))",
-            borderRadius: 6,
-            fontSize: 12,
-          }}
+          contentStyle={chartTooltipContentStyle()}
+          itemStyle={CHART_TOOLTIP_ITEM_STYLE}
+          labelStyle={CHART_TOOLTIP_LABEL_STYLE}
           formatter={(value: number, name: string) => [
             `${value.toLocaleString()} (${((value / total) * 100).toFixed(1)}%)`,
             name,
           ]}
         />
-        <Legend
-          verticalAlign="bottom"
-          iconType="circle"
-          wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-        />
+        <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={CHART_LEGEND_STYLE} />
       </PieChart>
     </ResponsiveContainer>
   );

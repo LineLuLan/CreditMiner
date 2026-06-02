@@ -7,6 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ClusterCustomersDialog } from "@/components/features/ClusterCustomersDialog";
+import {
+  CHART_AXIS_TICK,
+  CHART_LEGEND_STYLE,
+  CHART_TOOLTIP_PROPS,
+} from "@/components/charts/chart-theme";
 import { useClusters } from "@/hooks/useClusters";
 import { CLUSTER_COLORS } from "@/lib/constants";
 import { formatInt, formatPct, formatUsd } from "@/lib/utils";
@@ -77,11 +82,7 @@ export default function ClustersPage() {
           <>
             <div className="grid gap-4 md:grid-cols-3">
               {data.map((c) => (
-                <PersonaCard
-                  key={c.clusterId}
-                  cluster={c}
-                  onClick={() => setOpenId(c.clusterId)}
-                />
+                <PersonaCard key={c.clusterId} cluster={c} onClick={() => setOpenId(c.clusterId)} />
               ))}
             </div>
             <PcaScatterCard />
@@ -109,9 +110,11 @@ export default function ClustersPage() {
 function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => void }) {
   const color = CLUSTER_COLORS[cluster.clusterId % CLUSTER_COLORS.length];
   const churnSeverity =
-    cluster.churnRate > 0.2 ? "text-destructive" :
-    cluster.churnRate > 0.1 ? "text-warning" :
-    "text-success";
+    cluster.churnRate > 0.2
+      ? "text-destructive"
+      : cluster.churnRate > 0.1
+        ? "text-warning"
+        : "text-success";
 
   return (
     <Card
@@ -148,9 +151,7 @@ function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => v
           <div className="grid grid-cols-2 gap-3 border-t pt-3 text-xs">
             <div>
               <p className="text-muted-foreground">Size</p>
-              <p className="font-medium tabular-nums text-foreground">
-                {formatInt(cluster.size)}
-              </p>
+              <p className="font-medium tabular-nums text-foreground">{formatInt(cluster.size)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Avg risk</p>
@@ -178,7 +179,6 @@ function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => v
   );
 }
 
-
 function ClusterComparisonChart({ clusters }: { clusters: Cluster[] }) {
   const chartData = clusters.map((c) => ({
     name: c.personaName,
@@ -195,17 +195,10 @@ function ClusterComparisonChart({ clusters }: { clusters: Cluster[] }) {
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={chartData} margin={{ top: 8, right: 12, left: -10, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} unit="%" />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 6,
-                fontSize: 12,
-              }}
-            />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" tick={CHART_AXIS_TICK} />
+            <YAxis stroke="hsl(var(--muted-foreground))" tick={CHART_AXIS_TICK} unit="%" />
+            <Tooltip {...CHART_TOOLTIP_PROPS} />
+            <Legend wrapperStyle={CHART_LEGEND_STYLE} />
             <Bar dataKey="churnPct" name="Churn rate" radius={[4, 4, 0, 0]}>
               {chartData.map((_, i) => (
                 <Cell key={`churn-${i}`} fill={CLUSTER_COLORS[i % CLUSTER_COLORS.length]} />
@@ -224,9 +217,7 @@ function ClusterComparisonChart({ clusters }: { clusters: Cluster[] }) {
 }
 
 function ClusterTable({ clusters }: { clusters: Cluster[] }) {
-  const allKeys = Array.from(
-    new Set(clusters.flatMap((c) => Object.keys(c.centroid))),
-  ).sort();
+  const allKeys = Array.from(new Set(clusters.flatMap((c) => Object.keys(c.centroid)))).sort();
 
   return (
     <Card>

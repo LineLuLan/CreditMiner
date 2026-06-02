@@ -1,6 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CHART_AXIS_TICK, CHART_TOOLTIP_PROPS } from "@/components/charts/chart-theme";
 
 interface Props {
   binEdges: number[];
@@ -18,9 +19,9 @@ export function HistogramChart({ binEdges, counts, height = 320 }: Props) {
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 24, left: 0, bottom: 24 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-        <XAxis dataKey="range" angle={-30} textAnchor="end" height={60} />
-        <YAxis />
-        <Tooltip />
+        <XAxis dataKey="range" angle={-30} textAnchor="end" height={64} tick={CHART_AXIS_TICK} />
+        <YAxis tick={CHART_AXIS_TICK} />
+        <Tooltip {...CHART_TOOLTIP_PROPS} />
         <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
