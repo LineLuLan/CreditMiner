@@ -84,13 +84,7 @@ export function PcaScatterCard() {
                 tick={CHART_AXIS_TICK}
               />
               <ZAxis range={[20, 20]} />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3" }}
-                contentStyle={chartTooltipContentStyle()}
-                itemStyle={CHART_TOOLTIP_ITEM_STYLE}
-                labelStyle={CHART_TOOLTIP_LABEL_STYLE}
-                formatter={(value: number, name: string) => [value.toFixed(3), name]}
-              />
+              <Tooltip cursor={{ strokeDasharray: "3 3" }} content={<PcaTooltip />} />
               <Legend wrapperStyle={CHART_LEGEND_STYLE} />
               {[...grouped.entries()]
                 .sort(([a], [b]) => a - b)
@@ -111,5 +105,25 @@ export function PcaScatterCard() {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+function PcaTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: PcaPoint }>;
+}) {
+  const point = payload?.[0]?.payload;
+
+  if (!active || !point) return null;
+
+  return (
+    <div style={chartTooltipContentStyle({ minWidth: 128 })}>
+      <p style={CHART_TOOLTIP_LABEL_STYLE}>Cluster C{point.clusterId}</p>
+      <div style={CHART_TOOLTIP_ITEM_STYLE}>PC1 : {point.x.toFixed(3)}</div>
+      <div style={CHART_TOOLTIP_ITEM_STYLE}>PC2 : {point.y.toFixed(3)}</div>
+    </div>
   );
 }
