@@ -6,6 +6,7 @@ import {
   BarChart3,
   FileText,
   Filter,
+  GitBranch,
   LayoutDashboard,
   Lightbulb,
   Network,
@@ -22,6 +23,7 @@ const ICON_MAP = {
   Users,
   Network,
   Filter,
+  GitBranch,
   Sparkles,
   Lightbulb,
 } as const;

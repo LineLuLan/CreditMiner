@@ -7,6 +7,7 @@ import {
   BarChart3,
   FileText,
   Filter,
+  GitBranch,
   LayoutDashboard,
   Lightbulb,
   Menu,
@@ -26,6 +27,7 @@ const ICON_MAP = {
   Users,
   Network,
   Filter,
+  GitBranch,
   Sparkles,
   Lightbulb,
 } as const;
@@ -125,8 +127,7 @@ export function MobileNav() {
               {NAV_ITEMS.map((item) => {
                 const Icon = ICON_MAP[item.icon as keyof typeof ICON_MAP];
                 const active =
-                  pathname === item.href ||
-                  (item.href !== "/" && pathname.startsWith(item.href));
+                  pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
                 return (
                   <Link
                     key={item.href}

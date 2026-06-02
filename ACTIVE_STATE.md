@@ -43,6 +43,7 @@
   - Mining Report rules/anomaly section now avoids cross-card height stretching, contains long rule lists in an internal scroll area, and the desktop sidebar stays fixed while the page scrolls.
   - Mining Report actionable insights now include reader-facing summary tiles and per-insight interpretation text so teachers/reviewers can see the evidence-to-action reasoning.
   - Cluster PCA scatter tooltip now includes the hovered point's cluster label (`C0`/`C1`/`C2`) alongside PC1/PC2.
+  - Added a Pipeline sidebar page mapping CRISP-DM/data-mining phases to backend artifacts, APIs, and frontend screens so reviewers can see where train results appear.
 - Backend tests:
   - `mvn -B test`: passed via explicit Maven path after JDK/Maven install; 12 tests run, 0 failures, 0 errors, 1 skipped.
   - `mvn -B test`: passed again after mining-report artifact fallback; 12 tests run, 0 failures, 0 errors, 1 skipped.

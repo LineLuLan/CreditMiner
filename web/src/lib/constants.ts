@@ -1,8 +1,7 @@
 /** Centralized constants. Avoid magic strings/numbers in components. */
 
 /** Frontend API base URL. */
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
 
 /** Default page size for paginated tables. */
 export const DEFAULT_PAGE_SIZE = 20;
@@ -14,11 +13,7 @@ export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "CreditMiner";
 
 /** Persona display order — matches BE Phase 6 cluster names (k=3). */
-export const PERSONA_ORDER = [
-  "Premium Loyal",
-  "At-Risk Mid-Tier",
-  "Low-Income Stable",
-] as const;
+export const PERSONA_ORDER = ["Premium Loyal", "At-Risk Mid-Tier", "Low-Income Stable"] as const;
 
 /** Customer tier order. */
 export const TIER_ORDER = ["Bronze", "Silver", "Gold", "Platinum"] as const;
@@ -52,6 +47,7 @@ export const NAV_ITEMS = [
   { href: "/clusters", label: "Clusters", icon: "Network" },
   { href: "/rules", label: "Rules", icon: "Filter" },
   { href: "/mining-report", label: "Mining Report", icon: "FileText" },
+  { href: "/pipeline", label: "Pipeline", icon: "GitBranch" },
   { href: "/predict", label: "Predict", icon: "Sparkles" },
   { href: "/insights", label: "Insights", icon: "Lightbulb" },
 ] as const;
