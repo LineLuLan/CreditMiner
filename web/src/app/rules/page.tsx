@@ -182,7 +182,7 @@ export default function RulesPage() {
                     affect more customers.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
                   <ResponsiveContainer width="100%" height={320}>
                     <BarChart
                       data={supportData}
@@ -206,6 +206,11 @@ export default function RulesPage() {
                       />
                     </BarChart>
                   </ResponsiveContainer>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {sorted.slice(0, 3).map((rule, index) => (
+                      <TopRuleSummary key={rule.ruleId} rule={rule} rank={index + 1} />
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -309,6 +314,25 @@ function RuleCard({ rule, rank }: { rule: Rule; rank: number }) {
         <MiniMetric label="Confidence" value={formatPct(rule.confidence)} />
         <MiniMetric label="Lift" value={rule.lift.toFixed(2)} />
       </div>
+    </div>
+  );
+}
+
+function TopRuleSummary({ rule, rank }: { rule: Rule; rank: number }) {
+  const label = describeRule(rule);
+
+  return (
+    <div className="rounded-lg border bg-muted/15 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <Badge variant="secondary">#{rank}</Badge>
+        <span className="text-xs font-semibold tabular-nums">{formatPct(rule.support, 2)}</span>
+      </div>
+      <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5" title={label.headline}>
+        {label.headline}
+      </p>
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Lift {rule.lift.toFixed(2)} · confidence {formatPct(rule.confidence)}
+      </p>
     </div>
   );
 }
