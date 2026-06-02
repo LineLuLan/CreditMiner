@@ -1,7 +1,7 @@
 # Frontend Task Tracker
 
-> **Branch**: `frontend`  ·  **Owner**: FE team  ·  **Last sync**: 2026-05-14 — Polish wave 2026-05-14 complete. Gói A (FE-P1..P6: design tokens + layout) + Gói B (FE-P7..P10: /predict redesign) + Gói C (FE-P11..P17: page polish + perf) REVIEW. Full e2e + lhci re-run on 2026-05-14: 9/9 Playwright tests pass, 0 Lighthouse assertion failures. See `docs/FE_Audits.md` for the new per-route table.
-> Update this file in the **same commit** that closes a task. Sync `docs/` to `develop` → `backend` after.
+> **Branch**: `frontend` - **Owner**: FE team - **Last sync**: 2026-06-02 re-onboarding review. 2026-05-14 polish/audit results remain the latest recorded FE validation; local re-run completed on 2026-06-02 with Corepack/pnpm install, typecheck, lint, and build passing.
+> Update this file in the **same commit** that closes a task. Sync `docs/` to `develop` -> `backend` after.
 
 ---
 
@@ -17,16 +17,16 @@
 
 ---
 
-## Quick Stats
+## Quick Stats (re-onboarding summary)
 
 | Metric | Value |
 |---|---|
-| Total tasks | 56 |
-| DONE | 1 (FE-00) |
-| REVIEW | 39 (Phase 0..8 page wiring + FE-50 PCA scatter + FE-53 cluster-customers drawer + FE-Q1..Q8 polish suite) |
-| BACKLOG | 13 (FE-13 dedicated `loading.tsx` per route, FE-14 dedicated `error.tsx` per route, a few minor polish items) |
-| Blocked | 3 (manual user steps FE-M1..M3) |
-| % complete | All 7 pages live, audits green, demo-ready. Backlog items are nice-to-have. |
+| UI status | 7 dashboard pages documented live and demo-ready |
+| Latest recorded audit | 2026-05-14: 9/9 Playwright tests passed; Lighthouse assertions passed |
+| Current source branch | `develop` |
+| Local verification | PASSED 2026-06-02: Corepack pnpm install, typecheck, lint, and build |
+| Known follow-ups | `/clusters` and `/rules` remain Recharts-heavy; `/insights` contrast follow-up from 2026-05-14 audit |
+| Manual blockers | Node/pnpm environment, local API URL, deploy env vars |
 
 ---
 

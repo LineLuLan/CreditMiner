@@ -1,7 +1,7 @@
 # Backend Task Tracker
 
-> **Branch**: `backend`  ·  **Owner**: BE team  ·  **Last sync**: Phase 8 SEED RUN against Neon (2026-05-09 09:40 UTC+7); insights refreshed; anomaly threshold tuned to blueprint 3-5%.
-> Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` → `frontend`.
+> **Branch**: `backend` - **Owner**: BE team - **Last sync**: 2026-06-02 re-onboarding review. Phase 8 is documented complete, but local backend re-verification is blocked until JDK 17 and Maven are installed.
+> Update this file in the **same commit** that closes a task. After updating, sync `docs/` folder to `develop` -> `frontend`.
 
 ---
 
@@ -17,19 +17,16 @@
 
 ---
 
-## Quick Stats (auto-update by hand on commit)
+## Quick Stats (re-onboarding summary)
 
 | Metric | Value |
 |---|---|
-| Total tasks | 64 |
-| Done | 3 (BE-00, BE-M2, BE-M3) |
-| REVIEW | 58 (BE-01..BE-05, BE-10..BE-13, BE-20..BE-26, BE-30..BE-35, BE-40..BE-43, BE-50..BE-59, BE-60..BE-64, BE-70..BE-74, BE-80..BE-91) |
-| WIP | 0 |
-| Blocked | 1 (manual user step BE-M1) |
-| Skipped | 1 (BE-65 EM bonus — optional, deprioritized) |
-| % complete | 4.7% (95.3% incl REVIEW) |
-| Pending | 0 — Phase 8 seed RAN successfully 2026-05-09; all 12 endpoints live against Neon; predict cluster lookup fixed |
-| Follow-ups | PCA-2D HTTP endpoint, PredictRequest extra fields, 405 envelope, JUnit suite, stale ClassificationServiceTest. None block FE. |
+| Pipeline/API status | Phase 1-8 documented complete in `docs/BE_Handoff.md` |
+| Current source branch | `develop` |
+| Local verification | BLOCKED: `java` and `mvn` are missing on this machine |
+| DB safety | Do not run seed, migration, schema, reset, or training DB steps without explicit DB confirmation |
+| Security | Current docs redact the previously exposed Neon password; rotate the credential before future shared use |
+| Follow-ups | Training script target, destructive schema split, disabled context test, report export placeholder, deeper `/predict` coverage |
 
 ---
 

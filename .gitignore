@@ -111,6 +111,7 @@ postgres_data/
 volumes/
 
 # ----- Misc -----
+.codegraph/
 .history/
 tmp/
 temp/

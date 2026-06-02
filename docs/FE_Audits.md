@@ -5,8 +5,8 @@
 ## 2026-05-14 — Polish wave results
 
 ```
-pnpm test:e2e   → 9 passed (39.7s)
-pnpm lhci       → 0 assertion failures, all thresholds met
+corepack pnpm test:e2e   → 9 passed (39.7s)
+corepack pnpm lhci       → 0 assertion failures, all thresholds met
 ```
 
 | Route | Perf (before → after) | A11y (before → after) | BP | SEO |
@@ -29,11 +29,11 @@ pnpm lhci       → 0 assertion failures, all thresholds met
 Re-run command (same as 2026-05-09):
 ```powershell
 cd web
-pnpm build; pnpm start
+corepack pnpm build; corepack pnpm start
 # new shell
 $env:CHROME_PATH = 'C:\Users\admin\AppData\Local\ms-playwright\chromium-1140\chrome-win\chrome.exe'
-pnpm test:e2e
-pnpm lhci
+corepack pnpm test:e2e
+corepack pnpm lhci
 ```
 
 ## 2026-05-09 — Baseline
@@ -52,9 +52,7 @@ pnpm lhci
 ```powershell
 # 1. Spin BE on 8080 (with localhost CORS)
 cd backend
-$env:DATABASE_URL = '<see ~/.claude/.../reference_neon_db.md>'
-$env:DB_USER = 'neondb_owner'
-$env:DB_PASSWORD = '...'
+# Load DATABASE_URL, DB_USER, and DB_PASSWORD from the approved secret manager into this shell only.
 $env:SPRING_PROFILES_ACTIVE = 'prod'
 $env:CM_FRONTEND_URL = 'http://localhost:3000,http://127.0.0.1:3000'
 mvn -q -Dmaven.test.skip=true spring-boot:run
@@ -66,14 +64,14 @@ pnpm start
 
 # 3. In a third shell: run audits
 cd web
-pnpm test:e2e               # Playwright (predict + a11y)
+corepack pnpm test:e2e               # Playwright (predict + a11y)
 $env:CHROME_PATH = 'C:\Users\admin\AppData\Local\ms-playwright\chromium-1140\chrome-win\chrome.exe'
-pnpm lhci                   # Lighthouse on all 7 routes
+corepack pnpm lhci                   # Lighthouse on all 7 routes
 ```
 
 ## Playwright E2E
 
-`pnpm test:e2e` — 9 tests / 9 passing (~30s).
+`corepack pnpm test:e2e` — 9 tests / 9 passing (~30s).
 
 | Spec | Test | Status |
 |---|---|---|
@@ -108,7 +106,7 @@ The test fails on **critical** violations (currently 0 across all routes) and to
 
 ## Lighthouse
 
-`pnpm lhci` — 7 routes × 1 run each on the desktop preset, headless Chromium. Assertions: a11y ≥ 0.9 (error), performance ≥ 0.5 (warn), best-practices ≥ 0.9 (warn), SEO ≥ 0.9 (warn). All assertions pass.
+`corepack pnpm lhci` — 7 routes × 1 run each on the desktop preset, headless Chromium. Assertions: a11y ≥ 0.9 (error), performance ≥ 0.5 (warn), best-practices ≥ 0.9 (warn), SEO ≥ 0.9 (warn). All assertions pass.
 
 | Route | Performance | Accessibility | Best Practices | SEO |
 |---|---:|---:|---:|---:|
@@ -137,4 +135,4 @@ These don't block the demo — KPI / Predict / Insights / Customers all score 0.
 
 - Playwright traces / screenshots / reports: `web/test-results/` (gitignored)
 - Lighthouse reports (HTML + JSON per route): `web/.lighthouseci/` (gitignored)
-- Re-running `pnpm test:e2e` and `pnpm lhci` regenerates everything.
+- Re-running `corepack pnpm test:e2e` and `corepack pnpm lhci` regenerates everything.
