@@ -36,6 +36,8 @@
   - Shared Recharts/Radix tooltip styling was updated so dark-mode chart and small-control tooltips render readable foreground text.
   - Browser smoke passed in dark mode against `http://localhost:3000`: overview rendered the refreshed dashboard, donut tooltip showed `Attrited : 1,627 (16.1%)`, no `Network Error`, and no console/page errors.
   - Follow-up layout pass compacted Overview/EDA, prevented full-page horizontal overflow with `main min-w-0`, contained correlation heatmap scrolling inside its card, capped churn-by bar width, and disabled chart animations that made screenshots look partially rendered.
+  - Overview now states the core mining question: which customers are likely to churn, what segments/rules explain risk, and which retention actions should be prioritized.
+  - Mining Report was redesigned from tabbed evidence pages into a one-page executive dashboard covering the mining question, answer, report health, model evidence, dataset balance, segmentation, association rules, anomalies, and actionable insights.
 - Backend tests:
   - `mvn -B test`: passed via explicit Maven path after JDK/Maven install; 12 tests run, 0 failures, 0 errors, 1 skipped.
   - `mvn -B test`: passed again after mining-report artifact fallback; 12 tests run, 0 failures, 0 errors, 1 skipped.

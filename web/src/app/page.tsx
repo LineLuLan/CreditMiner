@@ -2,7 +2,16 @@
 
 import type { ComponentType } from "react";
 import Link from "next/link";
-import { ArrowRight, Brain, Database, Gauge, ShieldAlert, Sparkles, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Brain,
+  Database,
+  Gauge,
+  Search,
+  ShieldAlert,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { KPICard } from "@/components/charts/KPICard";
 import { DonutChart } from "@/components/charts/DonutChart";
@@ -71,6 +80,20 @@ export default function OverviewPage() {
                         value={topTier?.name ?? "n/a"}
                         note={topTier ? `${formatPct(topTierShare)} of dataset` : "No tier data"}
                       />
+                    </div>
+                    <div className="rounded-lg border border-primary/30 bg-background/40 p-3">
+                      <div className="flex items-start gap-2">
+                        <Search className="mt-0.5 h-4 w-4 text-primary" />
+                        <div>
+                          <p className="text-xs font-semibold uppercase text-primary">
+                            Mining question
+                          </p>
+                          <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                            Which customers are likely to churn, what behavioral segments and rules
+                            explain that risk, and which retention actions should be prioritized?
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 lg:w-56 lg:flex-col">
