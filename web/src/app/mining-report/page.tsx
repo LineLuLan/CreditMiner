@@ -256,7 +256,7 @@ function ReportContent({ report }: { report: MiningReport }) {
 
       <SegmentationEvidence report={report} />
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section className="grid items-start gap-4 xl:grid-cols-2">
         <RulesEvidence report={report} strongestRule={strongestRule} />
         <AnomalyEvidence report={report} anomalyCount={anomalyCount} anomalyPct={anomalyPct} />
       </section>
@@ -577,7 +577,10 @@ function RulesEvidence({ report, strongestRule }: { report: MiningReport; strong
             </div>
           </div>
         ) : null}
-        <RulesTable rules={report.rules.topRules.slice(0, 8)} />
+        <RulesTable
+          rules={report.rules.topRules.slice(0, 8)}
+          totalRules={report.rules.totalRules}
+        />
       </CardContent>
     </Card>
   );
@@ -654,21 +657,61 @@ function AnomalyEvidence({
 }
 
 function InsightEvidence({ insights }: { insights: Insight[] }) {
+  const sortedInsights = insights.slice().sort((a, b) => a.priority - b.priority);
+  const categories = Array.from(new Set(sortedInsights.map((insight) => insight.category)));
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Actionable insights</CardTitle>
-        <CardDescription>Business recommendations backed by the mining evidence.</CardDescription>
+        <CardDescription>
+          Interpreted recommendations that connect discovery, model evidence, and retention action.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3 lg:grid-cols-2">
-        {insights
-          .slice()
-          .sort((a, b) => a.priority - b.priority)
-          .map((insight) => (
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-3">
+          <InsightSummaryTile
+            label="Decision output"
+            value={`${formatInt(sortedInsights.length)} ranked actions`}
+            body="Each action is tied to a mined pattern rather than a generic business suggestion."
+          />
+          <InsightSummaryTile
+            label="Evidence coverage"
+            value={categories.map((category) => categoryLabel(category)).join(", ")}
+            body="Insights combine churn drivers, segment behavior, association rules, and anomaly review."
+          />
+          <InsightSummaryTile
+            label="Priority meaning"
+            value="P1 first"
+            body="Lower priority number means the action is more urgent for retention planning."
+          />
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          {sortedInsights.map((insight) => (
             <InsightCard key={insight.insightId} insight={insight} />
           ))}
+        </div>
       </CardContent>
     </Card>
+  );
+}
+
+function InsightSummaryTile({
+  label,
+  value,
+  body,
+}: {
+  label: string;
+  value: string;
+  body: string;
+}) {
+  return (
+    <div className="rounded-lg border bg-muted/15 p-3">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold leading-5">{value}</p>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">{body}</p>
+    </div>
   );
 }
 
@@ -786,16 +829,24 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RulesTable({ rules }: { rules: Rule[] }) {
+function RulesTable({ rules, totalRules }: { rules: Rule[]; totalRules: number }) {
   if (rules.length === 0) {
     return <EmptyState text="No rules are available in the report payload." />;
   }
 
   return (
-    <div className="grid gap-2">
-      {rules.map((rule) => (
-        <RuleCard key={rule.ruleId} rule={rule} />
-      ))}
+    <div className="rounded-lg border bg-muted/10">
+      <div className="flex items-center justify-between gap-3 border-b px-3 py-2">
+        <p className="text-xs font-semibold uppercase text-muted-foreground">Top ranked rules</p>
+        <p className="text-xs text-muted-foreground">
+          Showing {rules.length} of {formatInt(totalRules)}
+        </p>
+      </div>
+      <div className="max-h-[420px] space-y-2 overflow-y-auto p-2 pr-3">
+        {rules.map((rule) => (
+          <RuleCard key={rule.ruleId} rule={rule} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -821,14 +872,20 @@ function RuleCard({ rule }: { rule: Rule }) {
             ))}
           </div>
         </div>
-        <Badge variant={rule.category === "retention" ? "default" : "secondary"}>
-          {rule.category}
-        </Badge>
-      </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <MiniMetric label="Support" value={formatPct(rule.support, 2)} />
-        <MiniMetric label="Confidence" value={formatPct(rule.confidence)} />
-        <MiniMetric label="Lift" value={rule.lift.toFixed(2)} />
+        <div className="flex flex-wrap items-center justify-end gap-1.5 text-xs">
+          <Badge variant={rule.category === "retention" ? "default" : "secondary"}>
+            {rule.category}
+          </Badge>
+          <span className="rounded-md bg-muted/45 px-2 py-1 tabular-nums">
+            sup {formatPct(rule.support, 2)}
+          </span>
+          <span className="rounded-md bg-muted/45 px-2 py-1 tabular-nums">
+            conf {formatPct(rule.confidence)}
+          </span>
+          <span className="rounded-md bg-muted/45 px-2 py-1 tabular-nums">
+            lift {rule.lift.toFixed(2)}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -904,6 +961,8 @@ function formatRuleNumber(value: string) {
 }
 
 function InsightCard({ insight }: { insight: Insight }) {
+  const interpretation = insightInterpretation(insight.category);
+
   return (
     <div className="rounded-lg border bg-card/60 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -915,7 +974,15 @@ function InsightCard({ insight }: { insight: Insight }) {
             <Badge variant="secondary">{insight.category}</Badge>
           </div>
           <p className="mt-2 font-semibold leading-5">{insight.title}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{interpretation.scope}</p>
         </div>
+      </div>
+
+      <div className="mt-3 rounded-md bg-muted/25 p-3">
+        <p className="text-[11px] font-semibold uppercase text-muted-foreground">
+          Why this matters
+        </p>
+        <p className="mt-1 text-xs leading-5 text-foreground/90">{interpretation.why}</p>
       </div>
 
       <div className="mt-4 rounded-md border border-primary/30 bg-primary/5 p-3">
@@ -932,6 +999,39 @@ function InsightCard({ insight }: { insight: Insight }) {
       </div>
     </div>
   );
+}
+
+function categoryLabel(category: Insight["category"]) {
+  const labels: Record<Insight["category"], string> = {
+    churn: "churn",
+    cluster: "segments",
+    risk: "risk",
+    opportunity: "opportunity",
+  };
+  return labels[category];
+}
+
+function insightInterpretation(category: Insight["category"]) {
+  const interpretations: Record<Insight["category"], { scope: string; why: string }> = {
+    churn: {
+      scope: "Churn-driver insight from mined customer behavior.",
+      why: "This explains which behavior raises attrition risk and turns it into a targeted retention trigger.",
+    },
+    cluster: {
+      scope: "Segment-level insight from customer clustering.",
+      why: "This connects a customer persona to a cohort action, so retention planning is not one-size-fits-all.",
+    },
+    risk: {
+      scope: "Model-risk insight from classification evidence.",
+      why: "This converts a predictive signal into an operational KPI that can be monitored before churn happens.",
+    },
+    opportunity: {
+      scope: "Business opportunity supported by mining evidence.",
+      why: "This identifies where retention and revenue action can be prioritized using segment or rule evidence.",
+    },
+  };
+
+  return interpretations[category];
 }
 
 function EvidenceBlock({

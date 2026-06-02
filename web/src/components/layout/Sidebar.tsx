@@ -29,7 +29,7 @@ const ICON_MAP = {
 export function Sidebar() {
   const pathname = usePathname();
   return (
-    <aside className="hidden w-64 shrink-0 border-r bg-card md:flex md:flex-col">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 shrink-0 border-r bg-card md:flex md:flex-col">
       <div className="flex h-16 items-center gap-2 border-b px-6">
         <span className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground">
           <Sparkles className="h-4 w-4" aria-hidden />
@@ -38,7 +38,7 @@ export function Sidebar() {
           {APP_NAME}
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {NAV_ITEMS.map((item) => {
           const Icon = ICON_MAP[item.icon as keyof typeof ICON_MAP];
           const active =
