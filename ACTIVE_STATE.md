@@ -35,6 +35,7 @@
 - Backend tests:
   - `mvn -B test`: passed via explicit Maven path after JDK/Maven install; 12 tests run, 0 failures, 0 errors, 1 skipped.
   - `mvn -B test`: passed again after mining-report artifact fallback; 12 tests run, 0 failures, 0 errors, 1 skipped.
+  - `mvn -B test`: passed after adding demo H2 profile; 12 tests run, 0 failures, 0 errors, 1 skipped.
 - Data-mining report feature:
   - Backend added read-only `GET /api/mining-report` via `MiningReportController` and `MiningReportService`.
   - Frontend added `/mining-report` with dataset, classification, clustering, rules, anomaly, and insight evidence tabs.
@@ -42,7 +43,9 @@
   - `MiningReportService` falls back to local artifacts/resources for clusters, rules, and insights when DB rows are unavailable, so artifact-only training can still feed the report page.
 - Local runner:
   - `scripts/run-local.bat` starts backend and frontend dev servers in separate terminal windows when prerequisites are available.
-  - The runner has a `--check` mode and intentionally does not run setup, seed, reset, train, deploy, or read `.env` files.
+  - The runner has a `--check` mode and intentionally does not run setup, train, deploy, or read `.env` files.
+  - Backend now starts with Spring `demo` profile, using an in-memory H2 database seeded from local artifacts/resources at startup.
+  - Demo backend boot smoke passed: `/actuator/health` was `UP`; `/api/mining-report` returned 10127 rows, 3 clusters, 50 rules, and 5 insights.
 - Artifact training runner:
   - `scripts/train-artifacts.bat` runs Phase 1, 2, 3, 5, 6, and 7 via Maven and writes output to `docs/TRAINING_LOG.md`.
   - It is artifact-only and intentionally does not seed/reset databases, run SQL, deploy, or read `.env` files.
