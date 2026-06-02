@@ -41,6 +41,10 @@
 - Local runner:
   - `scripts/run-local.bat` starts backend and frontend dev servers in separate terminal windows when prerequisites are available.
   - The runner has a `--check` mode and intentionally does not run setup, seed, reset, train, deploy, or read `.env` files.
+- Artifact training runner:
+  - `scripts/train-artifacts.bat` runs Phase 1, 2, 3, 5, 6, and 7 via Maven and writes output to `docs/TRAINING_LOG.md`.
+  - It is artifact-only and intentionally does not seed/reset databases, run SQL, deploy, or read `.env` files.
+  - Current workspace is missing `backend/data/raw/BankChurners.csv`; full retraining is blocked until the raw Kaggle CSV is placed there.
 - DB verification: intentionally not run in this pass.
 - DB/dev tooling checks: `docker`, `psql`, and `codegraph` are not installed.
 - Secret scan: path/line-only scan found no tracked or untracked worktree hits for configured high-risk patterns.
