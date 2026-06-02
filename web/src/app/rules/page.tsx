@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
@@ -177,8 +177,8 @@ export default function RulesPage() {
               />
             </section>
 
-            <section className="grid min-w-0 items-start gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-              <Card className="min-w-0">
+            <section className="grid min-w-0 items-stretch gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+              <Card className="flex h-full min-w-0 flex-col">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Top rules by support</CardTitle>
                   <CardDescription>
@@ -186,7 +186,7 @@ export default function RulesPage() {
                     affect more customers.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1">
                   <ResponsiveContainer width="100%" height={320}>
                     <BarChart
                       data={supportData}
@@ -213,14 +213,14 @@ export default function RulesPage() {
                 </CardContent>
               </Card>
 
-              <Card className="min-w-0">
+              <Card className="flex h-full min-w-0 flex-col">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Most repeated rule conditions</CardTitle>
                   <CardDescription>
                     Shows what Apriori repeatedly discovered across the selected rule set.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="min-w-0">
+                <CardContent className="min-w-0 flex-1">
                   <ConditionSlider conditions={conditionData} />
                 </CardContent>
               </Card>
@@ -242,18 +242,13 @@ export default function RulesPage() {
                   <Skeleton key={index} className="h-24" />
                 ))}
               </div>
+            ) : sorted.length > 0 ? (
+              <RankedRuleScroller rules={sorted} />
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {sorted.map((rule, index) => (
-                  <RuleCard key={rule.ruleId} rule={rule} rank={index + 1} />
-                ))}
-                {sorted.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground md:col-span-2">
-                    No rules match the current filter. Try lowering min-lift below{" "}
-                    {minLift.toFixed(2)} or switching category.
-                  </p>
-                ) : null}
-              </div>
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No rules match the current filter. Try lowering min-lift below {minLift.toFixed(2)}{" "}
+                or switching category.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -311,6 +306,78 @@ function RuleCard({ rule, rank }: { rule: Rule; rank: number }) {
   );
 }
 
+function RankedRuleScroller({ rules }: { rules: Rule[] }) {
+  const scrollerRef = React.useRef<HTMLDivElement>(null);
+  const dragRef = React.useRef({ active: false, startY: 0, scrollTop: 0 });
+
+  const scroll = (direction: "up" | "down") => {
+    scrollerRef.current?.scrollBy({
+      top: direction === "up" ? -360 : 360,
+      behavior: "smooth",
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          {rules.length} ranked rules, contained for focused review.
+        </p>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Previous ranked rules"
+            onClick={() => scroll("up")}
+          >
+            <ChevronUp className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Next ranked rules"
+            onClick={() => scroll("down")}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      <div
+        ref={scrollerRef}
+        aria-label="Ranked rule evidence list"
+        className="max-h-[720px] cursor-grab overflow-y-auto overscroll-contain scroll-smooth pr-2 active:cursor-grabbing"
+        onPointerDown={(event) => {
+          const target = event.currentTarget;
+          dragRef.current = {
+            active: true,
+            startY: event.clientY,
+            scrollTop: target.scrollTop,
+          };
+          target.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          if (!dragRef.current.active) return;
+          event.currentTarget.scrollTop =
+            dragRef.current.scrollTop - (event.clientY - dragRef.current.startY);
+        }}
+        onPointerUp={(event) => {
+          dragRef.current.active = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => {
+          dragRef.current.active = false;
+        }}
+      >
+        <div className="grid gap-3 pb-1 md:grid-cols-2">
+          {rules.map((rule, index) => (
+            <RuleCard key={rule.ruleId} rule={rule} rank={index + 1} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md bg-muted/25 p-2">
@@ -326,12 +393,12 @@ function ConditionSlider({
   conditions: { label: string; value: string; count: number }[];
 }) {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
-  const dragRef = React.useRef({ active: false, startX: 0, scrollLeft: 0 });
+  const dragRef = React.useRef({ active: false, startY: 0, scrollTop: 0 });
   const max = conditions[0]?.count ?? 1;
 
-  const scroll = (direction: "left" | "right") => {
+  const scroll = (direction: "up" | "down") => {
     scrollerRef.current?.scrollBy({
-      left: direction === "left" ? -320 : 320,
+      top: direction === "up" ? -180 : 180,
       behavior: "smooth",
     });
   };
@@ -340,43 +407,44 @@ function ConditionSlider({
     <div className="min-w-0 space-y-3">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          Drag horizontally to inspect all conditions.
+          {conditions.length} repeated conditions ranked by frequency.
         </p>
         <div className="flex items-center gap-1">
           <Button
             variant="outline"
             size="icon"
             aria-label="Previous conditions"
-            onClick={() => scroll("left")}
+            onClick={() => scroll("up")}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronUp className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
             aria-label="Next conditions"
-            onClick={() => scroll("right")}
+            onClick={() => scroll("down")}
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronDown className="h-4 w-4" />
           </Button>
         </div>
       </div>
       <div
         ref={scrollerRef}
-        className="flex max-w-full cursor-grab snap-x gap-3 overflow-x-auto scroll-smooth pb-2 active:cursor-grabbing"
+        aria-label="Repeated rule conditions list"
+        className="max-h-[320px] cursor-grab space-y-2 overflow-y-auto overscroll-contain scroll-smooth pr-2 active:cursor-grabbing"
         onPointerDown={(event) => {
           const target = event.currentTarget;
           dragRef.current = {
             active: true,
-            startX: event.clientX,
-            scrollLeft: target.scrollLeft,
+            startY: event.clientY,
+            scrollTop: target.scrollTop,
           };
           target.setPointerCapture(event.pointerId);
         }}
         onPointerMove={(event) => {
           if (!dragRef.current.active) return;
-          event.currentTarget.scrollLeft =
-            dragRef.current.scrollLeft - (event.clientX - dragRef.current.startX);
+          event.currentTarget.scrollTop =
+            dragRef.current.scrollTop - (event.clientY - dragRef.current.startY);
         }}
         onPointerUp={(event) => {
           dragRef.current.active = false;
@@ -408,7 +476,7 @@ function ConditionCard({
   const pct = max > 0 ? (condition.count / max) * 100 : 0;
 
   return (
-    <div className="min-h-28 flex-[0_0_260px] select-none snap-start rounded-lg border bg-background/70 p-3 sm:flex-[0_0_300px]">
+    <div className="min-h-[88px] select-none rounded-lg border bg-background/70 p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{condition.value}</p>
