@@ -30,6 +30,11 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+    --chart-1: 221 83% 53%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 25 95% 53%;
+    --chart-4: 271 81% 56%;
+    --chart-5: 199 89% 48%;
   }
 
   .dark {
@@ -58,6 +63,11 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 160 70% 50%;
+    --chart-3: 25 95% 60%;
+    --chart-4: 271 81% 68%;
+    --chart-5: 199 85% 60%;
   }
 }
 
@@ -68,6 +78,8 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -89,5 +101,33 @@
   }
   .eyebrow {
     @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
+  }
+  /** Tabular figures so numeric columns/KPIs stay aligned. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+  /** Subtle full-width divider between page sections. */
+  .section-divider {
+    @apply h-px w-full bg-border;
+  }
+}
+
+@layer utilities {
+  /** Thin, theme-aware scrollbar for scrollable panels. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background-color: transparent;
   }
 }

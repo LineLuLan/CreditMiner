@@ -28,7 +28,7 @@ export function Header({ title }: { title: string }) {
   const crumbs = useCrumbs(pathname);
 
   return (
-    <header className="flex h-16 items-center justify-between gap-2 border-b bg-card px-4 sm:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-2 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <MobileNav />
         <div className="min-w-0">

@@ -32,15 +32,15 @@ export function Sidebar() {
   const pathname = usePathname();
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 shrink-0 border-r bg-card md:flex md:flex-col">
-      <div className="flex h-16 items-center gap-2 border-b px-6">
-        <span className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground">
+      <div className="flex h-16 items-center gap-2.5 border-b px-6">
+        <span className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground shadow-sm">
           <Sparkles className="h-4 w-4" aria-hidden />
         </span>
         <Link href="/" className="text-lg font-bold tracking-tight">
           {APP_NAME}
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+      <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto p-3">
         {NAV_ITEMS.map((item) => {
           const Icon = ICON_MAP[item.icon as keyof typeof ICON_MAP];
           const active =
@@ -49,14 +49,26 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
               )}
             >
-              <Icon className="h-4 w-4" />
+              {active ? (
+                <span
+                  aria-hidden
+                  className="absolute inset-y-1.5 left-0 w-1 rounded-r-full bg-primary"
+                />
+              ) : null}
+              <Icon
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-colors",
+                  active ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
+                )}
+              />
               {item.label}
             </Link>
           );
