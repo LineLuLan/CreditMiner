@@ -32,6 +32,7 @@ import { DonutChart } from "@/components/charts/DonutChart";
 import {
   CHART_AXIS_TICK,
   CHART_LEGEND_STYLE,
+  CHART_SEMANTIC,
   CHART_TOOLTIP_PROPS,
 } from "@/components/charts/chart-theme";
 import { Badge } from "@/components/ui/badge";
@@ -420,7 +421,7 @@ function DatasetEvidence({ report }: { report: MiningReport }) {
                 <Tooltip {...CHART_TOOLTIP_PROPS} />
                 <Bar
                   dataKey="count"
-                  fill="#10b981"
+                  fill={CHART_SEMANTIC.success}
                   maxBarSize={44}
                   radius={[4, 4, 0, 0]}
                   isAnimationActive={false}
@@ -495,7 +496,7 @@ function SegmentationEvidence({ report }: { report: MiningReport }) {
               <Bar
                 dataKey="riskPct"
                 name="Avg risk"
-                fill="#f59e0b"
+                fill={CHART_SEMANTIC.warning}
                 fillOpacity={0.75}
                 maxBarSize={48}
                 radius={[4, 4, 0, 0]}
@@ -520,7 +521,7 @@ function SegmentationEvidence({ report }: { report: MiningReport }) {
                   type="monotone"
                   dataKey="wcss"
                   name="WCSS"
-                  stroke="#3b82f6"
+                  stroke={CHART_SEMANTIC.primary}
                   strokeWidth={2}
                   dot={false}
                 />
@@ -529,7 +530,7 @@ function SegmentationEvidence({ report }: { report: MiningReport }) {
                   type="monotone"
                   dataKey="silhouette"
                   name="Silhouette"
-                  stroke="#10b981"
+                  stroke={CHART_SEMANTIC.success}
                   strokeWidth={2}
                 />
               </LineChart>
@@ -622,7 +623,7 @@ function AnomalyEvidence({
             <Tooltip {...CHART_TOOLTIP_PROPS} />
             <Bar
               dataKey="value"
-              fill="#ef4444"
+              fill={CHART_SEMANTIC.destructive}
               maxBarSize={60}
               radius={[4, 4, 0, 0]}
               isAnimationActive={false}

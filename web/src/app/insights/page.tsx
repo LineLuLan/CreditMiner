@@ -101,7 +101,7 @@ function Section({
       ? "border-l-primary bg-primary/5"
       : tone === "info"
         ? "border-l-info bg-info/5"
-        : "border-l-muted-foreground/30";
+        : "border-l-muted-foreground/30 bg-muted/30";
   return (
     <div className={`border-l-2 pl-3 ${accent}`}>
       <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

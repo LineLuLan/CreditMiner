@@ -1,5 +1,26 @@
 import type * as React from "react";
 
+/** Theme-aware categorical palette (light/dark via CSS vars). */
+export const CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+] as const;
+
+/** Semantic chart colors backed by the design tokens. */
+export const CHART_SEMANTIC = {
+  primary: "hsl(var(--primary))",
+  success: "hsl(var(--success))",
+  warning: "hsl(var(--warning))",
+  destructive: "hsl(var(--destructive))",
+  info: "hsl(var(--info))",
+} as const;
+
+/** Standard chart margin so axes/labels align across the dashboard. */
+export const CHART_MARGIN = { top: 8, right: 16, left: 0, bottom: 8 } as const;
+
 export const CHART_AXIS_TICK = {
   fill: "hsl(var(--muted-foreground))",
   fontSize: 13,

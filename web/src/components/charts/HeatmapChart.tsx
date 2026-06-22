@@ -59,8 +59,10 @@ export function HeatmapChart({ columns, matrix }: Props) {
 
 function corrColor(value: number): string {
   const clamped = Math.max(-1, Math.min(1, value));
+  // Positive correlation → primary blue; negative → destructive red.
+  // Alpha encodes magnitude; CSS vars keep it theme-aware in light/dark.
   if (clamped >= 0) {
-    return `rgba(59, 130, 246, ${clamped.toFixed(2)})`;
+    return `hsl(var(--chart-1) / ${clamped.toFixed(2)})`;
   }
-  return `rgba(239, 68, 68, ${Math.abs(clamped).toFixed(2)})`;
+  return `hsl(var(--destructive) / ${Math.abs(clamped).toFixed(2)})`;
 }

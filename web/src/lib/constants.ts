@@ -52,10 +52,15 @@ export const NAV_ITEMS = [
   { href: "/insights", label: "Insights", icon: "Lightbulb" },
 ] as const;
 
-/** Color palette for clusters (consistent across charts). */
+/**
+ * Color palette for clusters (consistent across charts).
+ * Backed by CSS variables (--chart-*) so colors adapt to light/dark themes.
+ * Tuned in globals.css to match the original blue/emerald/orange/purple set.
+ */
 export const CLUSTER_COLORS = [
-  "#3b82f6", // blue
-  "#10b981", // emerald
-  "#f97316", // orange
-  "#a855f7", // purple
+  "hsl(var(--chart-1))", // blue
+  "hsl(var(--chart-2))", // emerald
+  "hsl(var(--chart-3))", // orange
+  "hsl(var(--chart-4))", // purple
+  "hsl(var(--chart-5))", // sky
 ] as const;

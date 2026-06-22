@@ -16,7 +16,11 @@ import {
 } from "@/components/ui/select";
 import { HistogramChart } from "@/components/charts/HistogramChart";
 import { HeatmapChart } from "@/components/charts/HeatmapChart";
-import { CHART_AXIS_TICK, CHART_TOOLTIP_PROPS } from "@/components/charts/chart-theme";
+import {
+  CHART_AXIS_TICK,
+  CHART_SEMANTIC,
+  CHART_TOOLTIP_PROPS,
+} from "@/components/charts/chart-theme";
 import { CHURN_BY_DIMS, EDA_NUMERIC_COLS } from "@/lib/constants";
 import { formatInt, formatPct } from "@/lib/utils";
 import { useEdaChurnBy, useEdaCorrelation, useEdaDistribution } from "@/hooks/useEda";
@@ -208,7 +212,11 @@ function ChurnByPanel() {
                     <Cell
                       key={i}
                       fill={
-                        row.churnPct >= 25 ? "#ef4444" : row.churnPct >= 18 ? "#f59e0b" : "#10b981"
+                        row.churnPct >= 25
+                          ? CHART_SEMANTIC.destructive
+                          : row.churnPct >= 18
+                            ? CHART_SEMANTIC.warning
+                            : CHART_SEMANTIC.success
                       }
                     />
                   ))}
