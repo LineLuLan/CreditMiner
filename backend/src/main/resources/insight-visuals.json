@@ -1,0 +1,343 @@
+[
+  {
+    "title": "Falling card activity predicts churn",
+    "headline": {
+      "value": "50.9%",
+      "label": "churn when the Q4/Q1 count ratio is below 0.5"
+    },
+    "lift": "3.2x",
+    "unit": "% churn",
+    "baseline": {
+      "value": 16.1,
+      "label": "Portfolio 16.1%"
+    },
+    "axis": "Q4/Q1 transaction-count ratio, by quarter of customers",
+    "bars": [
+      {
+        "label": "Lowest 25%",
+        "value": 37.6,
+        "n": 2537,
+        "highlight": true
+      },
+      {
+        "label": "25-50%",
+        "value": 11.3,
+        "n": 2541,
+        "highlight": false
+      },
+      {
+        "label": "50-75%",
+        "value": 7.7,
+        "n": 2532,
+        "highlight": false
+      },
+      {
+        "label": "Highest 25%",
+        "value": 7.6,
+        "n": 2517,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Unused credit lines churn most",
+    "headline": {
+      "value": "36.1%",
+      "label": "churn with a zero revolving balance"
+    },
+    "lift": "2.25x",
+    "unit": "% churn",
+    "baseline": {
+      "value": 16.1,
+      "label": "Portfolio 16.1%"
+    },
+    "axis": "Average utilization ratio",
+    "bars": [
+      {
+        "label": "0",
+        "value": 36.1,
+        "n": 2470,
+        "highlight": true
+      },
+      {
+        "label": "0-0.25",
+        "value": 10.1,
+        "n": 3360,
+        "highlight": false
+      },
+      {
+        "label": "0.25-0.5",
+        "value": 9.5,
+        "n": 1752,
+        "highlight": false
+      },
+      {
+        "label": "0.5-0.75",
+        "value": 6.2,
+        "n": 1798,
+        "highlight": false
+      },
+      {
+        "label": "> 0.75",
+        "value": 15.5,
+        "n": 747,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Inactive customers with low use churn at 47%",
+    "headline": {
+      "value": "46.8%",
+      "label": "churn with 3+ inactive months and low use"
+    },
+    "lift": "2.9x",
+    "unit": "% churn",
+    "baseline": {
+      "value": 16.1,
+      "label": "Portfolio 16.1%"
+    },
+    "axis": "Inactive months in the last 12 months",
+    "bars": [
+      {
+        "label": "1",
+        "value": 4.5,
+        "n": 2233,
+        "highlight": false
+      },
+      {
+        "label": "2",
+        "value": 15.4,
+        "n": 3282,
+        "highlight": false
+      },
+      {
+        "label": "3",
+        "value": 21.5,
+        "n": 3846,
+        "highlight": false
+      },
+      {
+        "label": "4+",
+        "value": 24.6,
+        "n": 737,
+        "highlight": false
+      },
+      {
+        "label": "3+ and low use",
+        "value": 46.8,
+        "n": 1241,
+        "highlight": true
+      }
+    ]
+  },
+  {
+    "title": "Many bank contacts signal distress",
+    "headline": {
+      "value": "33.5%",
+      "label": "churn at 5 contacts per year"
+    },
+    "lift": "2.1x",
+    "unit": "% churn",
+    "baseline": {
+      "value": 16.1,
+      "label": "Portfolio 16.1%"
+    },
+    "axis": "Contacts with the bank in 12 months",
+    "bars": [
+      {
+        "label": "0",
+        "value": 1.8,
+        "n": 399,
+        "highlight": false
+      },
+      {
+        "label": "1",
+        "value": 7.2,
+        "n": 1499,
+        "highlight": false
+      },
+      {
+        "label": "2",
+        "value": 12.5,
+        "n": 3227,
+        "highlight": false
+      },
+      {
+        "label": "3",
+        "value": 20.2,
+        "n": 3380,
+        "highlight": false
+      },
+      {
+        "label": "4",
+        "value": 22.6,
+        "n": 1392,
+        "highlight": true
+      },
+      {
+        "label": "5",
+        "value": 33.5,
+        "n": 176,
+        "highlight": true
+      }
+    ]
+  },
+  {
+    "title": "Customers with 1 or 2 products churn twice as often",
+    "headline": {
+      "value": "27.8%",
+      "label": "churn with 2 products"
+    },
+    "lift": "1.7x",
+    "unit": "% churn",
+    "baseline": {
+      "value": 16.1,
+      "label": "Portfolio 16.1%"
+    },
+    "axis": "Number of products held",
+    "bars": [
+      {
+        "label": "1",
+        "value": 25.6,
+        "n": 910,
+        "highlight": true
+      },
+      {
+        "label": "2",
+        "value": 27.8,
+        "n": 1243,
+        "highlight": true
+      },
+      {
+        "label": "3",
+        "value": 17.3,
+        "n": 2305,
+        "highlight": false
+      },
+      {
+        "label": "4",
+        "value": 11.8,
+        "n": 1912,
+        "highlight": false
+      },
+      {
+        "label": "5",
+        "value": 12.0,
+        "n": 1891,
+        "highlight": false
+      },
+      {
+        "label": "6",
+        "value": 10.5,
+        "n": 1866,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "One segment holds 64% of all churn",
+    "headline": {
+      "value": "63.8%",
+      "label": "of churned customers are in At-Risk Mid-Tier"
+    },
+    "lift": "1.6x",
+    "unit": "% churn",
+    "baseline": {
+      "value": 16.1,
+      "label": "Portfolio 16.1%"
+    },
+    "axis": "Customer segment",
+    "bars": [
+      {
+        "label": "Premium Loyal",
+        "value": 11.7,
+        "n": 1920,
+        "highlight": false
+      },
+      {
+        "label": "At-Risk Mid-Tier",
+        "value": 26.1,
+        "n": 3981,
+        "highlight": true
+      },
+      {
+        "label": "Low-Income Stable",
+        "value": 8.6,
+        "n": 4226,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Premium Loyal customers use 7% of their credit",
+    "headline": {
+      "value": "6.8%",
+      "label": "of the credit limit is used by Premium Loyal"
+    },
+    "lift": null,
+    "unit": "% utilization",
+    "baseline": null,
+    "axis": "Average utilization by segment",
+    "bars": [
+      {
+        "label": "Premium Loyal",
+        "value": 6.8,
+        "n": 1920,
+        "highlight": true
+      },
+      {
+        "label": "At-Risk Mid-Tier",
+        "value": 7.5,
+        "n": 3981,
+        "highlight": false
+      },
+      {
+        "label": "Low-Income Stable",
+        "value": 55.7,
+        "n": 4226,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Card colour does not predict churn. Value score does.",
+    "headline": {
+      "value": "30.4%",
+      "label": "churn in the Bronze value tier"
+    },
+    "lift": "1.9x",
+    "unit": "% churn",
+    "baseline": {
+      "value": 16.1,
+      "label": "Portfolio 16.1%"
+    },
+    "axis": "Customer value tier",
+    "bars": [
+      {
+        "label": "Bronze",
+        "value": 30.4,
+        "n": 2532,
+        "highlight": true
+      },
+      {
+        "label": "Silver",
+        "value": 13.5,
+        "n": 2531,
+        "highlight": false
+      },
+      {
+        "label": "Gold",
+        "value": 7.7,
+        "n": 2532,
+        "highlight": false
+      },
+      {
+        "label": "Platinum",
+        "value": 12.6,
+        "n": 2532,
+        "highlight": false
+      }
+    ]
+  }
+]

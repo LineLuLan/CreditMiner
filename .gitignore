@@ -116,3 +116,6 @@ volumes/
 tmp/
 temp/
 .cache/
+
+# local session handoffs
+.handoff/

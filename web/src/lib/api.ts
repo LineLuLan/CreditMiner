@@ -5,7 +5,11 @@ import type {
   ApiError,
   Cluster,
   CustomerSummary,
+  EdaChurnGroup,
+  EdaCorrelation,
+  EdaDistribution,
   Insight,
+  InsightVisual,
   MiningReport,
   OverviewResponse,
   PageResponse,
@@ -14,6 +18,16 @@ import type {
   PredictResponse,
   Rule,
 } from "@/types/api.types";
+import {
+  EdaChurnGroupSchema,
+  EdaCorrelationSchema,
+  EdaDistributionSchema,
+  InsightVisualSchema,
+  MiningReportSchema,
+  OverviewResponseSchema,
+  RuleSchema,
+} from "@/lib/schemas";
+import { z } from "zod";
 
 /**
  * HTTP client for the CreditMiner backend.
@@ -48,28 +62,21 @@ client.interceptors.response.use(
 // ===== Endpoints =====
 
 export const api = {
-  overview: () => client.get<OverviewResponse>("/overview").then((r) => r.data),
+  overview: () =>
+    client.get<OverviewResponse>("/overview").then((r) => OverviewResponseSchema.parse(r.data)),
 
-  edaDistribution: (col: string, bins = 20) =>
+  edaDistribution: (col: string, bins = 20, split?: string) =>
     client
-      .get<{ column: string; binEdges: number[]; counts: number[] }>(
-        `/eda/distribution`,
-        { params: { col, bins } },
-      )
-      .then((r) => r.data),
+      .get<EdaDistribution>(`/eda/distribution`, { params: { col, bins, split } })
+      .then((r) => EdaDistributionSchema.parse(r.data)),
 
   edaCorrelation: () =>
-    client
-      .get<{ columns: string[]; matrix: number[][] }>(`/eda/correlation`)
-      .then((r) => r.data),
+    client.get<EdaCorrelation>(`/eda/correlation`).then((r) => EdaCorrelationSchema.parse(r.data)),
 
   edaChurnBy: (dim: string) =>
     client
-      .get<Array<{ group: string; count: number; attritedCount: number; churnRate: number }>>(
-        `/eda/churn-by`,
-        { params: { dim } },
-      )
-      .then((r) => r.data),
+      .get<EdaChurnGroup[]>(`/eda/churn-by`, { params: { dim } })
+      .then((r) => z.array(EdaChurnGroupSchema).parse(r.data)),
 
   edaPca2d: () => client.get<PcaPoint[]>(`/eda/pca-2d`).then((r) => r.data),
 
@@ -79,10 +86,7 @@ export const api = {
     attritionFlag?: string;
     clusterId?: number;
     sort?: string;
-  }) =>
-    client
-      .get<PageResponse<CustomerSummary>>(`/customers`, { params })
-      .then((r) => r.data),
+  }) => client.get<PageResponse<CustomerSummary>>(`/customers`, { params }).then((r) => r.data),
 
   customer: (id: number) => client.get(`/customers/${id}`).then((r) => r.data),
 
@@ -98,7 +102,7 @@ export const api = {
   rules: (minLift = 1.0, category?: string) =>
     client
       .get<Rule[]>(`/rules`, { params: { minLift, category } })
-      .then((r) => r.data),
+      .then((r) => z.array(RuleSchema).parse(r.data)),
 
   predict: (body: PredictRequest) =>
     client.post<PredictResponse>(`/predict`, body).then((r) => r.data),
@@ -106,11 +110,16 @@ export const api = {
   insights: (category?: string) =>
     client.get<Insight[]>(`/insights`, { params: { category } }).then((r) => r.data),
 
+  insightVisuals: () =>
+    client
+      .get<InsightVisual[]>(`/insights/visuals`)
+      .then((r) => z.array(InsightVisualSchema).parse(r.data)),
+
   anomalies: (limit = 50) =>
     client.get<Anomaly[]>(`/anomalies`, { params: { limit } }).then((r) => r.data),
 
   miningReport: () =>
-    client.get<MiningReport>(`/mining-report`).then((r) => r.data),
+    client.get<MiningReport>(`/mining-report`).then((r) => MiningReportSchema.parse(r.data)),
 };
 
 export type ApiClient = typeof api;

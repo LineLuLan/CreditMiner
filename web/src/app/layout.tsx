@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CreditMiner — Credit Card Customer Behavior Mining",
+  title: "CreditMiner - Credit Card Customer Behavior Mining",
   description:
     "Interactive dashboard for credit card churn prediction, customer segmentation, and risk analysis.",
 };
@@ -20,11 +20,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={cn(inter.variable)}>
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="app-body min-h-screen bg-background font-sans antialiased">
         <Providers>
-          <div className="flex min-h-screen">
+          <div className="app-shell flex min-h-screen">
             <Sidebar />
-            <main className="min-w-0 flex-1 md:pl-64">{children}</main>
+            <main className="app-main min-w-0 flex-1 md:pl-64">{children}</main>
           </div>
         </Providers>
       </body>

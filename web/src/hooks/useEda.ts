@@ -3,10 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export function useEdaDistribution(col: string | null, bins = 20) {
+export function useEdaDistribution(col: string | null, bins = 20, split?: string) {
   return useQuery({
-    queryKey: ["eda", "distribution", col, bins],
-    queryFn: () => api.edaDistribution(col!, bins),
+    queryKey: ["eda", "distribution", col, bins, split],
+    queryFn: () => api.edaDistribution(col!, bins, split),
     enabled: !!col,
   });
 }

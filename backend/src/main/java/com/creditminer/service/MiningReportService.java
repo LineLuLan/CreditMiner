@@ -16,15 +16,21 @@ import com.creditminer.repository.RuleRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import weka.core.Instances;
+import weka.core.SerializationHelper;
 
 import java.io.File;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -58,6 +64,21 @@ public class MiningReportService {
     @Value("${creditminer.data.phase5-comparison-csv:data/processed/phase5_comparison.csv}")
     private String modelComparisonPath;
 
+    @Value("${creditminer.data.phase5-evaluation-json:data/processed/phase5_evaluation.json}")
+    private String phase5EvaluationPath;
+
+    @Value("${creditminer.data.describe-json:data/processed/phase1_describe.json}")
+    private String phase1DescribePath;
+
+    @Value("${creditminer.data.phase2-report-json:data/processed/phase2_report.json}")
+    private String phase2ReportPath;
+
+    @Value("${creditminer.data.phase3-report-json:data/processed/phase3_report.json}")
+    private String phase3ReportPath;
+
+    @Value("${creditminer.data.assoc-arff:data/processed/clean_assoc.arff}")
+    private String associationArffPath;
+
     @Value("${creditminer.data.phase6-elbow-json:data/processed/phase6_elbow.json}")
     private String elbowPath;
 
@@ -70,15 +91,21 @@ public class MiningReportService {
     @Value("${creditminer.models.rules-json:models/rules.json}")
     private String rulesPath;
 
+    @Value("${creditminer.models.kmeans-input-header:models/kmeans-input-header.model}")
+    private String kmeansInputHeaderPath;
+
     public MiningReportResponse report() {
         List<String> warnings = new ArrayList<>();
+        MiningReportResponse.ClassificationEvidence classification = classification(warnings);
+        MiningReportResponse.AnomalyEvidence anomalies = anomalies(warnings);
         return MiningReportResponse.builder()
                 .generatedAt(Instant.now())
                 .dataset(dataset(warnings))
-                .classification(classification(warnings))
+                .classification(classification)
                 .clustering(clustering(warnings))
                 .rules(rules(warnings))
-                .anomalies(anomalies(warnings))
+                .anomalies(anomalies)
+                .methodology(methodology(classification.getEvaluation(), anomalies, warnings))
                 .insights(safeInsights(warnings))
                 .warnings(warnings)
                 .build();
@@ -184,12 +211,20 @@ public class MiningReportService {
     private MiningReportResponse.ClassificationEvidence classification(List<String> warnings) {
         List<MiningReportResponse.ModelMetric> metrics = modelMetrics(warnings);
         List<MiningReportResponse.FeatureImportance> features = featureImportance(warnings);
+        MiningReportResponse.EvaluationEvidence evaluation = evaluation(warnings);
+        String bestModel = "RandomForest";
+        String bestVariant = "SMOTE";
+        if (evaluation != null && evaluation.getBestVariant() != null) {
+            bestModel = evaluation.getBestVariant().path("algo").asText(bestModel);
+            bestVariant = evaluation.getBestVariant().path("variant").asText(bestVariant);
+        }
         return MiningReportResponse.ClassificationEvidence.builder()
-                .bestModel("RandomForest")
-                .bestVariant("SMOTE")
+                .bestModel(bestModel)
+                .bestVariant(bestVariant)
                 .metricSource(metrics.isEmpty() ? "not available" : metrics.get(0).getSource())
                 .modelMetrics(metrics)
                 .featureImportance(features)
+                .evaluation(evaluation)
                 .build();
     }
 
@@ -206,15 +241,86 @@ public class MiningReportService {
                     .source("docs/BE_Handoff.md documented fallback")
                     .build());
         }
-        warnings.add("Model comparison CSV exists but detailed CSV parsing is deferred; using documented headline metrics.");
-        return List.of(MiningReportResponse.ModelMetric.builder()
-                .model("RandomForest")
-                .variant("SMOTE")
-                .testF1(0.8758)
-                .testRocAuc(0.9888)
-                .testPrAuc(0.9429)
-                .source(modelComparisonPath)
-                .build());
+        try {
+            List<String> lines = Files.readAllLines(csv.toPath(), StandardCharsets.UTF_8);
+            if (lines.isEmpty()) return List.of();
+            String[] header = lines.get(0).split(",", -1);
+            Map<String, Integer> indexes = new LinkedHashMap<>();
+            for (int i = 0; i < header.length; i++) indexes.put(header[i].trim(), i);
+            List<MiningReportResponse.ModelMetric> out = new ArrayList<>();
+            for (int row = 1; row < lines.size(); row++) {
+                if (lines.get(row).isBlank()) continue;
+                String[] values = lines.get(row).split(",", -1);
+                out.add(MiningReportResponse.ModelMetric.builder()
+                        .model(csvValue(values, indexes, "algo"))
+                        .variant(csvValue(values, indexes, "variant"))
+                        .cvAccuracy(csvDouble(values, indexes, "cv_accuracy"))
+                        .cvF1(csvDouble(values, indexes, "cv_f1_attrited"))
+                        .cvRocAuc(csvDouble(values, indexes, "cv_roc_auc"))
+                        .cvPrAuc(csvDouble(values, indexes, "cv_pr_auc"))
+                        .testAccuracy(csvDouble(values, indexes, "test_accuracy"))
+                        .testPrecision(csvDouble(values, indexes, "test_precision_attrited"))
+                        .testRecall(csvDouble(values, indexes, "test_recall_attrited"))
+                        .testF1(csvDouble(values, indexes, "test_f1_attrited"))
+                        .testRocAuc(csvDouble(values, indexes, "test_roc_auc"))
+                        .testPrAuc(csvDouble(values, indexes, "test_pr_auc"))
+                        .source(modelComparisonPath)
+                        .build());
+            }
+            return out;
+        } catch (Exception ex) {
+            warnings.add("Failed to parse model comparison CSV: " + ex.getMessage());
+            return List.of();
+        }
+    }
+
+    private MiningReportResponse.EvaluationEvidence evaluation(List<String> warnings) {
+        JsonNode root = readJson(phase5EvaluationPath, warnings, "phase5 evaluation");
+        if (root == null) return null;
+        try {
+            List<JsonNode> variants = new ArrayList<>();
+            for (JsonNode rawVariant : root.path("variants")) {
+                if (!rawVariant.isObject()) continue;
+                ObjectNode variant = rawVariant.deepCopy();
+                sanitizeCurve(variant, "rocCurve", "fpr", "tpr", "threshold");
+                sanitizeCurve(variant, "prCurve", "recall", "precision", "threshold");
+                variants.add(variant);
+            }
+            return MiningReportResponse.EvaluationEvidence.builder()
+                    .split(root.path("split"))
+                    .variants(variants)
+                    .bestVariant(root.path("bestVariant"))
+                    .build();
+        } catch (Exception ex) {
+            warnings.add("Failed to parse phase5 evaluation: " + ex.getMessage());
+            return null;
+        }
+    }
+
+    /*
+     * Older Phase 5 artifacts may contain null or non-finite Weka threshold values.
+     * Keep the read boundary defensive so one bad point cannot invalidate the report API.
+     */
+    private void sanitizeCurve(ObjectNode variant, String curveName, String... requiredFields) {
+        ArrayNode sanitized = mapper.createArrayNode();
+        JsonNode rawCurve = variant.path(curveName);
+        if (rawCurve.isArray()) {
+            for (JsonNode point : rawCurve) {
+                if (isFiniteCurvePoint(point, requiredFields)) sanitized.add(point.deepCopy());
+            }
+        }
+        variant.set(curveName, sanitized);
+    }
+
+    private static boolean isFiniteCurvePoint(JsonNode point, String... requiredFields) {
+        if (!point.isObject()) return false;
+        for (String field : requiredFields) {
+            JsonNode value = point.get(field);
+            if (value == null || !value.isNumber() || !Double.isFinite(value.doubleValue())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private List<MiningReportResponse.FeatureImportance> featureImportance(List<String> warnings) {
@@ -459,6 +565,195 @@ public class MiningReportService {
                 .build();
     }
 
+    private MiningReportResponse.Methodology methodology(
+            MiningReportResponse.EvaluationEvidence evaluation,
+            MiningReportResponse.AnomalyEvidence anomalies,
+            List<String> warnings) {
+        return MiningReportResponse.Methodology.builder()
+                .preprocessing(preprocessingMethodology(warnings))
+                .featureEngineering(featureEngineeringMethodology(warnings))
+                .split(evaluation == null ? null : evaluation.getSplit())
+                .clustering(clusteringMethodology(warnings))
+                .associationRules(associationMethodology(warnings))
+                .anomaly(MiningReportResponse.AnomalyMethodology.builder()
+                        .rule(anomalies.getRule())
+                        .mu(anomalies.getClusterDistanceMu())
+                        .sigma(anomalies.getClusterDistanceSigma())
+                        .strongThreshold(anomalies.getStrongThreshold())
+                        .mildThreshold(anomalies.getMildThreshold())
+                        .build())
+                .build();
+    }
+
+    private MiningReportResponse.PreprocessingMethodology preprocessingMethodology(List<String> warnings) {
+        JsonNode phase2 = readJson(phase2ReportPath, warnings, "phase2 report");
+        JsonNode phase1 = readJson(phase1DescribePath, warnings, "phase1 describe");
+        Map<String, Integer> unknown = new LinkedHashMap<>();
+        Map<String, Double> medians = new LinkedHashMap<>();
+        Map<String, MiningReportResponse.OutlierColumnMethodology> outliers = new LinkedHashMap<>();
+        List<String> leakage = new ArrayList<>();
+        if (phase2 != null) {
+            phase2.path("unknownRewritten").fields().forEachRemaining(entry ->
+                    unknown.put(entry.getKey(), entry.getValue().asInt()));
+            phase2.path("numericMedianImputed").fields().forEachRemaining(entry ->
+                    medians.put(entry.getKey(), entry.getValue().asDouble()));
+            phase2.path("outlierByColumn").fields().forEachRemaining(entry -> {
+                JsonNode value = entry.getValue();
+                outliers.put(entry.getKey(), MiningReportResponse.OutlierColumnMethodology.builder()
+                        .zscoreCount(value.path("zscoreCount").asInt())
+                        .iqrCount(value.path("iqrCount").asInt())
+                        .combinedCount(value.path("combinedCount").asInt())
+                        .mean(value.path("mean").asDouble())
+                        .std(value.path("std").asDouble())
+                        .q1(value.path("q1").asDouble())
+                        .q3(value.path("q3").asDouble())
+                        .build());
+            });
+        }
+        if (phase1 != null) {
+            phase1.path("leakageColumnsDropped").forEach(node -> leakage.add(node.asText()));
+        }
+        return MiningReportResponse.PreprocessingMethodology.builder()
+                .rowsIn(phase2 == null ? 0 : phase2.path("totalRowsIn").asInt())
+                .rowsOut(phase2 == null ? 0 : phase2.path("totalRowsOut").asInt())
+                .duplicatesDropped(phase2 == null ? 0 : phase2.path("duplicatesDropped").asInt())
+                .unknownRewritten(unknown)
+                .numericMedianImputed(medians)
+                .outlierByColumn(outliers)
+                .leakageColumnsDropped(leakage)
+                .outlierPolicy("flag only, rows retained")
+                .build();
+    }
+
+    private MiningReportResponse.FeatureEngineeringMethodology featureEngineeringMethodology(List<String> warnings) {
+        JsonNode phase3 = readJson(phase3ReportPath, warnings, "phase3 report");
+        List<MiningReportResponse.DerivedFeatureMethodology> features = new ArrayList<>();
+        if (phase3 != null) {
+            for (JsonNode feature : phase3.path("derivedFeatures")) {
+                features.add(MiningReportResponse.DerivedFeatureMethodology.builder()
+                        .name(feature.path("name").asText())
+                        .type(feature.path("type").asText())
+                        .mean(numberOrNull(feature, "mean"))
+                        .std(numberOrNull(feature, "std"))
+                        .min(numberOrNull(feature, "min"))
+                        .max(numberOrNull(feature, "max"))
+                        .formula(featureFormula(feature.path("name").asText()))
+                        .build());
+            }
+        }
+        return MiningReportResponse.FeatureEngineeringMethodology.builder()
+                .columnsIn(phase3 == null ? 0 : phase3.path("totalColumnsIn").asInt())
+                .columnsOut(phase3 == null ? 0 : phase3.path("totalColumnsOut").asInt())
+                .derivedFeatures(features)
+                .build();
+    }
+
+    private MiningReportResponse.ClusteringMethodology clusteringMethodology(List<String> warnings) {
+        JsonNode elbow = readJson(elbowPath, warnings, "elbow/silhouette");
+        List<MiningReportResponse.ElbowPoint> points = new ArrayList<>();
+        if (elbow != null) {
+            for (JsonNode point : elbow.path("scores")) {
+                points.add(MiningReportResponse.ElbowPoint.builder()
+                        .k(point.path("k").asInt())
+                        .wcss(point.path("wcss").asDouble())
+                        .silhouette(point.path("silhouette").asDouble())
+                        .build());
+            }
+        }
+        return MiningReportResponse.ClusteringMethodology.builder()
+                .kMin(elbow == null ? 0 : elbow.path("kMin").asInt())
+                .kMax(elbow == null ? 0 : elbow.path("kMax").asInt())
+                .bestK(elbow == null ? 0 : elbow.path("bestK").asInt())
+                .strategy(elbow == null ? "not available" : elbow.path("strategy").asText())
+                .seed(42)
+                .maxIterations(500)
+                .normalization("min-max")
+                .featuresUsed(kmeansFeatures(warnings))
+                .elbow(points)
+                .build();
+    }
+
+    private List<String> kmeansFeatures(List<String> warnings) {
+        File headerFile = new File(kmeansInputHeaderPath);
+        if (!headerFile.exists()) {
+            warnings.add("KMeans input header missing at " + kmeansInputHeaderPath);
+            return List.of();
+        }
+        try {
+            Object serialized = SerializationHelper.read(kmeansInputHeaderPath);
+            if (!(serialized instanceof Instances header)) {
+                warnings.add("KMeans input header is not a Weka Instances object");
+                return List.of();
+            }
+            List<String> names = new ArrayList<>(header.numAttributes());
+            for (int i = 0; i < header.numAttributes(); i++) names.add(header.attribute(i).name());
+            return names;
+        } catch (Exception ex) {
+            warnings.add("Failed to read KMeans input header: " + ex.getMessage());
+            return List.of();
+        }
+    }
+
+    private MiningReportResponse.AssociationMethodology associationMethodology(List<String> warnings) {
+        JsonNode rules = readJson(rulesPath, warnings, "rules");
+        JsonNode config = rules == null ? null : rules.path("config");
+        JsonNode retention = config == null ? null
+                : (config.has("retentionPass") ? config.path("retentionPass") : config);
+        JsonNode churn = config == null ? null : config.path("churnPass");
+        List<String> attributes = associationAttributes(warnings);
+        long discretizedCount = attributes.stream()
+                .filter(AssociationService.NUMERIC_TO_DISCRETIZE::contains)
+                .count();
+        return MiningReportResponse.AssociationMethodology.builder()
+                .discretization("3 equal-frequency bins on " + discretizedCount + " numerics")
+                .attributesUsed(attributes)
+                .retentionPass(associationPass(retention))
+                .churnPass(associationPass(churn))
+                .build();
+    }
+
+    private MiningReportResponse.AssociationPass associationPass(JsonNode config) {
+        if (config == null || config.isMissingNode()) return null;
+        return MiningReportResponse.AssociationPass.builder()
+                .minSupport(numberOrNull(config, "minSupport"))
+                .minConfidence(numberOrNull(config, "minConfidence"))
+                .minLift(numberOrNull(config, "minLift"))
+                .numRules(config.has("numRules") ? config.path("numRules").asInt() : null)
+                .metric(config.has("metric") ? config.path("metric").asText() : null)
+                .build();
+    }
+
+    private List<String> associationAttributes(List<String> warnings) {
+        File arff = new File(associationArffPath);
+        if (!arff.exists()) {
+            warnings.add("Association ARFF missing at " + associationArffPath);
+            return List.of();
+        }
+        // Read with an explicitly closed reader: DataSource.getDataSet() leaves the file handle
+        // open, which on Windows pins clean_assoc.arff and makes Phase7Pipeline fail to rewrite it.
+        try (java.io.Reader reader = Files.newBufferedReader(arff.toPath(), StandardCharsets.UTF_8)) {
+            Instances data = new Instances(reader);
+            List<String> names = new ArrayList<>(data.numAttributes());
+            for (int i = 0; i < data.numAttributes(); i++) names.add(data.attribute(i).name());
+            return names;
+        } catch (Exception ex) {
+            warnings.add("Failed to read association ARFF: " + ex.getMessage());
+            return List.of();
+        }
+    }
+
+    private static String featureFormula(String name) {
+        return switch (name) {
+            case "Utilization_Score" -> "Utilization_Score = Total_Revolving_Bal / Credit_Limit";
+            case "Spending_Intensity" -> "Spending_Intensity = Total_Trans_Amt / Total_Trans_Ct";
+            case "Engagement_Score" -> "Engagement_Score = Total_Trans_Ct / Months_on_book";
+            case "Customer_Value_Score" -> "Customer_Value_Score = 0.4*z(Total_Trans_Amt) + 0.3*z(Credit_Limit) + 0.2*z(Months_on_book) - 0.1*z(Months_Inactive_12_mon)";
+            case "Risk_Score" -> "Risk_Score = 0.4*Utilization_Score + 0.3*(Months_Inactive_12_mon/12) + 0.3*(1 - Engagement_norm)";
+            case "Customer_Tier" -> "Customer_Tier = quartile bins of Customer_Value_Score (Bronze, Silver, Gold, Platinum)";
+            default -> null;
+        };
+    }
+
     private List<AnomalyResponse> safeTopAnomalies(List<String> warnings) {
         try {
             return anomalyService.topAnomalies(10);
@@ -516,6 +811,24 @@ public class MiningReportService {
             warnings.add("Failed to read " + label + ": " + ex.getMessage());
             return null;
         }
+    }
+
+    private static String csvValue(String[] row, Map<String, Integer> indexes, String column) {
+        Integer index = indexes.get(column);
+        if (index == null || index >= row.length) {
+            throw new IllegalArgumentException("Missing CSV column '" + column + "'");
+        }
+        return row[index].trim();
+    }
+
+    private static Double csvDouble(String[] row, Map<String, Integer> indexes, String column) {
+        String value = csvValue(row, indexes, column);
+        return value.isBlank() ? null : Double.valueOf(value);
+    }
+
+    private static Double numberOrNull(JsonNode node, String field) {
+        return node == null || !node.has(field) || !node.path(field).isNumber()
+                ? null : node.path(field).asDouble();
     }
 
     private static Integer intOrNull(JsonNode node, String field) {

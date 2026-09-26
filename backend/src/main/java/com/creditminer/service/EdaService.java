@@ -18,10 +18,12 @@ import weka.core.Instances;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * EDA endpoints (Phase 4) — distribution, correlation, churn-by.
@@ -37,9 +39,15 @@ public class EdaService {
     private static final int DEFAULT_BINS = 20;
 
     /** Whitelisted dim values for {@code /api/eda/churn-by} (BE_Handoff §3.4 + Phase 3 tier). */
-    private static final Set<String> CHURN_BY_DIMS = Set.of(
+    private static final List<String> CHURN_BY_DIMS = List.of(
             "Income_Category", "Card_Category", "Customer_Tier",
-            "Gender", "Education_Level", "Marital_Status"
+            "Gender", "Education_Level", "Marital_Status",
+            "Months_Inactive_12_mon", "Contacts_Count_12_mon",
+            "Total_Relationship_Count", "Dependent_count"
+    );
+    private static final Set<String> INTEGER_CHURN_BY_DIMS = Set.of(
+            "Months_Inactive_12_mon", "Contacts_Count_12_mon",
+            "Total_Relationship_Count", "Dependent_count"
     );
 
     /** Skip ID-like cols when computing the correlation matrix. */
@@ -109,21 +117,37 @@ public class EdaService {
     // -------------------- distribution --------------------
 
     public DistributionResponse distribution(String colName, Integer bins) {
+        return distribution(colName, bins, null);
+    }
+
+    public DistributionResponse distribution(String colName, Integer bins, String split) {
         Instances data = dataCache.get();
         Attribute attr = requireAttribute(data, colName);
+        Attribute splitAttr = null;
+        if (split != null) {
+            if (!"Attrition_Flag".equals(split)) {
+                throw new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST,
+                        "split must be Attrition_Flag, got '" + split + "'");
+            }
+            splitAttr = requireAttribute(data, split);
+            if (!splitAttr.isNominal()) {
+                throw new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST,
+                        "split '" + split + "' is not a nominal attribute");
+            }
+        }
         int b = clamp(bins == null ? DEFAULT_BINS : bins, MIN_BINS, MAX_BINS);
 
         if (attr.isNumeric()) {
-            return numericHistogram(data, attr, b);
+            return numericHistogram(data, attr, b, splitAttr);
         }
         if (attr.isNominal()) {
-            return nominalCounts(data, attr);
+            return nominalCounts(data, attr, splitAttr);
         }
         throw new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST,
                 "Column '" + colName + "' is neither numeric nor nominal");
     }
 
-    private DistributionResponse numericHistogram(Instances data, Attribute attr, int bins) {
+    private DistributionResponse numericHistogram(Instances data, Attribute attr, int bins, Attribute splitAttr) {
         double[] vals = data.attributeToDoubleArray(attr.index());
         double min = Double.POSITIVE_INFINITY, max = Double.NEGATIVE_INFINITY;
         int present = 0;
@@ -136,7 +160,9 @@ public class EdaService {
         if (present == 0) {
             return DistributionResponse.builder()
                     .column(attr.name()).type("numeric")
-                    .binEdges(List.of()).counts(List.of()).build();
+                    .binEdges(List.of()).counts(List.of())
+                    .stats(summaryStats(vals)).series(splitSeriesNumeric(data, attr, splitAttr, List.of()))
+                    .build();
         }
 
         List<Double> edges = new ArrayList<>(bins + 1);
@@ -154,10 +180,7 @@ public class EdaService {
         int[] counts = new int[realBins];
         for (double v : vals) {
             if (Double.isNaN(v)) continue;
-            int idx = (int) Math.floor((v - min) / Math.max(1e-12, max - min) * realBins);
-            if (idx < 0) idx = 0;
-            if (idx >= realBins) idx = realBins - 1;
-            counts[idx]++;
+            counts[histogramIndex(v, edges)]++;
         }
         List<Integer> countsList = new ArrayList<>(realBins);
         for (int c : counts) countsList.add(c);
@@ -166,10 +189,12 @@ public class EdaService {
                 .type("numeric")
                 .binEdges(edges)
                 .counts(countsList)
+                .stats(summaryStats(vals))
+                .series(splitSeriesNumeric(data, attr, splitAttr, edges))
                 .build();
     }
 
-    private DistributionResponse nominalCounts(Instances data, Attribute attr) {
+    private DistributionResponse nominalCounts(Instances data, Attribute attr, Attribute splitAttr) {
         int[] counts = data.attributeStats(attr.index()).nominalCounts;
         List<String> categories = new ArrayList<>(attr.numValues());
         List<Integer> countsList = new ArrayList<>(attr.numValues());
@@ -182,7 +207,102 @@ public class EdaService {
                 .type("nominal")
                 .categories(categories)
                 .counts(countsList)
+                .stats(null)
+                .series(splitSeriesNominal(data, attr, splitAttr))
                 .build();
+    }
+
+    private List<DistributionResponse.Series> splitSeriesNumeric(
+            Instances data, Attribute valueAttr, Attribute splitAttr, List<Double> edges) {
+        if (splitAttr == null) return null;
+        int binCount = Math.max(0, edges.size() - 1);
+        List<DistributionResponse.Series> series = new ArrayList<>(splitAttr.numValues());
+        for (int splitIndex = 0; splitIndex < splitAttr.numValues(); splitIndex++) {
+            int[] counts = new int[binCount];
+            List<Double> values = new ArrayList<>();
+            for (int row = 0; row < data.numInstances(); row++) {
+                Instance inst = data.instance(row);
+                if (inst.isMissing(splitAttr) || inst.isMissing(valueAttr)
+                        || (int) inst.value(splitAttr) != splitIndex) continue;
+                double value = inst.value(valueAttr);
+                values.add(value);
+                if (binCount > 0) counts[histogramIndex(value, edges)]++;
+            }
+            series.add(DistributionResponse.Series.builder()
+                    .label(splitAttr.value(splitIndex))
+                    .counts(toList(counts))
+                    .stats(summaryStats(values.stream().mapToDouble(Double::doubleValue).toArray()))
+                    .build());
+        }
+        return series;
+    }
+
+    private List<DistributionResponse.Series> splitSeriesNominal(
+            Instances data, Attribute valueAttr, Attribute splitAttr) {
+        if (splitAttr == null) return null;
+        List<DistributionResponse.Series> series = new ArrayList<>(splitAttr.numValues());
+        for (int splitIndex = 0; splitIndex < splitAttr.numValues(); splitIndex++) {
+            int[] counts = new int[valueAttr.numValues()];
+            for (int row = 0; row < data.numInstances(); row++) {
+                Instance inst = data.instance(row);
+                if (inst.isMissing(splitAttr) || inst.isMissing(valueAttr)
+                        || (int) inst.value(splitAttr) != splitIndex) continue;
+                counts[(int) inst.value(valueAttr)]++;
+            }
+            series.add(DistributionResponse.Series.builder()
+                    .label(splitAttr.value(splitIndex))
+                    .counts(toList(counts))
+                    .stats(null)
+                    .build());
+        }
+        return series;
+    }
+
+    private static int histogramIndex(double value, List<Double> edges) {
+        int bins = edges.size() - 1;
+        double min = edges.get(0);
+        double max = edges.get(edges.size() - 1);
+        int index = (int) Math.floor((value - min) / Math.max(1e-12, max - min) * bins);
+        if (index < 0) return 0;
+        return Math.min(index, bins - 1);
+    }
+
+    private static List<Integer> toList(int[] counts) {
+        List<Integer> out = new ArrayList<>(counts.length);
+        for (int count : counts) out.add(count);
+        return out;
+    }
+
+    private static DistributionResponse.SummaryStats summaryStats(double[] values) {
+        double[] sorted = Arrays.stream(values).filter(v -> !Double.isNaN(v)).sorted().toArray();
+        if (sorted.length == 0) {
+            return DistributionResponse.SummaryStats.builder()
+                    .count(0).mean(0).std(0).min(0).q1(0).median(0).q3(0).max(0)
+                    .build();
+        }
+        double sum = Arrays.stream(sorted).sum();
+        double mean = sum / sorted.length;
+        double sumSquares = 0;
+        for (double value : sorted) sumSquares += (value - mean) * (value - mean);
+        double std = sorted.length < 2 ? 0 : Math.sqrt(sumSquares / (sorted.length - 1));
+        return DistributionResponse.SummaryStats.builder()
+                .count(sorted.length)
+                .mean(round(mean, 4))
+                .std(round(std, 4))
+                .min(round(sorted[0], 4))
+                .q1(round(percentile(sorted, 0.25), 4))
+                .median(round(percentile(sorted, 0.50), 4))
+                .q3(round(percentile(sorted, 0.75), 4))
+                .max(round(sorted[sorted.length - 1], 4))
+                .build();
+    }
+
+    private static double percentile(double[] sorted, double p) {
+        double position = p * (sorted.length - 1);
+        int lower = (int) Math.floor(position);
+        int upper = (int) Math.ceil(position);
+        if (lower == upper) return sorted[lower];
+        return sorted[lower] + (position - lower) * (sorted[upper] - sorted[lower]);
     }
 
     // -------------------- correlation --------------------
@@ -240,9 +360,10 @@ public class EdaService {
         }
         Instances data = dataCache.get();
         Attribute dimAttr = requireAttribute(data, dim);
-        if (!dimAttr.isNominal()) {
+        boolean integerNumeric = INTEGER_CHURN_BY_DIMS.contains(dim);
+        if (integerNumeric ? !dimAttr.isNumeric() : !dimAttr.isNominal()) {
             throw new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST,
-                    "dim '" + dim + "' is not a nominal attribute");
+                    "dim '" + dim + "' has an unexpected attribute type");
         }
         Attribute classAttr = data.attribute("Attrition_Flag");
         if (classAttr == null) {
@@ -255,14 +376,15 @@ public class EdaService {
                     "Attrition_Flag missing 'Attrited Customer' level");
         }
 
-        Map<String, int[]> agg = new LinkedHashMap<>();
-        for (int i = 0; i < dimAttr.numValues(); i++) {
-            agg.put(dimAttr.value(i), new int[2]);
-        }
+        Map<String, int[]> agg = integerNumeric
+                ? numericChurnGroups(data, dimAttr)
+                : nominalChurnGroups(dimAttr);
         for (int i = 0; i < data.numInstances(); i++) {
             Instance inst = data.instance(i);
             if (inst.isMissing(dimAttr)) continue;
-            String key = dimAttr.value((int) inst.value(dimAttr));
+            String key = integerNumeric
+                    ? integerGroupLabel(inst.value(dimAttr), dim)
+                    : dimAttr.value((int) inst.value(dimAttr));
             int[] cnt = agg.computeIfAbsent(key, k -> new int[2]);
             cnt[0]++;
             if (!inst.isMissing(classAttr) && (int) inst.value(classAttr) == attritedIdx) {
@@ -277,6 +399,39 @@ public class EdaService {
                 .churnRate(c[0] == 0 ? 0.0 : round((double) c[1] / c[0], 4))
                 .build()));
         return out;
+    }
+
+    private static Map<String, int[]> nominalChurnGroups(Attribute dimAttr) {
+        Map<String, int[]> groups = new LinkedHashMap<>();
+        for (int i = 0; i < dimAttr.numValues(); i++) {
+            groups.put(dimAttr.value(i), new int[2]);
+        }
+        return groups;
+    }
+
+    private static Map<String, int[]> numericChurnGroups(Instances data, Attribute dimAttr) {
+        Map<Long, int[]> sorted = new TreeMap<>();
+        for (int i = 0; i < data.numInstances(); i++) {
+            Instance inst = data.instance(i);
+            if (inst.isMissing(dimAttr)) continue;
+            long value = integerGroupValue(inst.value(dimAttr), dimAttr.name());
+            sorted.computeIfAbsent(value, ignored -> new int[2]);
+        }
+        Map<String, int[]> groups = new LinkedHashMap<>();
+        sorted.forEach((value, counts) -> groups.put(Long.toString(value), counts));
+        return groups;
+    }
+
+    private static String integerGroupLabel(double value, String dim) {
+        return Long.toString(integerGroupValue(value, dim));
+    }
+
+    private static long integerGroupValue(double value, String dim) {
+        if (!Double.isFinite(value) || value != Math.rint(value)) {
+            throw new BusinessException("INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR,
+                    "dim '" + dim + "' contains a non-integer value");
+        }
+        return (long) value;
     }
 
     // -------------------- helpers --------------------

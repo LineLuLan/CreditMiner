@@ -20,4 +20,33 @@ public class DistributionResponse {
     private List<Double> binEdges;
     private List<String> categories;
     private List<Integer> counts;
+
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    private SummaryStats stats;
+
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    private List<Series> series;
+
+    @Data
+    @Builder
+    public static class SummaryStats {
+        private int count;
+        private double mean;
+        private double std;
+        private double min;
+        private double q1;
+        private double median;
+        private double q3;
+        private double max;
+    }
+
+    @Data
+    @Builder
+    public static class Series {
+        private String label;
+        private List<Integer> counts;
+
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        private SummaryStats stats;
+    }
 }

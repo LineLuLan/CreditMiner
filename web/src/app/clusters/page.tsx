@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { DataChip } from "@/components/ui/data-chip";
 import { ClusterCustomersDialog } from "@/components/features/ClusterCustomersDialog";
 import {
   CHART_AXIS_TICK,
@@ -109,6 +110,7 @@ export default function ClustersPage() {
 
 function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => void }) {
   const color = CLUSTER_COLORS[cluster.clusterId % CLUSTER_COLORS.length];
+  const traits = getClusterTraits(cluster.description);
   const churnSeverity =
     cluster.churnRate > 0.2
       ? "text-destructive"
@@ -118,7 +120,7 @@ function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => v
 
   return (
     <Card
-      className="cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
+      className="cursor-pointer overflow-hidden transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -135,10 +137,12 @@ function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => v
           <CardTitle className="text-lg">{cluster.personaName}</CardTitle>
           <Badge variant="secondary">C{cluster.clusterId}</Badge>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {cluster.description}
-          <span className="ml-2 text-primary">· click for customer list</span>
-        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {traits.map((trait) => (
+            <DataChip key={trait} value={trait} />
+          ))}
+          <DataChip value="Open customers" tone="primary" />
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
@@ -179,6 +183,18 @@ function PersonaCard({ cluster, onClick }: { cluster: Cluster; onClick?: () => v
   );
 }
 
+function getClusterTraits(description: string): string[] {
+  const traitText = description.split(
+    /,\s*(?=(?:avg\s*risk|avgrisk|churn)\s*=)/i,
+  )[0];
+
+  return traitText
+    .split(",")
+    .map((trait) => trait.trim())
+    .filter(Boolean)
+    .map((trait) => trait.charAt(0).toUpperCase() + trait.slice(1));
+}
+
 function ClusterComparisonChart({ clusters }: { clusters: Cluster[] }) {
   const chartData = clusters.map((c) => ({
     name: c.personaName,
@@ -192,25 +208,38 @@ function ClusterComparisonChart({ clusters }: { clusters: Cluster[] }) {
         <CardTitle>Comparison: churn rate vs size share (%)</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={chartData} margin={{ top: 8, right: 12, left: -10, bottom: 8 }}>
+        <div role="img" aria-label="Churn rate and size share by customer segment">
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={chartData} margin={{ top: 8, right: 12, left: -10, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" tick={CHART_AXIS_TICK} />
             <YAxis stroke="hsl(var(--muted-foreground))" tick={CHART_AXIS_TICK} unit="%" />
             <Tooltip {...CHART_TOOLTIP_PROPS} />
             <Legend wrapperStyle={CHART_LEGEND_STYLE} />
-            <Bar dataKey="churnPct" name="Churn rate" radius={[4, 4, 0, 0]}>
+            <Bar
+              dataKey="churnPct"
+              name="Churn rate"
+              radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
+            >
               {chartData.map((_, i) => (
                 <Cell key={`churn-${i}`} fill={CLUSTER_COLORS[i % CLUSTER_COLORS.length]} />
               ))}
             </Bar>
-            <Bar dataKey="sizeShare" name="Size share" fillOpacity={0.5} radius={[4, 4, 0, 0]}>
+            <Bar
+              dataKey="sizeShare"
+              name="Size share"
+              fillOpacity={0.5}
+              radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
+            >
               {chartData.map((_, i) => (
                 <Cell key={`size-${i}`} fill={CLUSTER_COLORS[i % CLUSTER_COLORS.length]} />
               ))}
             </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
@@ -244,7 +273,7 @@ function ClusterTable({ clusters }: { clusters: Cluster[] }) {
                   const v = c.centroid[k];
                   return (
                     <td key={c.clusterId} className="py-1.5 pr-4 tabular-nums">
-                      {v === undefined || v === null ? "—" : v.toFixed(2)}
+                      {v === undefined || v === null ? "n/a" : v.toFixed(2)}
                     </td>
                   );
                 })}

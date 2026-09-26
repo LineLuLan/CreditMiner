@@ -2,16 +2,31 @@
 
 import * as React from "react";
 import { Sparkles, Target, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatPct, severity } from "@/lib/utils";
 import type { PredictResponse } from "@/types/api.types";
 
-export function PredictResult({ data }: { data: PredictResponse }) {
+export function PredictResult({
+  data,
+  previousChurnProb,
+  resultRef,
+}: {
+  data: PredictResponse;
+  previousChurnProb: number | null;
+  resultRef: React.Ref<HTMLDivElement>;
+}) {
   const sev = severity(data.churnProb);
 
   return (
-    <div className="space-y-4" data-testid="predict-result">
+    <div
+      ref={resultRef}
+      className="scroll-mt-4 space-y-4 outline-none"
+      data-testid="predict-result"
+      tabIndex={-1}
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <Card className="overflow-hidden border-primary/20 shadow-md">
         <CardHeader className="bg-muted/40">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -23,6 +38,12 @@ export function PredictResult({ data }: { data: PredictResponse }) {
           <SemicircleGauge value={data.churnProb} severity={sev} />
           <div className="flex flex-col items-center gap-3 md:items-start">
             <LabelBadge label={data.label} />
+            {previousChurnProb !== null ? (
+              <p className="text-sm font-medium tabular-nums text-foreground">
+                was {Math.round(previousChurnProb * 100)}% -&gt; now{" "}
+                {Math.round(data.churnProb * 100)}%
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
               <span>
                 Risk score{" "}
@@ -31,12 +52,11 @@ export function PredictResult({ data }: { data: PredictResponse }) {
                 </span>
               </span>
               <span>
-                Model{" "}
-                <span className="font-semibold text-foreground">{data.modelUsed}</span>
+                Model <span className="font-semibold text-foreground">{data.modelUsed}</span>
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Threshold 0.5 separates Existing (&lt; 0.5) from Attrited (≥ 0.5).
+              Scores below 0.5 show active customers. Higher scores show churn.
             </p>
           </div>
         </CardContent>
@@ -76,9 +96,7 @@ export function PredictResult({ data }: { data: PredictResponse }) {
                 </p>
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Cluster lookup unavailable.
-              </p>
+              <p className="text-xs text-muted-foreground">Cluster lookup unavailable.</p>
             )}
           </CardContent>
         </Card>
@@ -86,12 +104,10 @@ export function PredictResult({ data }: { data: PredictResponse }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Top contributing features
-            <span className="ml-2 text-xs font-normal text-muted-foreground">
-              (Random Forest importance)
-            </span>
-          </CardTitle>
+          <CardTitle className="text-base">Top contributing features</CardTitle>
+          <CardDescription>
+            Global RandomForest importance (mean decrease impurity), not a per-customer explanation.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.topFeatures.map((f, idx) => (
@@ -115,6 +131,7 @@ function maxContribution(features: PredictResponse["topFeatures"]): number {
 
 function LabelBadge({ label }: { label: string }) {
   const isAttrited = label === "Attrited";
+  const displayLabel = isAttrited ? "Churn" : "Active";
   return (
     <div
       className={cn(
@@ -124,13 +141,8 @@ function LabelBadge({ label }: { label: string }) {
           : "border-success/40 bg-success/10 text-success",
       )}
     >
-      <span
-        className={cn(
-          "h-2 w-2 rounded-full",
-          isAttrited ? "bg-destructive" : "bg-success",
-        )}
-      />
-      Predicted label: <span className="font-bold">{label}</span>
+      <span className={cn("h-2 w-2 rounded-full", isAttrited ? "bg-destructive" : "bg-success")} />
+      Prediction: <span className="font-bold">{displayLabel}</span>
     </div>
   );
 }
@@ -212,22 +224,10 @@ function SemicircleGauge({
         >
           50%
         </text>
-        <text
-          x="20"
-          y="120"
-          textAnchor="start"
-          className="fill-muted-foreground"
-          fontSize="9"
-        >
+        <text x="20" y="120" textAnchor="start" className="fill-muted-foreground" fontSize="9">
           0
         </text>
-        <text
-          x="180"
-          y="120"
-          textAnchor="end"
-          className="fill-muted-foreground"
-          fontSize="9"
-        >
+        <text x="180" y="120" textAnchor="end" className="fill-muted-foreground" fontSize="9">
           100
         </text>
         <text

@@ -9,3 +9,11 @@ export function useInsights(category?: string) {
     queryFn: () => api.insights(category),
   });
 }
+
+export function useInsightVisuals() {
+  return useQuery({
+    queryKey: ["insights", "visuals"],
+    queryFn: api.insightVisuals,
+    retry: false,
+  });
+}

@@ -5,14 +5,24 @@ import {
   AttritionFlag,
   CardCategory,
   ClusterSchema,
+  ClassificationEvaluationSchema,
+  EvaluationVariantSchema,
   CustomerSummarySchema,
   CustomerTier,
   EducationLevel,
+  EdaChurnGroupSchema,
+  EdaCorrelationSchema,
+  EdaDistributionSchema,
+  EdaDistributionSeriesSchema,
+  EdaDistributionStatsSchema,
   FeatureContributionSchema,
   Gender,
   IncomeCategory,
   InsightSchema,
+  InsightVisualBarSchema,
+  InsightVisualSchema,
   MaritalStatus,
+  MethodologySchema,
   MiningReportSchema,
   OverviewResponseSchema,
   PcaPointSchema,
@@ -36,10 +46,20 @@ export type PredictResponse = z.infer<typeof PredictResponseSchema>;
 export type FeatureContribution = z.infer<typeof FeatureContributionSchema>;
 
 export type OverviewResponse = z.infer<typeof OverviewResponseSchema>;
+export type EdaDistributionStats = z.infer<typeof EdaDistributionStatsSchema>;
+export type EdaDistributionSeries = z.infer<typeof EdaDistributionSeriesSchema>;
+export type EdaDistribution = z.infer<typeof EdaDistributionSchema>;
+export type EdaCorrelation = z.infer<typeof EdaCorrelationSchema>;
+export type EdaChurnGroup = z.infer<typeof EdaChurnGroupSchema>;
 export type CustomerSummary = z.infer<typeof CustomerSummarySchema>;
 export type Cluster = z.infer<typeof ClusterSchema>;
+export type ClassificationEvaluation = z.infer<typeof ClassificationEvaluationSchema>;
+export type EvaluationVariant = z.infer<typeof EvaluationVariantSchema>;
+export type Methodology = z.infer<typeof MethodologySchema>;
 export type Rule = z.infer<typeof RuleSchema>;
 export type Insight = z.infer<typeof InsightSchema>;
+export type InsightVisualBar = z.infer<typeof InsightVisualBarSchema>;
+export type InsightVisual = z.infer<typeof InsightVisualSchema>;
 export type Anomaly = z.infer<typeof AnomalySchema>;
 export type PcaPoint = z.infer<typeof PcaPointSchema>;
 export type MiningReport = z.infer<typeof MiningReportSchema>;

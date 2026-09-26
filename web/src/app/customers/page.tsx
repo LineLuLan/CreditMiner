@@ -4,13 +4,7 @@ import * as React from "react";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -21,30 +15,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useCustomer, useCustomers } from "@/hooks/useCustomers";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/lib/constants";
 import { formatInt, formatPct, formatUsd } from "@/lib/utils";
-import type { CustomerSummary } from "@/types/api.types";
+import { CustomerTable } from "./CustomerTable";
 
 const ATTRITION_OPTIONS = [
   { value: "all", label: "All customers" },
-  { value: "Existing Customer", label: "Existing only" },
-  { value: "Attrited Customer", label: "Attrited only" },
+  { value: "Existing Customer", label: "Active only" },
+  { value: "Attrited Customer", label: "Churned only" },
 ];
 
 const CLUSTER_OPTIONS = [
   { value: "all", label: "All clusters" },
-  { value: "0", label: "C0 — Premium Loyal" },
-  { value: "1", label: "C1 — At-Risk Mid-Tier" },
-  { value: "2", label: "C2 — Low-Income Stable" },
+  { value: "0", label: "C0 - Premium Loyal" },
+  { value: "1", label: "C1 - At-Risk Mid-Tier" },
+  { value: "2", label: "C2 - Low-Income Stable" },
 ];
 
 const SORT_OPTIONS = [
@@ -63,6 +49,14 @@ export default function CustomersPage() {
   const [clusterId, setClusterId] = React.useState("all");
   const [sort, setSort] = React.useState("clientNum,asc");
   const [openId, setOpenId] = React.useState<number | null>(null);
+
+  const handleAttritionChange = (value: string) => {
+    setAttritionFlag(value);
+  };
+
+  const handleClusterChange = (value: string) => {
+    setClusterId(value);
+  };
 
   const params = React.useMemo(
     () => ({
@@ -85,15 +79,15 @@ export default function CustomersPage() {
   }, [attritionFlag, clusterId, sort, size]);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex min-w-0 flex-col">
       <Header title="Customers" />
-      <div className="flex-1 space-y-4 p-6">
+      <div className="min-w-0 flex-1 space-y-4 p-4 xl:p-5">
         <Card>
           <CardContent className="space-y-3 pt-6">
             <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Filter label="Attrition">
-                <Select value={attritionFlag} onValueChange={setAttritionFlag}>
-                  <SelectTrigger aria-label="Filter by attrition" className="w-full">
+              <Filter label="Churn status">
+                <Select value={attritionFlag} onValueChange={handleAttritionChange}>
+                  <SelectTrigger aria-label="Filter by churn status" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -106,7 +100,7 @@ export default function CustomersPage() {
                 </Select>
               </Filter>
               <Filter label="Cluster">
-                <Select value={clusterId} onValueChange={setClusterId}>
+                <Select value={clusterId} onValueChange={handleClusterChange}>
                   <SelectTrigger aria-label="Filter by cluster" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -148,60 +142,36 @@ export default function CustomersPage() {
                 </Select>
               </Filter>
             </div>
+            <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+              <span className="text-xs font-medium text-muted-foreground">Quick filter</span>
+              <Button
+                type="button"
+                size="sm"
+                variant={attritionFlag === "Attrited Customer" ? "secondary" : "outline"}
+                aria-pressed={attritionFlag === "Attrited Customer"}
+                onClick={() => handleAttritionChange("Attrited Customer")}
+              >
+                Churned only
+              </Button>
+            </div>
             <div className="text-sm text-muted-foreground">
-              {data ? `${formatInt(data.total)} total` : isLoading ? "Loading…" : "—"}
+              {data ? `${formatInt(data.total)} total` : isLoading ? "Loading..." : "n/a"}
               {isFetching && !isLoading ? " · refreshing…" : ""}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-0">
-            {error ? (
-              <p className="p-6 text-sm text-destructive">
-                {(error as { message?: string }).message ?? "Failed to load customers"}
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Client #</TableHead>
-                      <TableHead>Attrition</TableHead>
-                      <TableHead className="text-right">Age</TableHead>
-                      <TableHead className="hidden sm:table-cell">Gender</TableHead>
-                      <TableHead className="hidden md:table-cell">Card</TableHead>
-                      <TableHead className="hidden sm:table-cell">Tier</TableHead>
-                      <TableHead className="text-right">Risk</TableHead>
-                      <TableHead className="hidden text-right md:table-cell">Cluster</TableHead>
-                      <TableHead>Flags</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading
-                      ? Array.from({ length: size }).map((_, i) => (
-                          <TableRow key={i}>
-                            <TableCell colSpan={9}>
-                              <Skeleton className="h-6" />
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      : data?.items.map((c) => (
-                          <CustomerRow key={c.clientNum} c={c} onClick={() => setOpenId(c.clientNum)} />
-                        ))}
-                    {!isLoading && data && data.items.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-                          No customers match the selected filters.
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <CustomerTable
+          errorMessage={
+            error
+              ? ((error as { message?: string }).message ?? "Failed to load customers")
+              : undefined
+          }
+          isLoading={isLoading}
+          size={size}
+          items={data?.items}
+          onSelect={setOpenId}
+        />
 
         {data ? (
           <div className="flex items-center justify-between text-sm">
@@ -247,42 +217,7 @@ function Filter({ label, children }: { label: string; children: React.ReactEleme
   );
 }
 
-function CustomerRow({ c, onClick }: { c: CustomerSummary; onClick: () => void }) {
-  return (
-    <TableRow className="cursor-pointer" onClick={onClick}>
-      <TableCell className="font-mono text-xs">{c.clientNum}</TableCell>
-      <TableCell>
-        <Badge variant={c.attritionFlag === "Attrited Customer" ? "destructive" : "secondary"}>
-          {c.attritionFlag === "Attrited Customer" ? "Attrited" : "Existing"}
-        </Badge>
-      </TableCell>
-      <TableCell className="text-right tabular-nums">{c.customerAge ?? "—"}</TableCell>
-      <TableCell className="hidden sm:table-cell">{c.gender ?? "—"}</TableCell>
-      <TableCell className="hidden md:table-cell">{c.cardCategory ?? "—"}</TableCell>
-      <TableCell className="hidden sm:table-cell">{c.customerTier ?? "—"}</TableCell>
-      <TableCell className="text-right tabular-nums">
-        {c.riskScore != null ? c.riskScore.toFixed(2) : "—"}
-      </TableCell>
-      <TableCell className="hidden text-right tabular-nums md:table-cell">
-        {c.clusterId != null ? `C${c.clusterId}` : "—"}
-      </TableCell>
-      <TableCell>
-        <div className="flex flex-wrap gap-1">
-          {c.isOutlier ? <Badge variant="outline" className="text-[10px]">outlier</Badge> : null}
-          {c.isAnomaly ? <Badge variant="destructive" className="text-[10px]">anomaly</Badge> : null}
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function CustomerDetailDialog({
-  id,
-  onClose,
-}: {
-  id: number | null;
-  onClose: () => void;
-}) {
+function CustomerDetailDialog({ id, onClose }: { id: number | null; onClose: () => void }) {
   const { data, isLoading } = useCustomer(id ?? undefined);
   const open = id !== null;
 
@@ -290,9 +225,7 @@ function CustomerDetailDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>
-            {id ? `Customer ${id}` : "Customer"}
-          </DialogTitle>
+          <DialogTitle>{id ? `Customer ${id}` : "Customer"}</DialogTitle>
         </DialogHeader>
         {isLoading || !data ? (
           <div className="space-y-2">
@@ -309,8 +242,8 @@ function CustomerDetailDialog({
 }
 
 const HUMANIZE: Record<string, string> = {
-  clientNum: "Client #",
-  attritionFlag: "Attrition",
+  clientNum: "Customer ID",
+  attritionFlag: "Churn",
   customerAge: "Age",
   gender: "Gender",
   dependentCount: "Dependents",
@@ -361,7 +294,9 @@ function CustomerDetailGrid({ data }: { data: Record<string, unknown> }) {
 }
 
 function formatValue(key: string, value: unknown): string {
-  if (value === null || value === undefined || value === "") return "—";
+  if (value === null || value === undefined || value === "") return "n/a";
+  if (key === "attritionFlag" && value === "Attrited Customer") return "Churned";
+  if (key === "attritionFlag" && value === "Existing Customer") return "Active";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "number") {
     if (USD_KEYS.has(key)) return formatUsd(value);

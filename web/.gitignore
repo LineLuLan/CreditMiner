@@ -37,3 +37,6 @@ test-results/
 .eslintcache
 .turbo/
 .swc/
+
+# supervisor API samples for offline worker runs
+.api-samples/

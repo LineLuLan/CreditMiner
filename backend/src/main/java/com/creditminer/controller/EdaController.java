@@ -47,8 +47,9 @@ public class EdaController {
     @GetMapping("/distribution")
     @Operation(summary = "Histogram (numeric) or value counts (nominal) for a single column")
     public DistributionResponse distribution(@RequestParam("col") String col,
-                                             @RequestParam(value = "bins", required = false) Integer bins) {
-        return edaService.distribution(col, bins);
+                                             @RequestParam(value = "bins", required = false) Integer bins,
+                                             @RequestParam(value = "split", required = false) String split) {
+        return edaService.distribution(col, bins, split);
     }
 
     @GetMapping("/correlation")
@@ -58,7 +59,7 @@ public class EdaController {
     }
 
     @GetMapping("/churn-by")
-    @Operation(summary = "Churn rate grouped by a categorical dimension")
+    @Operation(summary = "Churn rate grouped by an accepted categorical or integer dimension")
     public List<ChurnGroupResponse> churnBy(@RequestParam("dim") String dim) {
         return edaService.churnBy(dim);
     }

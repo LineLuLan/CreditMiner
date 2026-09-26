@@ -3,8 +3,13 @@ package com.creditminer.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import weka.associations.Apriori;
+import weka.associations.AssociationRule;
+import weka.associations.AssociationRules;
+import weka.associations.Item;
 import weka.core.Attribute;
 import weka.core.Instances;
+import weka.core.SelectedTag;
+import weka.core.Tag;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Discretize;
 import weka.filters.unsupervised.attribute.Remove;
@@ -20,7 +25,7 @@ import java.util.regex.Pattern;
  *
  * <p>Pipeline:
  * <ol>
- *   <li>{@link #discretizeForApriori(Instances)} — 3 equal-frequency bins on 6 numeric cols</li>
+ *   <li>{@link #discretizeForApriori(Instances)} — 3 equal-frequency bins on 10 numeric cols</li>
  *   <li>Drop unused attributes outside the Apriori input set</li>
  *   <li>{@link #runApriori(Instances)} — sup=0.05, conf=0.7, n=50</li>
  *   <li>{@link #extractRules(Apriori, int, double)} — keep rules with {@code Attrition_Flag} on RHS,
@@ -35,7 +40,9 @@ public class AssociationService {
     /** Numeric cols discretized into 3 equal-frequency bins (blueprint §7.1). */
     public static final List<String> NUMERIC_TO_DISCRETIZE = List.of(
             "Credit_Limit", "Avg_Utilization_Ratio", "Total_Trans_Amt",
-            "Total_Trans_Ct", "Risk_Score", "Months_Inactive_12_mon"
+            "Total_Trans_Ct", "Risk_Score", "Months_Inactive_12_mon",
+            "Total_Ct_Chng_Q4_Q1", "Total_Revolving_Bal",
+            "Contacts_Count_12_mon", "Total_Relationship_Count"
     );
 
     /** Attributes kept on the Apriori input set (everything else is dropped). */
@@ -43,6 +50,8 @@ public class AssociationService {
             // Discretized numerics (now nominal)
             "Credit_Limit", "Avg_Utilization_Ratio", "Total_Trans_Amt",
             "Total_Trans_Ct", "Risk_Score", "Months_Inactive_12_mon",
+            "Total_Ct_Chng_Q4_Q1", "Total_Revolving_Bal",
+            "Contacts_Count_12_mon", "Total_Relationship_Count",
             // Native nominals
             "Income_Category", "Card_Category", "Customer_Tier",
             "Gender", "Education_Level", "Marital_Status",
@@ -60,13 +69,18 @@ public class AssociationService {
     private static final int NUM_RULES = 10000;
     private static final double DELTA = 0.01;
     private static final int FINAL_TOP_N = 50;
+    public static final double CHURN_MIN_SUPPORT = 0.02;
+    public static final double CHURN_FALLBACK_MIN_SUPPORT = 0.01;
+    public static final double CHURN_MIN_LIFT = 1.5;
+    public static final int CHURN_NUM_RULES = 100000;
+    private static final int CHURN_TOP_N = 30;
 
     /** Regex for one rule line in {@link Apriori#toString()} output. */
     private static final Pattern RULE_LINE = Pattern.compile(
             "^\\s*\\d+\\.\\s+(.+?)\\s+(\\d+)\\s+==>\\s+(.+?)\\s+(\\d+)\\s+<conf:\\(([0-9.]+)\\)>\\s+lift:\\(([0-9.]+)\\).*$"
     );
 
-    /** Discretize the 6 numeric columns from {@link #NUMERIC_TO_DISCRETIZE} (3 bins, equal-frequency). */
+    /** Discretize the 10 numeric columns from {@link #NUMERIC_TO_DISCRETIZE} (3 bins, equal-frequency). */
     public Instances discretizeForApriori(Instances data) {
         try {
             int[] indices = indicesOf(data, NUMERIC_TO_DISCRETIZE);
@@ -81,6 +95,12 @@ public class AssociationService {
             disc.setInputFormat(data);
             Instances out = Filter.useFilter(data, disc);
             log.info("Discretized {} numeric cols into 3 equal-frequency bins", indices.length);
+            for (String name : NUMERIC_TO_DISCRETIZE) {
+                Attribute attribute = out.attribute(name);
+                if (attribute != null && attribute.isNominal() && attribute.numValues() < 3) {
+                    log.info("Discretization produced {} usable bins for {}", attribute.numValues(), name);
+                }
+            }
             return out;
         } catch (Exception e) {
             throw new IllegalStateException("Discretize filter failed", e);
@@ -119,10 +139,26 @@ public class AssociationService {
         return a;
     }
 
+    /** Run the churn-focused Apriori pass, ranked and filtered by lift. */
+    public Apriori runChurnApriori(Instances data, double minSupport) throws Exception {
+        Apriori a = new Apriori();
+        a.setLowerBoundMinSupport(minSupport);
+        a.setUpperBoundMinSupport(minSupport);
+        // Weka initializes support at 1 - delta, so this reaches the requested
+        // floor in one cycle while the equal bounds keep the pass fixed there.
+        a.setDelta(1.0 - minSupport);
+        a.setMetricType(new SelectedTag(liftMetricTagId(), Apriori.TAGS_SELECTION));
+        a.setMinMetric(CHURN_MIN_LIFT);
+        a.setNumRules(CHURN_NUM_RULES);
+        a.setOutputItemSets(false);
+        a.buildAssociations(data);
+        return a;
+    }
+
     /**
-     * Extract rules from {@link Apriori#toString()} output, filter to
-     * {@code Attrition_Flag} on RHS with {@code lift > minLift}, sort by lift desc,
-     * categorize churn vs retention.
+     * Extract retention rules from {@link Apriori#toString()} output, filter to
+     * {@code Attrition_Flag=Existing Customer} on RHS with {@code lift > minLift},
+     * and keep the highest-support rules.
      */
     public List<RuleRecord> extractRules(Apriori apriori, int totalInstances, double minLift) {
         String output = apriori.toString();
@@ -139,25 +175,70 @@ public class AssociationService {
             // Phase 7 step 7.3: only single-attribute RHS = Attrition_Flag=...
             // (multi-attr consequences like "Attrition_Flag=X Card_Category=Y" inflate lift artificially).
             String prettyRhs = prettyJoin(rhs);
-            if (!prettyRhs.startsWith("Attrition_Flag=")) continue;
-            if (prettyRhs.contains(", ")) continue;
+            if (!"Attrition_Flag=Existing Customer".equals(prettyRhs)) continue;
             if (lift <= minLift) continue;
 
             double support = totalInstances == 0 ? 0.0 : (double) jointCount / totalInstances;
-            String category = prettyRhs.contains("Attrited") ? "churn"
-                    : prettyRhs.contains("Existing") ? "retention"
-                    : "other";
 
             rules.add(new RuleRecord(
                     prettyJoin(lhs), prettyRhs,
                     round(support, 4), round(conf, 4), round(lift, 4),
-                    category));
+                    "retention", "retention"));
         }
-        rules.sort(Comparator.comparingDouble(RuleRecord::lift).reversed());
+        rules.sort(Comparator.comparingDouble(RuleRecord::support).reversed()
+                .thenComparing(Comparator.comparingDouble(RuleRecord::lift).reversed())
+                .thenComparing(RuleRecord::lhs));
         if (rules.size() > FINAL_TOP_N) {
             rules = new ArrayList<>(rules.subList(0, FINAL_TOP_N));
         }
         log.info("Extracted {} rules with Attrition_Flag on RHS, lift > {}", rules.size(), minLift);
+        return rules;
+    }
+
+    /**
+     * Extract only rules whose consequence is exactly
+     * {@code Attrition_Flag=Attrited Customer}, ordered by lift descending.
+     */
+    public List<RuleRecord> extractChurnRules(Apriori apriori, int totalInstances) throws Exception {
+        AssociationRules associationRules = apriori.getAssociationRules();
+        if (associationRules == null) return List.of();
+
+        List<RuleRecord> rules = new ArrayList<>();
+        for (AssociationRule rule : associationRules.getRules()) {
+            if (rule.getConsequence().size() != 1) continue;
+            Item rhsItem = rule.getConsequence().iterator().next();
+            if (!"Attrition_Flag".equals(rhsItem.getAttribute().name())
+                    || !"Attrited Customer".equals(rhsItem.getItemValueAsString())) {
+                continue;
+            }
+
+            double lift = rule.getNamedMetricValue("Lift");
+            if (lift < CHURN_MIN_LIFT) continue;
+            double support = totalInstances == 0
+                    ? 0.0
+                    : (double) rule.getTotalSupport() / totalInstances;
+            String lhs = rule.getPremise().stream()
+                    .map(Item::toString)
+                    .reduce((left, right) -> left + ", " + right)
+                    .orElse("");
+
+            rules.add(new RuleRecord(
+                    lhs,
+                    rhsItem.toString(),
+                    round(support, 4),
+                    round(rule.getNamedMetricValue("Confidence"), 4),
+                    round(lift, 4),
+                    "churn",
+                    "churn"));
+        }
+        rules.sort(Comparator.comparingDouble(RuleRecord::lift).reversed()
+                .thenComparing(Comparator.comparingDouble(RuleRecord::support).reversed())
+                .thenComparing(RuleRecord::lhs));
+        if (rules.size() > CHURN_TOP_N) {
+            rules = new ArrayList<>(rules.subList(0, CHURN_TOP_N));
+        }
+        log.info("Extracted {} churn rules with single-item Attrited Customer RHS, lift >= {}",
+                rules.size(), CHURN_MIN_LIFT);
         return rules;
     }
 
@@ -188,6 +269,13 @@ public class AssociationService {
         return sb.append("]").toString();
     }
 
+    private static int liftMetricTagId() {
+        for (Tag tag : Apriori.TAGS_SELECTION) {
+            if ("Lift".equalsIgnoreCase(tag.getReadable())) return tag.getID();
+        }
+        throw new IllegalStateException("Weka Apriori does not expose a Lift metric tag");
+    }
+
     private static double round(double v, int decimals) {
         if (Double.isNaN(v) || Double.isInfinite(v)) return v;
         double f = Math.pow(10, decimals);
@@ -196,5 +284,5 @@ public class AssociationService {
 
     /** Lightweight in-memory record passed to JSON exporter / repo. */
     public record RuleRecord(String lhs, String rhs, double support,
-                             double confidence, double lift, String category) { }
+                             double confidence, double lift, String category, String pass) { }
 }

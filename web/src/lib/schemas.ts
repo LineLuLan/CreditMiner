@@ -83,6 +83,46 @@ export const OverviewResponseSchema = z.object({
   tierBreakdown: z.record(z.number()),
 });
 
+// ---------- EDA ----------
+export const EdaDistributionStatsSchema = z.object({
+  count: z.number(),
+  mean: z.number(),
+  std: z.number(),
+  min: z.number(),
+  q1: z.number(),
+  median: z.number(),
+  q3: z.number(),
+  max: z.number(),
+});
+
+export const EdaDistributionSeriesSchema = z.object({
+  label: AttritionFlag,
+  counts: z.array(z.number()),
+  stats: EdaDistributionStatsSchema.nullable().optional(),
+});
+
+export const EdaDistributionSchema = z.object({
+  column: z.string(),
+  type: z.enum(["numeric", "nominal"]),
+  binEdges: z.array(z.number()),
+  categories: z.array(z.string()).optional(),
+  counts: z.array(z.number()),
+  stats: EdaDistributionStatsSchema.nullable().optional(),
+  series: z.array(EdaDistributionSeriesSchema).nullable().optional(),
+});
+
+export const EdaCorrelationSchema = z.object({
+  columns: z.array(z.string()),
+  matrix: z.array(z.array(z.number())),
+});
+
+export const EdaChurnGroupSchema = z.object({
+  group: z.string(),
+  count: z.number().int(),
+  attritedCount: z.number().int(),
+  churnRate: z.number(),
+});
+
 // ---------- Customers ----------
 export const CustomerSummarySchema = z.object({
   clientNum: z.number(),
@@ -105,149 +145,7 @@ export const PageResponseSchema = <T extends z.ZodTypeAny>(item: T) =>
     items: z.array(item),
   });
 
-// ---------- Clusters ----------
-export const ClusterSchema = z.object({
-  clusterId: z.number().int(),
-  personaName: z.string(),
-  size: z.number().int(),
-  centroid: z.record(z.number()),
-  avgRisk: z.number(),
-  churnRate: z.number(),
-  description: z.string(),
-});
-
-// ---------- Rules ----------
-export const RuleSchema = z.object({
-  ruleId: z.number(),
-  lhs: z.string(),
-  rhs: z.string(),
-  support: z.number(),
-  confidence: z.number(),
-  lift: z.number(),
-  category: z.enum(["churn", "retention"]),
-});
-
-// ---------- Insights ----------
-export const InsightSchema = z.object({
-  insightId: z.number(),
-  title: z.string(),
-  discovery: z.string(),
-  evidence: z.string(),
-  recommendation: z.string(),
-  category: z.enum(["churn", "cluster", "risk", "opportunity"]),
-  priority: z.number().int(),
-});
-
-// ---------- Anomalies ----------
-export const AnomalySchema = z.object({
-  clientNum: z.number(),
-  reason: z.string(),
-  score: z.number(),
-  clusterId: z.number().int().nullable(),
-});
-
-// ---------- PCA-2D ----------
-export const PcaPointSchema = z.object({
-  clientNum: z.number(),
-  clusterId: z.number().int(),
-  x: z.number(),
-  y: z.number(),
-});
-
-// ---------- Mining Report ----------
-export const NameCountSchema = z.object({
-  name: z.string(),
-  count: z.number(),
-});
-
-export const ColumnMissingSchema = z.object({
-  name: z.string(),
-  missing: z.number().int(),
-  missingPct: z.number(),
-});
-
-export const ModelMetricSchema = z.object({
-  model: z.string(),
-  variant: z.string(),
-  testF1: z.number().nullable().optional(),
-  testRocAuc: z.number().nullable().optional(),
-  testPrAuc: z.number().nullable().optional(),
-  testAccuracy: z.number().nullable().optional(),
-  source: z.string(),
-});
-
-export const FeatureImportanceReportSchema = z.object({
-  name: z.string(),
-  importance: z.number(),
-  share: z.number(),
-});
-
-export const ElbowPointSchema = z.object({
-  k: z.number().int(),
-  wcss: z.number(),
-  silhouette: z.number(),
-});
-
-export const MiningReportSchema = z.object({
-  generatedAt: z.string(),
-  dataset: z.object({
-    totalRows: z.number().int(),
-    totalColumns: z.number().int(),
-    classColumn: z.string(),
-    numericColumns: z.number().int(),
-    categoricalColumns: z.number().int(),
-    totalMissingValues: z.number().int(),
-    dbCustomerRows: z.number(),
-    attritedCustomers: z.number(),
-    churnRate: z.number(),
-    attritionBreakdown: z.array(NameCountSchema),
-    topMissingColumns: z.array(ColumnMissingSchema),
-    tierBreakdown: z.record(z.number()),
-    leakageColumnsDropped: z.array(z.string()),
-  }),
-  classification: z.object({
-    bestModel: z.string(),
-    bestVariant: z.string(),
-    metricSource: z.string(),
-    modelMetrics: z.array(ModelMetricSchema),
-    featureImportance: z.array(FeatureImportanceReportSchema),
-  }),
-  clustering: z.object({
-    bestK: z.number().int(),
-    strategy: z.string(),
-    totalClusters: z.number().int(),
-    clusters: z.array(ClusterSchema),
-    elbowScores: z.array(ElbowPointSchema),
-  }),
-  rules: z.object({
-    totalRules: z.number(),
-    churnRules: z.number(),
-    retentionRules: z.number(),
-    avgSupport: z.number(),
-    avgConfidence: z.number(),
-    avgLift: z.number(),
-    minLift: z.number(),
-    maxLift: z.number(),
-    topRules: z.array(RuleSchema),
-  }),
-  anomalies: z.object({
-    dbOutlierCount: z.number(),
-    dbAnomalyCount: z.number(),
-    phase2OutlierCount: z.number().nullable().optional(),
-    clusterStrongOutlierCount: z.number().nullable().optional(),
-    clusterMildOutlierCount: z.number().nullable().optional(),
-    combinedAnomalyCount: z.number().nullable().optional(),
-    combinedAnomalyPct: z.number().nullable().optional(),
-    clusterDistanceMu: z.number().nullable().optional(),
-    clusterDistanceSigma: z.number().nullable().optional(),
-    strongThreshold: z.number().nullable().optional(),
-    mildThreshold: z.number().nullable().optional(),
-    rule: z.string().nullable().optional(),
-    topAnomalies: z.array(AnomalySchema),
-  }),
-  insights: z.array(InsightSchema),
-  warnings: z.array(z.string()),
-});
+export * from "./mining-report-schemas";
 
 // ---------- Error envelope ----------
 export const ApiErrorSchema = z.object({

@@ -1,42 +1,66 @@
 [
   {
-    "title": "High utilization signals imminent churn",
-    "discovery": "Customers with Avg_Utilization_Ratio > 0.7 churn at 2.4x the average rate.",
-    "evidence": "Apriori rule {Util=high, Inactive=high} -> Attrited (sup=0.08, conf=0.78, lift=4.84). Confirmed by RandomForest feature importance (utilization ranks top 3).",
-    "recommendation": "Trigger an alert when utilization exceeds 70% for 2 consecutive months; offer credit-limit increase or financial counseling.",
+    "title": "Falling card activity predicts churn",
+    "discovery": "Customers whose transaction count fell by half from Q1 to Q4 churned at 50.9%. The portfolio rate is 16.1%.",
+    "evidence": "1,370 customers, lift 3.2. Transaction count has the strongest correlation with churn (r = -0.371). 23 of the 30 churn rules contain a low transaction count or a low count change. Source: phase9_insight_facts.json, models/rules.json.",
+    "recommendation": "Compute the Q4/Q1 transaction ratio each month. Open a retention case when the ratio is below 0.5.",
     "category": "churn",
     "priority": 1
   },
   {
-    "title": "Premium Loyal cluster is under-monetized",
-    "discovery": "The Premium Loyal cluster has the highest credit limits but the lowest utilization rate.",
-    "evidence": "Premium centroid: Credit_Limit ~ $20K, Utilization ~ 0.15. Cluster size ~30%, churn rate <6%.",
-    "recommendation": "Push premium credit products, travel rewards, and investment offerings to this cohort.",
-    "category": "opportunity",
-    "priority": 2
-  },
-  {
-    "title": "Inactive months strongly correlates with churn",
-    "discovery": "Customers with Months_Inactive_12_mon >= 4 churn 3.1x more often.",
-    "evidence": "Pearson r(inactive, attrited)=0.21; Apriori rule {Inactive=high, Trans_Ct=low} -> Attrited (lift=3.6).",
-    "recommendation": "Send re-engagement campaigns at 2-month inactivity; escalate at 3 months.",
+    "title": "Unused credit lines churn most",
+    "discovery": "Customers with a zero revolving balance churned at 36.1%. Customers with a balance of $1,000 to $2,000 churned at 4.6%.",
+    "evidence": "2,470 customers, lift 2.25. High utilization (above 0.75) churned at 15.5%, which is below the portfolio rate. 8 of the 30 churn rules contain a low balance and low utilization. Source: phase9_insight_facts.json, models/rules.json.",
+    "recommendation": "Flag a card that has a zero balance for two statements. Offer a balance transfer or an instalment plan.",
     "category": "churn",
     "priority": 1
   },
   {
-    "title": "Low transaction count is the strongest single predictor",
-    "discovery": "Total_Trans_Ct ranks #1 in RandomForest feature importance.",
-    "evidence": "RF importance: Total_Trans_Ct = 0.28 (top), followed by Total_Trans_Amt (0.19) and Avg_Utilization_Ratio (0.17).",
-    "recommendation": "Surface a 'transactions this month vs last' KPI in customer-facing app to drive activity.",
+    "title": "Inactive customers with low use churn at 47%",
+    "discovery": "Customers with 3 or more inactive months and a low transaction count churned at 46.8%.",
+    "evidence": "1,241 customers, lift 2.9. Inactivity alone is weaker: 4 or more inactive months gives 24.6%. 9 of the 30 churn rules contain inactivity above 2.5 months. Source: phase9_insight_facts.json (combos), models/rules.json.",
+    "recommendation": "Start a re-engagement message at the second inactive month. Call the customer at the third month if the transaction count is low.",
+    "category": "churn",
+    "priority": 1
+  },
+  {
+    "title": "Many bank contacts signal distress",
+    "discovery": "Customers who contacted the bank 5 times in a year churned at 33.5%. Customers with no contacts churned at 1.8%.",
+    "evidence": "Contact count has the strongest positive correlation with churn (r = +0.204). 10 of the 30 churn rules contain more than 2.5 contacts. Source: phase9_insight_facts.json, models/rules.json.",
+    "recommendation": "Send customers with 4 or more contacts to a resolution desk. Record the reason for each contact.",
     "category": "risk",
     "priority": 2
   },
   {
-    "title": "Blue card holders churn 1.6x more than Silver/Gold",
-    "discovery": "Card_Category=Blue customers have a 17.2% churn rate vs 11% for higher tiers.",
-    "evidence": "Apriori rule {Card=Blue, Trans_Ct=low} -> Attrited (sup=0.05, conf=0.72, lift=4.46).",
-    "recommendation": "Promote tier upgrade with first-year fee waiver to active Blue customers.",
+    "title": "Customers with 1 or 2 products churn twice as often",
+    "discovery": "Customers with 1 or 2 products churned at 25.6% and 27.8%. Customers with 6 products churned at 10.5%.",
+    "evidence": "The two churn rules with the highest lift (5.9, confidence 95%) contain a product count of 3 or less. RandomForest importance rank 7. Source: phase9_insight_facts.json, models/rules.json.",
+    "recommendation": "Sell a second product in the first year. Track churn by product count.",
+    "category": "risk",
+    "priority": 2
+  },
+  {
+    "title": "One segment holds 64% of all churn",
+    "discovery": "The At-Risk Mid-Tier segment has 39% of customers and 63.8% of all churned customers. Its churn rate is 26.1%.",
+    "evidence": "K-means, k = 3, selected by silhouette (0.218). Segment profile: credit limit $6,486, revolving balance $498, 60 transactions per year. Source: phase9_insight_facts.json (byCluster).",
+    "recommendation": "Put the retention budget in this segment. A decrease from 26% to 21% keeps about 200 customers per year.",
     "category": "opportunity",
+    "priority": 2
+  },
+  {
+    "title": "Premium Loyal customers use 7% of their credit",
+    "discovery": "The Premium Loyal segment has the highest credit limit ($24,287) and uses 6.8% of it. Its churn rate is 11.7%.",
+    "evidence": "1,920 customers. They spend the most: $6,737 per year in 75 transactions. Source: phase9_insight_facts.json (byCluster).",
+    "recommendation": "Offer rewards and instalment purchases to increase card use. Do not spend the retention budget here.",
+    "category": "opportunity",
+    "priority": 3
+  },
+  {
+    "title": "Card colour does not predict churn. Value score does.",
+    "discovery": "Blue cards churned at 16.1% and Silver cards at 14.8%. The Bronze value tier churned at 30.4% and the Gold tier at 7.7%.",
+    "evidence": "Income, education, gender and marital status are all within 2 points of the portfolio rate. Source: phase9_insight_facts.json.",
+    "recommendation": "Segment retention campaigns by value score and activity. Do not segment by card colour or demographics.",
+    "category": "risk",
     "priority": 3
   }
 ]

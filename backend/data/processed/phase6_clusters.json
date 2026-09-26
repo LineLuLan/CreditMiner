@@ -25,7 +25,7 @@
   },
   "avgRisk" : 0.3214,
   "churnRate" : 0.1167,
-  "description" : "high credit, low utilization, mid spender, avgRisk=0.32, churn=0.12"
+  "description" : "high credit, low utilization, mid spender, avgRisk=0,32, churn=0,12"
 }, {
   "clusterId" : 1,
   "personaName" : "Cluster 1",
@@ -53,7 +53,7 @@
   },
   "avgRisk" : 0.339,
   "churnRate" : 0.2607,
-  "description" : "mid credit, low utilization, mid spender, avgRisk=0.34, churn=0.26"
+  "description" : "mid credit, low utilization, mid spender, avgRisk=0,34, churn=0,26"
 }, {
   "clusterId" : 2,
   "personaName" : "Cluster 2",
@@ -81,5 +81,5 @@
   },
   "avgRisk" : 0.5271,
   "churnRate" : 0.0864,
-  "description" : "low credit, high utilization, mid spender, avgRisk=0.53, churn=0.09"
+  "description" : "low credit, high utilization, mid spender, avgRisk=0,53, churn=0,09"
 } ]

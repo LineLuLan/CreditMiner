@@ -29,7 +29,7 @@ public class RuleController {
 
     @GetMapping
     @Operation(summary = "Association rules sorted by lift desc")
-    public List<RuleResponse> list(@RequestParam(value = "minLift", defaultValue = "1.2") double minLift,
+    public List<RuleResponse> list(@RequestParam(value = "minLift", defaultValue = "1.0") double minLift,
                                    @RequestParam(value = "category", required = false) String category) {
         BigDecimal threshold = BigDecimal.valueOf(minLift);
         List<Rule> rules = (category == null || category.isBlank())

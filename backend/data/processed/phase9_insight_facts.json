@@ -1,0 +1,907 @@
+{
+  "generatedAt" : "2026-09-12T05:35:42.129485Z",
+  "overall" : {
+    "rows" : 10127,
+    "attrited" : 1627,
+    "churnRate" : 0.1607
+  },
+  "churnByBucket" : {
+    "Avg_Utilization_Ratio" : [ {
+      "bucket" : "0",
+      "count" : 2470,
+      "attrited" : 893,
+      "churnRate" : 0.3615,
+      "liftVsBase" : 2.2503
+    }, {
+      "bucket" : "(0, 0.25]",
+      "count" : 3360,
+      "attrited" : 340,
+      "churnRate" : 0.1012,
+      "liftVsBase" : 0.6298
+    }, {
+      "bucket" : "(0.25, 0.5]",
+      "count" : 1752,
+      "attrited" : 166,
+      "churnRate" : 0.0947,
+      "liftVsBase" : 0.5897
+    }, {
+      "bucket" : "(0.5, 0.75]",
+      "count" : 1798,
+      "attrited" : 112,
+      "churnRate" : 0.0623,
+      "liftVsBase" : 0.3877
+    }, {
+      "bucket" : "> 0.75",
+      "count" : 747,
+      "attrited" : 116,
+      "churnRate" : 0.1553,
+      "liftVsBase" : 0.9666
+    } ],
+    "Months_Inactive_12_mon" : [ {
+      "bucket" : "0",
+      "count" : 29,
+      "attrited" : 15,
+      "churnRate" : 0.5172,
+      "liftVsBase" : 3.2195
+    }, {
+      "bucket" : "1",
+      "count" : 2233,
+      "attrited" : 100,
+      "churnRate" : 0.0448,
+      "liftVsBase" : 0.2787
+    }, {
+      "bucket" : "2",
+      "count" : 3282,
+      "attrited" : 505,
+      "churnRate" : 0.1539,
+      "liftVsBase" : 0.9577
+    }, {
+      "bucket" : "3",
+      "count" : 3846,
+      "attrited" : 826,
+      "churnRate" : 0.2148,
+      "liftVsBase" : 1.3368
+    }, {
+      "bucket" : "4+",
+      "count" : 737,
+      "attrited" : 181,
+      "churnRate" : 0.2456,
+      "liftVsBase" : 1.5286
+    } ],
+    "Contacts_Count_12_mon" : [ {
+      "bucket" : "0",
+      "count" : 399,
+      "attrited" : 7,
+      "churnRate" : 0.0175,
+      "liftVsBase" : 0.1092
+    }, {
+      "bucket" : "1",
+      "count" : 1499,
+      "attrited" : 108,
+      "churnRate" : 0.072,
+      "liftVsBase" : 0.4485
+    }, {
+      "bucket" : "2",
+      "count" : 3227,
+      "attrited" : 403,
+      "churnRate" : 0.1249,
+      "liftVsBase" : 0.7773
+    }, {
+      "bucket" : "3",
+      "count" : 3380,
+      "attrited" : 681,
+      "churnRate" : 0.2015,
+      "liftVsBase" : 1.2541
+    }, {
+      "bucket" : "4",
+      "count" : 1392,
+      "attrited" : 315,
+      "churnRate" : 0.2263,
+      "liftVsBase" : 1.4085
+    }, {
+      "bucket" : "5",
+      "count" : 176,
+      "attrited" : 59,
+      "churnRate" : 0.3352,
+      "liftVsBase" : 2.0866
+    }, {
+      "bucket" : "6+",
+      "count" : 54,
+      "attrited" : 54,
+      "churnRate" : 1.0,
+      "liftVsBase" : 6.2243
+    } ],
+    "Total_Relationship_Count" : [ {
+      "bucket" : "1",
+      "count" : 910,
+      "attrited" : 233,
+      "churnRate" : 0.256,
+      "liftVsBase" : 1.5937
+    }, {
+      "bucket" : "2",
+      "count" : 1243,
+      "attrited" : 346,
+      "churnRate" : 0.2784,
+      "liftVsBase" : 1.7326
+    }, {
+      "bucket" : "3",
+      "count" : 2305,
+      "attrited" : 400,
+      "churnRate" : 0.1735,
+      "liftVsBase" : 1.0801
+    }, {
+      "bucket" : "4",
+      "count" : 1912,
+      "attrited" : 225,
+      "churnRate" : 0.1177,
+      "liftVsBase" : 0.7325
+    }, {
+      "bucket" : "5",
+      "count" : 1891,
+      "attrited" : 227,
+      "churnRate" : 0.12,
+      "liftVsBase" : 0.7472
+    }, {
+      "bucket" : "6",
+      "count" : 1866,
+      "attrited" : 196,
+      "churnRate" : 0.105,
+      "liftVsBase" : 0.6538
+    } ],
+    "Total_Trans_Ct" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : 10.0,
+      "hi" : 45.0,
+      "count" : 2611,
+      "attrited" : 968,
+      "churnRate" : 0.3707,
+      "liftVsBase" : 2.3076
+    }, {
+      "bucket" : "Q2",
+      "lo" : 45.0,
+      "hi" : 67.0,
+      "count" : 2512,
+      "attrited" : 514,
+      "churnRate" : 0.2046,
+      "liftVsBase" : 1.2736
+    }, {
+      "bucket" : "Q3",
+      "lo" : 67.0,
+      "hi" : 81.0,
+      "count" : 2662,
+      "attrited" : 119,
+      "churnRate" : 0.0447,
+      "liftVsBase" : 0.2782
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 81.0,
+      "hi" : 139.0,
+      "count" : 2342,
+      "attrited" : 26,
+      "churnRate" : 0.0111,
+      "liftVsBase" : 0.0691
+    } ],
+    "Total_Trans_Amt" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : 510.0,
+      "hi" : 2155.5,
+      "count" : 2532,
+      "attrited" : 618,
+      "churnRate" : 0.2441,
+      "liftVsBase" : 1.5192
+    }, {
+      "bucket" : "Q2",
+      "lo" : 2155.5,
+      "hi" : 3899.0,
+      "count" : 2532,
+      "attrited" : 697,
+      "churnRate" : 0.2753,
+      "liftVsBase" : 1.7134
+    }, {
+      "bucket" : "Q3",
+      "lo" : 3899.0,
+      "hi" : 4741.0,
+      "count" : 2534,
+      "attrited" : 22,
+      "churnRate" : 0.0087,
+      "liftVsBase" : 0.054
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 4741.0,
+      "hi" : 18484.0,
+      "count" : 2529,
+      "attrited" : 290,
+      "churnRate" : 0.1147,
+      "liftVsBase" : 0.7137
+    } ],
+    "Total_Amt_Chng_Q4_Q1" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : 0.0,
+      "hi" : 0.631,
+      "count" : 2557,
+      "attrited" : 620,
+      "churnRate" : 0.2425,
+      "liftVsBase" : 1.5092
+    }, {
+      "bucket" : "Q2",
+      "lo" : 0.631,
+      "hi" : 0.736,
+      "count" : 2507,
+      "attrited" : 319,
+      "churnRate" : 0.1272,
+      "liftVsBase" : 0.792
+    }, {
+      "bucket" : "Q3",
+      "lo" : 0.736,
+      "hi" : 0.859,
+      "count" : 2538,
+      "attrited" : 289,
+      "churnRate" : 0.1139,
+      "liftVsBase" : 0.7088
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 0.859,
+      "hi" : 3.397,
+      "count" : 2525,
+      "attrited" : 399,
+      "churnRate" : 0.158,
+      "liftVsBase" : 0.9836
+    } ],
+    "Total_Ct_Chng_Q4_Q1" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : 0.0,
+      "hi" : 0.582,
+      "count" : 2537,
+      "attrited" : 954,
+      "churnRate" : 0.376,
+      "liftVsBase" : 2.3406
+    }, {
+      "bucket" : "Q2",
+      "lo" : 0.582,
+      "hi" : 0.702,
+      "count" : 2541,
+      "attrited" : 286,
+      "churnRate" : 0.1126,
+      "liftVsBase" : 0.7006
+    }, {
+      "bucket" : "Q3",
+      "lo" : 0.702,
+      "hi" : 0.818,
+      "count" : 2532,
+      "attrited" : 195,
+      "churnRate" : 0.077,
+      "liftVsBase" : 0.4794
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 0.818,
+      "hi" : 3.714,
+      "count" : 2517,
+      "attrited" : 192,
+      "churnRate" : 0.0763,
+      "liftVsBase" : 0.4748
+    } ],
+    "Total_Revolving_Bal" : [ {
+      "bucket" : "0",
+      "count" : 2470,
+      "attrited" : 893,
+      "churnRate" : 0.3615,
+      "liftVsBase" : 2.2503
+    }, {
+      "bucket" : "(0, 1000]",
+      "count" : 1443,
+      "attrited" : 269,
+      "churnRate" : 0.1864,
+      "liftVsBase" : 1.1603
+    }, {
+      "bucket" : "(1000, 2000]",
+      "count" : 4549,
+      "attrited" : 211,
+      "churnRate" : 0.0464,
+      "liftVsBase" : 0.2887
+    }, {
+      "bucket" : "> 2000",
+      "count" : 1665,
+      "attrited" : 254,
+      "churnRate" : 0.1526,
+      "liftVsBase" : 0.9495
+    } ],
+    "Credit_Limit" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : 1438.3,
+      "hi" : 2555.0,
+      "count" : 2535,
+      "attrited" : 517,
+      "churnRate" : 0.2039,
+      "liftVsBase" : 1.2694
+    }, {
+      "bucket" : "Q2",
+      "lo" : 2555.0,
+      "hi" : 4549.0,
+      "count" : 2531,
+      "attrited" : 354,
+      "churnRate" : 0.1399,
+      "liftVsBase" : 0.8706
+    }, {
+      "bucket" : "Q3",
+      "lo" : 4549.0,
+      "hi" : 11067.5,
+      "count" : 2529,
+      "attrited" : 387,
+      "churnRate" : 0.153,
+      "liftVsBase" : 0.9525
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 11067.5,
+      "hi" : 34516.0,
+      "count" : 2532,
+      "attrited" : 369,
+      "churnRate" : 0.1457,
+      "liftVsBase" : 0.9071
+    } ],
+    "Card_Category" : [ {
+      "bucket" : "Blue",
+      "count" : 9436,
+      "attrited" : 1519,
+      "churnRate" : 0.161,
+      "liftVsBase" : 1.002
+    }, {
+      "bucket" : "Gold",
+      "count" : 116,
+      "attrited" : 21,
+      "churnRate" : 0.181,
+      "liftVsBase" : 1.1268
+    }, {
+      "bucket" : "Silver",
+      "count" : 555,
+      "attrited" : 82,
+      "churnRate" : 0.1477,
+      "liftVsBase" : 0.9196
+    }, {
+      "bucket" : "Platinum",
+      "count" : 20,
+      "attrited" : 5,
+      "churnRate" : 0.25,
+      "liftVsBase" : 1.5561
+    } ],
+    "Income_Category" : [ {
+      "bucket" : "$60K - $80K",
+      "count" : 1402,
+      "attrited" : 189,
+      "churnRate" : 0.1348,
+      "liftVsBase" : 0.8391
+    }, {
+      "bucket" : "Less than $40K",
+      "count" : 4673,
+      "attrited" : 799,
+      "churnRate" : 0.171,
+      "liftVsBase" : 1.0643
+    }, {
+      "bucket" : "$80K - $120K",
+      "count" : 1535,
+      "attrited" : 242,
+      "churnRate" : 0.1577,
+      "liftVsBase" : 0.9813
+    }, {
+      "bucket" : "$40K - $60K",
+      "count" : 1790,
+      "attrited" : 271,
+      "churnRate" : 0.1514,
+      "liftVsBase" : 0.9423
+    }, {
+      "bucket" : "$120K +",
+      "count" : 727,
+      "attrited" : 126,
+      "churnRate" : 0.1733,
+      "liftVsBase" : 1.0788
+    }, {
+      "bucket" : "Unknown",
+      "count" : 0,
+      "attrited" : 0,
+      "churnRate" : 0.0,
+      "liftVsBase" : 0.0
+    } ],
+    "Gender" : [ {
+      "bucket" : "M",
+      "count" : 4769,
+      "attrited" : 697,
+      "churnRate" : 0.1462,
+      "liftVsBase" : 0.9097
+    }, {
+      "bucket" : "F",
+      "count" : 5358,
+      "attrited" : 930,
+      "churnRate" : 0.1736,
+      "liftVsBase" : 1.0804
+    } ],
+    "Customer_Tier" : [ {
+      "bucket" : "Bronze",
+      "count" : 2532,
+      "attrited" : 771,
+      "churnRate" : 0.3045,
+      "liftVsBase" : 1.8953
+    }, {
+      "bucket" : "Silver",
+      "count" : 2531,
+      "attrited" : 341,
+      "churnRate" : 0.1347,
+      "liftVsBase" : 0.8386
+    }, {
+      "bucket" : "Gold",
+      "count" : 2532,
+      "attrited" : 196,
+      "churnRate" : 0.0774,
+      "liftVsBase" : 0.4818
+    }, {
+      "bucket" : "Platinum",
+      "count" : 2532,
+      "attrited" : 319,
+      "churnRate" : 0.126,
+      "liftVsBase" : 0.7842
+    } ],
+    "Education_Level" : [ {
+      "bucket" : "High School",
+      "count" : 2013,
+      "attrited" : 306,
+      "churnRate" : 0.152,
+      "liftVsBase" : 0.9462
+    }, {
+      "bucket" : "Graduate",
+      "count" : 4647,
+      "attrited" : 743,
+      "churnRate" : 0.1599,
+      "liftVsBase" : 0.9952
+    }, {
+      "bucket" : "Uneducated",
+      "count" : 1487,
+      "attrited" : 237,
+      "churnRate" : 0.1594,
+      "liftVsBase" : 0.992
+    }, {
+      "bucket" : "Unknown",
+      "count" : 0,
+      "attrited" : 0,
+      "churnRate" : 0.0,
+      "liftVsBase" : 0.0
+    }, {
+      "bucket" : "College",
+      "count" : 1013,
+      "attrited" : 154,
+      "churnRate" : 0.152,
+      "liftVsBase" : 0.9462
+    }, {
+      "bucket" : "Post-Graduate",
+      "count" : 516,
+      "attrited" : 92,
+      "churnRate" : 0.1783,
+      "liftVsBase" : 1.1098
+    }, {
+      "bucket" : "Doctorate",
+      "count" : 451,
+      "attrited" : 95,
+      "churnRate" : 0.2106,
+      "liftVsBase" : 1.3111
+    } ],
+    "Marital_Status" : [ {
+      "bucket" : "Married",
+      "count" : 5436,
+      "attrited" : 838,
+      "churnRate" : 0.1542,
+      "liftVsBase" : 0.9595
+    }, {
+      "bucket" : "Single",
+      "count" : 3943,
+      "attrited" : 668,
+      "churnRate" : 0.1694,
+      "liftVsBase" : 1.0545
+    }, {
+      "bucket" : "Unknown",
+      "count" : 0,
+      "attrited" : 0,
+      "churnRate" : 0.0,
+      "liftVsBase" : 0.0
+    }, {
+      "bucket" : "Divorced",
+      "count" : 748,
+      "attrited" : 121,
+      "churnRate" : 0.1618,
+      "liftVsBase" : 1.0069
+    } ],
+    "Dependent_count" : [ {
+      "bucket" : "0",
+      "count" : 904,
+      "attrited" : 135,
+      "churnRate" : 0.1493,
+      "liftVsBase" : 0.9295
+    }, {
+      "bucket" : "1",
+      "count" : 1838,
+      "attrited" : 269,
+      "churnRate" : 0.1464,
+      "liftVsBase" : 0.911
+    }, {
+      "bucket" : "2",
+      "count" : 2655,
+      "attrited" : 417,
+      "churnRate" : 0.1571,
+      "liftVsBase" : 0.9776
+    }, {
+      "bucket" : "3",
+      "count" : 2732,
+      "attrited" : 482,
+      "churnRate" : 0.1764,
+      "liftVsBase" : 1.0981
+    }, {
+      "bucket" : "4",
+      "count" : 1574,
+      "attrited" : 260,
+      "churnRate" : 0.1652,
+      "liftVsBase" : 1.0282
+    }, {
+      "bucket" : "5",
+      "count" : 424,
+      "attrited" : 64,
+      "churnRate" : 0.1509,
+      "liftVsBase" : 0.9395
+    } ]
+  },
+  "byCluster" : [ {
+    "clusterId" : 0,
+    "personaName" : "Cluster 0",
+    "size" : 1920,
+    "attrited" : 224,
+    "churnRate" : 0.1167,
+    "liftVsBase" : 0.7262,
+    "shareOfCustomers" : 0.1896,
+    "shareOfAttrited" : 0.1377,
+    "avgCreditLimit" : 24286.6536,
+    "avgUtilization" : 0.068,
+    "avgTransAmt" : 6737.225,
+    "avgTransCt" : 74.8844,
+    "avgRevolvingBal" : 1333.2734,
+    "avgRiskScore" : 0.3214
+  }, {
+    "clusterId" : 1,
+    "personaName" : "Cluster 1",
+    "size" : 3981,
+    "attrited" : 1038,
+    "churnRate" : 0.2607,
+    "liftVsBase" : 1.6229,
+    "shareOfCustomers" : 0.3931,
+    "shareOfAttrited" : 0.638,
+    "avgCreditLimit" : 6486.179,
+    "avgUtilization" : 0.0751,
+    "avgTransAmt" : 3683.6797,
+    "avgTransCt" : 60.3371,
+    "avgRevolvingBal" : 498.1105,
+    "avgRiskScore" : 0.339
+  }, {
+    "clusterId" : 2,
+    "personaName" : "Cluster 2",
+    "size" : 4226,
+    "attrited" : 365,
+    "churnRate" : 0.0864,
+    "liftVsBase" : 0.5376,
+    "shareOfCustomers" : 0.4173,
+    "shareOfAttrited" : 0.2243,
+    "avgCreditLimit" : 3540.9232,
+    "avgUtilization" : 0.5571,
+    "avgTransAmt" : 4022.712,
+    "avgTransCt" : 64.5632,
+    "avgRevolvingBal" : 1711.5369,
+    "avgRiskScore" : 0.5271
+  } ],
+  "pointBiserial" : [ {
+    "feature" : "Total_Trans_Ct",
+    "r" : -0.3714
+  }, {
+    "feature" : "Total_Ct_Chng_Q4_Q1",
+    "r" : -0.2901
+  }, {
+    "feature" : "Engagement_Score",
+    "r" : -0.2872
+  }, {
+    "feature" : "Total_Revolving_Bal",
+    "r" : -0.2631
+  }, {
+    "feature" : "Contacts_Count_12_mon",
+    "r" : 0.2045
+  }, {
+    "feature" : "Avg_Utilization_Ratio",
+    "r" : -0.1784
+  }, {
+    "feature" : "Utilization_Score",
+    "r" : -0.1784
+  }, {
+    "feature" : "Total_Trans_Amt",
+    "r" : -0.1686
+  }, {
+    "feature" : "Months_Inactive_12_mon",
+    "r" : 0.1524
+  }, {
+    "feature" : "Customer_Value_Score",
+    "r" : -0.15
+  }, {
+    "feature" : "Total_Relationship_Count",
+    "r" : -0.15
+  }, {
+    "feature" : "Total_Amt_Chng_Q4_Q1",
+    "r" : -0.1311
+  }, {
+    "feature" : "Risk_Score",
+    "r" : -0.0653
+  }, {
+    "feature" : "Credit_Limit",
+    "r" : -0.0239
+  }, {
+    "feature" : "Dependent_count",
+    "r" : 0.019
+  }, {
+    "feature" : "Customer_Age",
+    "r" : 0.0182
+  }, {
+    "feature" : "Spending_Intensity",
+    "r" : 0.0162
+  }, {
+    "feature" : "Months_on_book",
+    "r" : 0.0137
+  }, {
+    "feature" : "Avg_Open_To_Buy",
+    "r" : -3.0E-4
+  } ],
+  "classMeans" : [ {
+    "feature" : "Customer_Value_Score",
+    "existingMean" : 0.0381,
+    "attritedMean" : -0.1991,
+    "ratioAttritedOverExisting" : -5.2243
+  }, {
+    "feature" : "Total_Revolving_Bal",
+    "existingMean" : 1256.6041,
+    "attritedMean" : 672.823,
+    "ratioAttritedOverExisting" : 0.5354
+  }, {
+    "feature" : "Avg_Utilization_Ratio",
+    "existingMean" : 0.2964,
+    "attritedMean" : 0.1625,
+    "ratioAttritedOverExisting" : 0.5481
+  }, {
+    "feature" : "Utilization_Score",
+    "existingMean" : 0.2964,
+    "attritedMean" : 0.1625,
+    "ratioAttritedOverExisting" : 0.5482
+  }, {
+    "feature" : "Engagement_Score",
+    "existingMean" : 2.0377,
+    "attritedMean" : 1.3244,
+    "ratioAttritedOverExisting" : 0.6499
+  }, {
+    "feature" : "Total_Trans_Ct",
+    "existingMean" : 68.6726,
+    "attritedMean" : 44.9336,
+    "ratioAttritedOverExisting" : 0.6543
+  }, {
+    "feature" : "Total_Trans_Amt",
+    "existingMean" : 4654.6559,
+    "attritedMean" : 3095.0258,
+    "ratioAttritedOverExisting" : 0.6649
+  }, {
+    "feature" : "Contacts_Count_12_mon",
+    "existingMean" : 2.3564,
+    "attritedMean" : 2.9723,
+    "ratioAttritedOverExisting" : 1.2614
+  }, {
+    "feature" : "Total_Ct_Chng_Q4_Q1",
+    "existingMean" : 0.7424,
+    "attritedMean" : 0.5544,
+    "ratioAttritedOverExisting" : 0.7467
+  }, {
+    "feature" : "Months_Inactive_12_mon",
+    "existingMean" : 2.2738,
+    "attritedMean" : 2.6933,
+    "ratioAttritedOverExisting" : 1.1845
+  }, {
+    "feature" : "Total_Relationship_Count",
+    "existingMean" : 3.9146,
+    "attritedMean" : 3.2797,
+    "ratioAttritedOverExisting" : 0.8378
+  }, {
+    "feature" : "Total_Amt_Chng_Q4_Q1",
+    "existingMean" : 0.7725,
+    "attritedMean" : 0.6943,
+    "ratioAttritedOverExisting" : 0.8987
+  }, {
+    "feature" : "Credit_Limit",
+    "existingMean" : 8726.8775,
+    "attritedMean" : 8136.0395,
+    "ratioAttritedOverExisting" : 0.9323
+  }, {
+    "feature" : "Risk_Score",
+    "existingMean" : 0.4175,
+    "attritedMean" : 0.3968,
+    "ratioAttritedOverExisting" : 0.9503
+  }, {
+    "feature" : "Dependent_count",
+    "existingMean" : 2.3354,
+    "attritedMean" : 2.4026,
+    "ratioAttritedOverExisting" : 1.0288
+  }, {
+    "feature" : "Spending_Intensity",
+    "existingMean" : 62.4251,
+    "attritedMean" : 63.5931,
+    "ratioAttritedOverExisting" : 1.0187
+  }, {
+    "feature" : "Customer_Age",
+    "existingMean" : 46.2621,
+    "attritedMean" : 46.6595,
+    "ratioAttritedOverExisting" : 1.0086
+  }, {
+    "feature" : "Months_on_book",
+    "existingMean" : 35.8806,
+    "attritedMean" : 36.1782,
+    "ratioAttritedOverExisting" : 1.0083
+  }, {
+    "feature" : "Avg_Open_To_Buy",
+    "existingMean" : 7470.2734,
+    "attritedMean" : 7463.2165,
+    "ratioAttritedOverExisting" : 0.9991
+  } ],
+  "featureImportance" : [ {
+    "name" : "Total_Trans_Amt",
+    "importance" : 3242.0,
+    "share" : 0.0781
+  }, {
+    "name" : "Customer_Age",
+    "importance" : 2677.0,
+    "share" : 0.0645
+  }, {
+    "name" : "Total_Trans_Ct",
+    "importance" : 2532.0,
+    "share" : 0.061
+  }, {
+    "name" : "Total_Amt_Chng_Q4_Q1",
+    "importance" : 2475.0,
+    "share" : 0.0596
+  }, {
+    "name" : "Spending_Intensity",
+    "importance" : 2339.0,
+    "share" : 0.0563
+  }, {
+    "name" : "Total_Ct_Chng_Q4_Q1",
+    "importance" : 2255.0,
+    "share" : 0.0543
+  }, {
+    "name" : "Total_Relationship_Count",
+    "importance" : 2227.0,
+    "share" : 0.0536
+  }, {
+    "name" : "Credit_Limit",
+    "importance" : 2058.0,
+    "share" : 0.0496
+  }, {
+    "name" : "Months_on_book",
+    "importance" : 2042.0,
+    "share" : 0.0492
+  }, {
+    "name" : "Engagement_Score",
+    "importance" : 1765.0,
+    "share" : 0.0425
+  } ],
+  "rules" : {
+    "topChurn" : [ {
+      "ruleId" : 51,
+      "lhs" : "Gender=F, Card_Category=Blue, Total_Relationship_Count='(-inf-3.5]', Total_Revolving_Bal='(-inf-854.5]', Total_Trans_Ct='(-inf-53.5]', Total_Ct_Chng_Q4_Q1='(-inf-0.626]', Avg_Utilization_Ratio='(-inf-0.0655]'",
+      "rhs" : "Attrition_Flag=Attrited Customer",
+      "support" : 0.02,
+      "confidence" : 0.9486,
+      "lift" : 5.9044,
+      "category" : "churn",
+      "pass" : "churn"
+    }, {
+      "ruleId" : 52,
+      "lhs" : "Gender=F, Card_Category=Blue, Total_Relationship_Count='(-inf-3.5]', Total_Trans_Ct='(-inf-53.5]', Total_Ct_Chng_Q4_Q1='(-inf-0.626]', Avg_Utilization_Ratio='(-inf-0.0655]'",
+      "rhs" : "Attrition_Flag=Attrited Customer",
+      "support" : 0.02,
+      "confidence" : 0.9486,
+      "lift" : 5.9044,
+      "category" : "churn",
+      "pass" : "churn"
+    }, {
+      "ruleId" : 53,
+      "lhs" : "Gender=F, Income_Category=Less than $40K, Total_Relationship_Count='(-inf-3.5]', Total_Revolving_Bal='(-inf-854.5]', Total_Trans_Ct='(-inf-53.5]', Avg_Utilization_Ratio='(-inf-0.0655]'",
+      "rhs" : "Attrition_Flag=Attrited Customer",
+      "support" : 0.02,
+      "confidence" : 0.9144,
+      "lift" : 5.6916,
+      "category" : "churn",
+      "pass" : "churn"
+    }, {
+      "ruleId" : 54,
+      "lhs" : "Gender=F, Income_Category=Less than $40K, Contacts_Count_12_mon='(2.5-inf)', Total_Trans_Ct='(-inf-53.5]', Total_Ct_Chng_Q4_Q1='(-inf-0.626]', Avg_Utilization_Ratio='(-inf-0.0655]'",
+      "rhs" : "Attrition_Flag=Attrited Customer",
+      "support" : 0.02,
+      "confidence" : 0.9022,
+      "lift" : 5.6157,
+      "category" : "churn",
+      "pass" : "churn"
+    }, {
+      "ruleId" : 55,
+      "lhs" : "Income_Category=Less than $40K, Card_Category=Blue, Contacts_Count_12_mon='(2.5-inf)', Total_Revolving_Bal='(-inf-854.5]', Total_Trans_Ct='(-inf-53.5]', Total_Ct_Chng_Q4_Q1='(-inf-0.626]', Avg_Utilization_Ratio='(-inf-0.0655]'",
+      "rhs" : "Attrition_Flag=Attrited Customer",
+      "support" : 0.02,
+      "confidence" : 0.8943,
+      "lift" : 5.5663,
+      "category" : "churn",
+      "pass" : "churn"
+    } ],
+    "topRetention" : [ {
+      "ruleId" : 1,
+      "lhs" : "Marital_Status=Married",
+      "rhs" : "Attrition_Flag=Existing Customer",
+      "support" : 0.454,
+      "confidence" : 0.85,
+      "lift" : 1.01,
+      "category" : "retention",
+      "pass" : "retention"
+    }, {
+      "ruleId" : 2,
+      "lhs" : "Marital_Status=Married, Card_Category=Blue",
+      "rhs" : "Attrition_Flag=Existing Customer",
+      "support" : 0.4268,
+      "confidence" : 0.84,
+      "lift" : 1.01,
+      "category" : "retention",
+      "pass" : "retention"
+    }, {
+      "ruleId" : 3,
+      "lhs" : "Gender=M",
+      "rhs" : "Attrition_Flag=Existing Customer",
+      "support" : 0.4021,
+      "confidence" : 0.85,
+      "lift" : 1.02,
+      "category" : "retention",
+      "pass" : "retention"
+    } ]
+  },
+  "combos" : [ {
+    "label" : "Months_Inactive_12_mon >= 3 AND Total_Trans_Ct <= q1(Total_Trans_Ct)",
+    "count" : 1241,
+    "attrited" : 581,
+    "churnRate" : 0.4682,
+    "liftVsBase" : 2.9141
+  }, {
+    "label" : "Contacts_Count_12_mon >= 4",
+    "count" : 1622,
+    "attrited" : 428,
+    "churnRate" : 0.2639,
+    "liftVsBase" : 1.6424
+  }, {
+    "label" : "Total_Revolving_Bal == 0",
+    "count" : 2470,
+    "attrited" : 893,
+    "churnRate" : 0.3615,
+    "liftVsBase" : 2.2503
+  }, {
+    "label" : "Total_Trans_Ct <= q1 AND Total_Trans_Amt <= q1",
+    "count" : 2071,
+    "attrited" : 532,
+    "churnRate" : 0.2569,
+    "liftVsBase" : 1.5989
+  }, {
+    "label" : "Avg_Utilization_Ratio == 0 AND Total_Revolving_Bal == 0",
+    "count" : 2470,
+    "attrited" : 893,
+    "churnRate" : 0.3615,
+    "liftVsBase" : 2.2503
+  }, {
+    "label" : "Total_Ct_Chng_Q4_Q1 < 0.5",
+    "count" : 1370,
+    "attrited" : 697,
+    "churnRate" : 0.5088,
+    "liftVsBase" : 3.1667
+  }, {
+    "label" : "Card_Category == Blue AND Total_Trans_Ct <= q1",
+    "count" : 2503,
+    "attrited" : 933,
+    "churnRate" : 0.3728,
+    "liftVsBase" : 2.3201
+  } ]
+}

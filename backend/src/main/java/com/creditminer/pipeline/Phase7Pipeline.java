@@ -28,7 +28,7 @@ import java.util.Map;
  * <p>Pipeline:
  * <ol>
  *   <li>Load enriched.arff (Phase 3 output)</li>
- *   <li>Discretize 6 numerics (3 equal-frequency bins) via {@link AssociationService#discretizeForApriori}</li>
+ *   <li>Discretize 10 numerics (3 equal-frequency bins) via {@link AssociationService#discretizeForApriori}</li>
  *   <li>Drop unused attributes; save {@code data/processed/clean_assoc.arff}</li>
  *   <li>Run Apriori (sup=0.05, conf=0.7, n=50)</li>
  *   <li>Filter rules with {@code Attrition_Flag} on RHS, lift &gt; 1.2; sort by lift desc</li>
@@ -72,30 +72,58 @@ public class Phase7Pipeline {
 
         // BE-70: discretize
         Instances discretized = svc.discretizeForApriori(raw);
-        // Drop unused — keeps only the 13 attrs in APRIORI_KEEP
+        // Drop unused — keeps only the 17 attrs in APRIORI_KEEP
         Instances assocData = svc.retainKeepCols(discretized);
 
         // BE-71: save clean_assoc.arff
         loader.saveArff(assocData, assocArff);
 
-        // BE-72: Apriori
+        // BE-72: original retention-focused Apriori pass
         Apriori apriori = svc.runApriori(assocData);
 
         // BE-73: extract + filter
-        List<RuleRecord> rules = svc.extractRules(apriori, assocData.numInstances(), MIN_LIFT);
+        List<RuleRecord> retentionRules = svc.extractRules(apriori, assocData.numInstances(), MIN_LIFT);
+
+        // A second lift-ranked pass targets the minority Attrited Customer consequence.
+        double churnSupportUsed = AssociationService.CHURN_MIN_SUPPORT;
+        Apriori churnApriori = svc.runChurnApriori(assocData, churnSupportUsed);
+        List<RuleRecord> churnRules = svc.extractChurnRules(churnApriori, assocData.numInstances());
+        if (churnRules.isEmpty()) {
+            churnSupportUsed = AssociationService.CHURN_FALLBACK_MIN_SUPPORT;
+            log.info("No churn rules at support {}; retrying once at support {}",
+                    AssociationService.CHURN_MIN_SUPPORT, churnSupportUsed);
+            churnApriori = svc.runChurnApriori(assocData, churnSupportUsed);
+            churnRules = svc.extractChurnRules(churnApriori, assocData.numInstances());
+        }
+
+        List<RuleRecord> rules = new ArrayList<>(retentionRules.size() + churnRules.size());
+        rules.addAll(retentionRules);
+        rules.addAll(churnRules);
 
         // BE-74: rules.json
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("totalRows", assocData.numInstances());
-        doc.put("config", Map.of(
-                "minSupport", 0.05,
-                "minConfidence", 0.7,
-                "numRules", 50,
-                "minLift", MIN_LIFT
+        Map<String, Object> config = new LinkedHashMap<>();
+        config.put("minSupport", 0.05);
+        config.put("minConfidence", 0.7);
+        config.put("numRules", 50);
+        config.put("minLift", MIN_LIFT);
+        config.put("churnPass", Map.of(
+                "minSupport", churnSupportUsed,
+                "minLift", AssociationService.CHURN_MIN_LIFT,
+                "numRules", AssociationService.CHURN_NUM_RULES,
+                "metric", "lift"
         ));
+        doc.put("config", config);
         doc.put("ruleCount", rules.size());
         doc.put("churnRuleCount", rules.stream().filter(r -> "churn".equals(r.category())).count());
         doc.put("retentionRuleCount", rules.stream().filter(r -> "retention".equals(r.category())).count());
+        doc.put("summary", Map.of(
+                "retentionRules", retentionRules.size(),
+                "churnRules", churnRules.size(),
+                "maxChurnLift", maxLift(churnRules),
+                "maxRetentionLift", maxLift(retentionRules)
+        ));
 
         List<Map<String, Object>> ruleList = new ArrayList<>();
         int id = 1;
@@ -108,6 +136,7 @@ public class Phase7Pipeline {
             m.put("confidence", r.confidence());
             m.put("lift", r.lift());
             m.put("category", r.category());
+            m.put("pass", r.pass());
             ruleList.add(m);
         }
         doc.put("rules", ruleList);
@@ -121,26 +150,32 @@ public class Phase7Pipeline {
         mapper.writeValue(f, doc);
         log.info("Wrote {} ({} rules)", rulesJson, rules.size());
 
-        printConsoleSummary(rules);
+        printConsoleSummary(retentionRules, churnRules, churnSupportUsed);
         log.info("=== Phase 7 DONE ===");
     }
 
-    private static void printConsoleSummary(List<RuleRecord> rules) {
+    private static void printConsoleSummary(
+            List<RuleRecord> retentionRules,
+            List<RuleRecord> churnRules,
+            double churnSupportUsed) {
         System.out.println();
         System.out.println("=== PHASE 7 SUMMARY ===");
         System.out.printf("Rules: %d total (churn=%d, retention=%d)%n",
-                rules.size(),
-                rules.stream().filter(r -> "churn".equals(r.category())).count(),
-                rules.stream().filter(r -> "retention".equals(r.category())).count());
+                retentionRules.size() + churnRules.size(), churnRules.size(), retentionRules.size());
+        System.out.printf("Retention config: support=0.0500, confidence=0.7000, top=%d%n",
+                retentionRules.size());
+        System.out.printf("Churn config: support=%.4f, metric=lift, minLift=%.4f, cap=%d%n",
+                churnSupportUsed, AssociationService.CHURN_MIN_LIFT, AssociationService.CHURN_NUM_RULES);
         System.out.println();
-        System.out.printf("%-3s %-9s %7s %7s %7s  %-50s ==> %s%n",
-                "#", "Category", "Sup", "Conf", "Lift", "LHS", "RHS");
+        System.out.println("Top 10 churn rules (lift desc, then support desc)");
+        System.out.printf("%-3s %7s %7s %7s  %-68s ==> %s%n",
+                "#", "Sup", "Conf", "Lift", "LHS", "RHS");
         System.out.println("-".repeat(140));
         int i = 1;
-        for (RuleRecord r : rules) {
-            System.out.printf("%-3d %-9s %7.4f %7.4f %7.4f  %-50s ==> %s%n",
-                    i++, r.category(), r.support(), r.confidence(), r.lift(),
-                    truncate(r.lhs(), 50), r.rhs());
+        for (RuleRecord r : churnRules.stream().limit(10).toList()) {
+            System.out.printf("%-3d %7.4f %7.4f %7.4f  %-68s ==> %s%n",
+                    i++, r.support(), r.confidence(), r.lift(),
+                    truncate(r.lhs(), 68), r.rhs());
         }
         System.out.println();
     }
@@ -148,5 +183,9 @@ public class Phase7Pipeline {
     private static String truncate(String s, int len) {
         if (s == null) return "";
         return s.length() > len ? s.substring(0, len - 3) + "..." : s;
+    }
+
+    private static double maxLift(List<RuleRecord> rules) {
+        return rules.stream().mapToDouble(RuleRecord::lift).max().orElse(0.0);
     }
 }
