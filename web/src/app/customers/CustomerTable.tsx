@@ -11,7 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { CustomerSummary } from "@/types/api.types";
+import { formatDecimal, formatInt, formatRatio } from "@/lib/format";
+import { clusterColor } from "@/lib/chart-theme";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { Anomaly, Cluster, CustomerSummary } from "@/types/api.types";
 
 export function CustomerTable({
   errorMessage,
@@ -19,112 +22,147 @@ export function CustomerTable({
   size,
   items,
   onSelect,
+  clusters,
+  anomalies,
+  baselineRate,
 }: {
   errorMessage?: string;
   isLoading: boolean;
   size: number;
   items?: CustomerSummary[];
+  clusters?: Cluster[];
+  anomalies?: Anomaly[];
+  baselineRate?: number;
   onSelect: (customerId: number) => void;
 }) {
+  const anomalyByClient = new Map(anomalies?.map((anomaly) => [anomaly.clientId, anomaly]));
+  const clusterById = new Map(clusters?.map((cluster) => [cluster.clusterId, cluster]));
+
   return (
-    <Card>
-      <CardContent className="p-0">
-        {errorMessage ? (
-          <p className="p-6 text-sm text-destructive">{errorMessage}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer ID</TableHead>
-                  <TableHead>Churn</TableHead>
-                  <TableHead className="text-right">Age</TableHead>
-                  <TableHead className="hidden sm:table-cell">Gender</TableHead>
-                  <TableHead className="hidden md:table-cell">Card</TableHead>
-                  <TableHead className="hidden sm:table-cell">Tier</TableHead>
-                  <TableHead className="text-right">Risk</TableHead>
-                  <TableHead className="hidden text-right md:table-cell">Cluster</TableHead>
-                  <TableHead>Flags</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading
-                  ? Array.from({ length: size }).map((_, index) => (
-                      <TableRow key={index}>
-                        <TableCell colSpan={9}>
-                          <Skeleton className="h-6" />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  : items?.map((customer) => (
-                      <CustomerRow
-                        key={customer.clientNum}
-                        customer={customer}
-                        onClick={() => onSelect(customer.clientNum)}
-                      />
-                    ))}
-                {!isLoading && items && items.length === 0 ? (
+    <TooltipProvider delayDuration={200}>
+      <Card className="min-w-0">
+        <CardContent className="p-0">
+          {errorMessage ? (
+            <p className="p-6 text-sm text-danger">{errorMessage}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-                      No customers match the selected filters.
-                    </TableCell>
+                    <TableHead>Client ID</TableHead>
+                    <TableHead>Default</TableHead>
+                    <TableHead className="text-right">Age</TableHead>
+                    <TableHead className="hidden sm:table-cell">Sex</TableHead>
+                    <TableHead className="hidden md:table-cell">Education</TableHead>
+                    <TableHead className="hidden sm:table-cell">Risk tier</TableHead>
+                    <TableHead className="text-right">Pay ratio</TableHead>
+                    <TableHead className="hidden md:table-cell">Cluster</TableHead>
+                    <TableHead>Flags</TableHead>
                   </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                </TableHeader>
+                <TableBody>
+                  {isLoading
+                    ? Array.from({ length: size }).map((_, index) => (
+                        <TableRow key={index}>
+                          <TableCell colSpan={9}>
+                            <Skeleton className="h-6" />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    : items?.map((customer) => (
+                        <CustomerRow
+                          key={customer.clientId}
+                          customer={customer}
+                          anomaly={anomalyByClient.get(customer.clientId)}
+                          cluster={
+                            customer.clusterId == null
+                              ? undefined
+                              : clusterById.get(customer.clusterId)
+                          }
+                          baselineRate={baselineRate}
+                          onClick={() => onSelect(customer.clientId)}
+                        />
+                      ))}
+                  {!isLoading && items && items.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={9}
+                        className="py-8 text-center text-sm text-muted-foreground"
+                      >
+                        No clients match the selected filters.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }
 
-function CustomerRow({ customer, onClick }: { customer: CustomerSummary; onClick: () => void }) {
+function CustomerRow({
+  customer,
+  anomaly,
+  cluster,
+  baselineRate,
+  onClick,
+}: {
+  customer: CustomerSummary;
+  anomaly?: Anomaly;
+  cluster?: Cluster;
+  baselineRate?: number;
+  onClick: () => void;
+}) {
   return (
     <TableRow className="cursor-pointer" onClick={onClick}>
-      <TableCell className="font-mono text-xs">{customer.clientNum}</TableCell>
+      <TableCell>{formatInt(customer.clientId)}</TableCell>
       <TableCell>
-        <Badge
-          variant={customer.attritionFlag === "Attrited Customer" ? "destructive" : "secondary"}
-        >
-          {customer.attritionFlag === "Attrited Customer" ? "Churned" : "Active"}
+        <Badge variant={customer.defaultFlag === "Yes" ? "destructive" : "secondary"}>
+          {customer.defaultFlag}
         </Badge>
       </TableCell>
-      <TableCell className="text-right tabular-nums">{customer.customerAge ?? "n/a"}</TableCell>
-      <TableCell className="hidden sm:table-cell">{customer.gender ?? "n/a"}</TableCell>
-      <TableCell className="hidden md:table-cell">{customer.cardCategory ?? "n/a"}</TableCell>
-      <TableCell className="hidden sm:table-cell">{customer.customerTier ?? "n/a"}</TableCell>
-      <TableCell className="text-right tabular-nums">
-        {customer.riskScore != null ? <RiskValue value={customer.riskScore} /> : "n/a"}
-      </TableCell>
-      <TableCell className="hidden text-right tabular-nums md:table-cell">
-        {customer.clusterId != null ? `C${customer.clusterId}` : "n/a"}
+      <TableCell className="text-right tabular-nums">{formatInt(customer.age)}</TableCell>
+      <TableCell className="hidden sm:table-cell">{customer.sex}</TableCell>
+      <TableCell className="hidden md:table-cell">{customer.education}</TableCell>
+      <TableCell className="hidden sm:table-cell">{customer.riskTier}</TableCell>
+      <TableCell className="text-right tabular-nums">{formatRatio(customer.payRatio)}</TableCell>
+      <TableCell className="hidden md:table-cell">
+        {cluster ? (
+          <span className="inline-flex items-center gap-2">
+            <span
+              aria-hidden
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: clusterColor(cluster.defaultRate, baselineRate) }}
+            />
+            {cluster.displayName ?? cluster.personaName}
+          </span>
+        ) : (
+          "n/a"
+        )}
       </TableCell>
       <TableCell>
-        <div className="flex flex-wrap gap-1">
-          {customer.isOutlier ? <Badge variant="outline" className="text-[10px]">outlier</Badge> : null}
-          {customer.isAnomaly ? <Badge variant="destructive" className="text-[10px]">anomaly</Badge> : null}
-        </div>
+        {anomaly ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="rounded-full border border-danger px-2 py-0.5 text-[10px] font-semibold text-danger"
+                aria-label={`Outlier, score ${formatDecimal(anomaly.score, 4)}`}
+                onClick={(event) => event.stopPropagation()}
+              >
+                outlier
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Score: {formatDecimal(anomaly.score, 4)}</p>
+              <p>{anomaly.reason}</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
       </TableCell>
     </TableRow>
-  );
-}
-
-function RiskValue({ value }: { value: number }) {
-  const tone =
-    value < 0.35
-      ? "bg-muted text-muted-foreground"
-      : value <= 0.5
-        ? "bg-warning/20 text-warning-foreground ring-warning/30"
-        : "bg-destructive/15 text-destructive ring-destructive/30";
-  const label = value < 0.35 ? "Low" : value <= 0.5 ? "Watch" : "High";
-
-  return (
-    <span
-      className={`inline-flex min-w-16 items-center justify-center rounded-md px-2 py-1 text-xs font-semibold ring-1 ring-inset ${tone}`}
-      aria-label={`${label} risk, score ${value.toFixed(2)}`}
-    >
-      {value.toFixed(2)}
-    </span>
   );
 }

@@ -6,6 +6,7 @@ import { formatInt, formatPct } from "@/lib/utils";
 import type { InsightVisual, MiningReport } from "@/types/api.types";
 import { comparisonRows, ModelComparisonTable } from "./ClassificationSection";
 import { findBestVariant } from "./ExecutiveSummary";
+import { imputationSentence } from "./report-copy";
 import { ReportDetails, ReportSection, ReportTable } from "./ReportPrimitives";
 
 export function InsightsSection({
@@ -20,35 +21,37 @@ export function InsightsSection({
     <ReportSection
       id="section-7"
       title="7 Insights and recommendations"
-      takeaway="Behavior signals show where churn risk increases and which customers need action."
+      takeaway="Behavior signals show where default risk increases and which clients need review."
     >
-      <div className="report-insight-grid grid gap-4 lg:grid-cols-2">
-        {report.insights.map((insight) => (
-          <InsightVisualCard
-            key={insight.insightId}
-            insight={insight}
-            visual={visualsByTitle.get(insight.title)}
-            className="report-insight-source"
-          />
-        ))}
-      </div>
+      <ReportDetails label="Show insight evidence" className="report-detail-print">
+        <div className="report-insight-grid grid gap-4 lg:grid-cols-2">
+          {report.insights.map((insight) => (
+            <InsightVisualCard
+              key={insight.insightId}
+              insight={insight}
+              visual={visualsByTitle.get(insight.title)}
+              className="report-insight-source"
+            />
+          ))}
+        </div>
+      </ReportDetails>
     </ReportSection>
   );
 }
 
 export function LimitationsSection({ report }: { report: MiningReport }) {
   const limitations = [
-    "The evidence comes from one dataset snapshot, so changing customer behavior is not represented.",
+    "The evidence comes from one dataset snapshot. It does not represent changing client behavior.",
     "There is no temporal or out-of-time validation; the stratified holdout measures same-period generalization only.",
     "Feature importance is global and does not explain an individual prediction.",
-    `Churn is imbalanced at ${formatPct(report.dataset.churnRate)}, so threshold and class-cost choices change results.`,
-    "Retention rules inherit a high majority-class base rate, producing flat confidence and a low lift ceiling.",
+    `Default is imbalanced at ${formatPct(report.dataset.defaultRate)}. Threshold and class-cost choices change results.`,
+    "Non-default rules inherit a high majority-class base rate. This produces flat confidence and a low lift ceiling.",
   ];
   const nextSteps = [
     "Add an out-of-time test set and monitor F1, PR-AUC, recall, and calibration by monthly cohort.",
     "Evaluate operating thresholds with explicit false-negative and false-positive business costs.",
-    "Add local explanation methods for reviewed customers while retaining the global comparison.",
-    "Validate retention interventions with controlled experiments and segment-level uplift metrics.",
+    "Add local explanation methods for reviewed clients while retaining the global comparison.",
+    "Validate risk interventions with controlled experiments and segment-level uplift metrics.",
   ];
   return (
     <ReportSection
@@ -61,7 +64,8 @@ export function LimitationsSection({ report }: { report: MiningReport }) {
         <ListCard title="Other limitation" items={limitations.slice(4)} flat />
         <ListCard title="Next steps" items={nextSteps} flat />
         <p className="mt-3">
-          Keep the current model artifact. Restore it if churn metrics or error cost decrease.
+          Keep the current model artifact. Restore it if default-class metrics or error cost
+          decrease.
         </p>
       </ReportDetails>
     </ReportSection>
@@ -120,11 +124,11 @@ export function Appendices({ report }: { report: MiningReport }) {
 
 function EvidenceNotesAppendix({ report }: { report: MiningReport }) {
   const notes = [
-    "Groups with fewer than 100 customers can change sharply. Read their rates with care.",
-    "Unknown categories get explicit labels. Numeric gaps use median values. Outliers stay in the data.",
-    "SMOTE changes training rows only. Cost-sensitive models increase the penalty for missed churn.",
-    "F1 balances precision and recall. PR-AUC measures retrieval for the churn class.",
-    `Retention has a ${formatPct(1 - report.dataset.churnRate)} base rate. Its lift ceiling is ${(1 / Math.max(1 - report.dataset.churnRate, 0.0001)).toFixed(2)}.`,
+    "Groups with fewer than 100 clients can change sharply. Read their rates with care.",
+    `Unknown categories get explicit labels. ${imputationSentence(report.methodology?.preprocessing)} Outliers stay in the data.`,
+    "SMOTE changes training rows only. Cost-sensitive models increase the penalty for missed defaults.",
+    "F1 balances precision and recall. PR-AUC measures retrieval for the default class.",
+    `Non-default has a ${formatPct(1 - report.dataset.defaultRate)} base rate. Its lift ceiling is ${(1 / Math.max(1 - report.dataset.defaultRate, 0.0001)).toFixed(2)}.`,
   ];
   return (
     <ReportSection
@@ -185,6 +189,16 @@ function parameterRows(report: MiningReport): string[][] {
       "Hyperparameters",
       variant.hyperparameters?.summary ?? variant.hyperparameters?.options ?? "n/a",
     ]);
+    rows.push([
+      `${variant.algo ?? "Model"} (${variant.variant ?? "variant"})`,
+      "Build / CV / holdout prediction (ms)",
+      `${value(variant.buildTimeMs ?? variant.trainTimeMs)} / ${value(variant.cvTimeMs)} / ${value(variant.testPredictTimeMs)}`,
+    ]);
+    rows.push([
+      `${variant.algo ?? "Model"} (${variant.variant ?? "variant"})`,
+      "Holdout rows / prediction (microseconds per record)",
+      `${value(variant.testRows)} / ${value(variant.predictMicrosPerRecord)}`,
+    ]);
   }
   rows.push(
     [
@@ -210,14 +224,19 @@ function parameterRows(report: MiningReport): string[][] {
       `${formatInt(rules?.attributesUsed?.length ?? 0)}: ${(rules?.attributesUsed ?? []).join(", ") || "n/a"}`,
     ],
     [
-      "Retention Apriori",
+      "Non-default Apriori",
       "Support / confidence / lift",
-      `${value(rules?.retentionPass?.minSupport)} / ${value(rules?.retentionPass?.minConfidence)} / ${value(rules?.retentionPass?.minLift)}`,
+      `${value(rules?.nonDefaultPass?.minSupport)} / ${value(rules?.nonDefaultPass?.minConfidence)} / ${value(rules?.nonDefaultPass?.minLift)}`,
     ],
     [
-      "Churn Apriori",
+      "Default Apriori",
       "Support / lift / metric",
-      `${value(rules?.churnPass?.minSupport)} / ${value(rules?.churnPass?.minLift)} / ${rules?.churnPass?.metric ?? "n/a"}`,
+      `${value(rules?.defaultPass?.minSupport)} / ${value(rules?.defaultPass?.minLift)} / ${rules?.defaultPass?.metric ?? "n/a"}`,
+    ],
+    [
+      "Default Apriori",
+      "Attempted support / final support",
+      `${rules?.defaultPass?.attemptedSupports?.map(String).join(", ") || "n/a"} / ${value(rules?.defaultPass?.finalSupport)}`,
     ],
     ["Anomaly", "Rule", anomaly?.rule ?? report.anomalies.rule ?? "n/a"],
     [

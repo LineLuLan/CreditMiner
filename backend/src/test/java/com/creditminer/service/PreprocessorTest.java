@@ -9,60 +9,55 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Tests for {@link Preprocessor}. Build small in-memory {@link Instances}
- * to exercise filters without depending on Phase-1 ARFF files.
- */
 class PreprocessorTest {
 
-    private final Preprocessor preprocessor = new Preprocessor();
-
     @Test
-    void contextLoads() {
-        assertNotNull(preprocessor);
+    void duplicatesIgnoreIdAndNegativeBillsArePreservedAndCounted() {
+        Instances data = fixture();
+        add(data, 1, -20, 100, "No");
+        add(data, 2, -20, 100, "No");
+        add(data, 3, 40, 300, "Yes");
+
+        Preprocessor preprocessor = new Preprocessor();
+        Instances cleaned = preprocessor.run(data);
+
+        assertEquals(2, cleaned.numInstances());
+        assertEquals(1, preprocessor.getLastReport().duplicatesDropped);
+        assertEquals(1, preprocessor.getLastReport().negativeBillTotal);
+        assertEquals(1, preprocessor.getLastReport().negativeBillByColumn.get("BILL_AMT1"));
+        assertEquals(-20, cleaned.instance(0).value(cleaned.attribute("BILL_AMT1")));
     }
 
     @Test
-    void normalizeKeepsValuesIn01() {
-        Attribute x = new Attribute("x");
-        ArrayList<Attribute> attrs = new ArrayList<>(List.of(x));
-        Instances data = new Instances("t", attrs, 0);
-        for (double v : new double[] { 0, 5, 10, 25, 50 }) {
-            data.add(new DenseInstance(1.0, new double[] { v }));
-        }
-        Instances normalized = preprocessor.normalize(data);
-        for (int i = 0; i < normalized.numInstances(); i++) {
-            double v = normalized.instance(i).value(0);
-            assertTrue(v >= 0 && v <= 1, "Normalized value out of [0,1]: " + v);
-        }
-        // Endpoints should map exactly to 0 and 1
-        assertEquals(0.0, normalized.instance(0).value(0), 1e-9);
-        assertEquals(1.0, normalized.instance(4).value(0), 1e-9);
+    void iqrOutliersAreFlaggedButNotDeleted() {
+        Instances data = fixture();
+        for (int i = 0; i < 8; i++) add(data, i + 1, 10, 100 + i, "No");
+        add(data, 9, 10000, 108, "Yes");
+
+        Preprocessor preprocessor = new Preprocessor();
+        Instances cleaned = preprocessor.run(data);
+
+        assertEquals(9, cleaned.numInstances());
+        assertTrue(preprocessor.getLastOutlierFlags()[8]);
+        assertTrue(preprocessor.getLastReport().outlierByColumn.get("BILL_AMT1").iqrCount() > 0);
     }
 
-    @Test
-    void imputeMissingRewritesUnknownToMode() {
-        // Use a real BE column name from CATEGORICAL_UNKNOWN_COLS so the rewrite fires.
-        ArrayList<String> levels = new ArrayList<>(List.of("Graduate", "College", "Unknown"));
-        Attribute edu = new Attribute("Education_Level", levels);
-        Instances data = new Instances("t", new ArrayList<>(List.of(edu)), 0);
-        addNominal(data, edu, "Graduate");
-        addNominal(data, edu, "Graduate");
-        addNominal(data, edu, "Graduate");
-        addNominal(data, edu, "College");
-        addNominal(data, edu, "Unknown");
-
-        Instances out = preprocessor.imputeMissing(data);
-        Attribute outAttr = out.attribute("Education_Level");
-        // Last row had "Unknown" → rewritten to missing → ReplaceMissingValues fills with mode (Graduate).
-        assertEquals("Graduate", outAttr.value((int) out.instance(4).value(outAttr)));
+    private static Instances fixture() {
+        ArrayList<Attribute> attributes = new ArrayList<>();
+        attributes.add(new Attribute("ID"));
+        for (int month = 1; month <= 6; month++) attributes.add(new Attribute("BILL_AMT" + month));
+        attributes.add(new Attribute("AGE"));
+        attributes.add(new Attribute("Default", new ArrayList<>(List.of("No", "Yes"))));
+        Instances data = new Instances("fixture", attributes, 0);
+        data.setClassIndex(data.numAttributes() - 1);
+        return data;
     }
 
-    private static void addNominal(Instances data, Attribute attr, String value) {
-        DenseInstance inst = new DenseInstance(1.0, new double[] { attr.indexOfValue(value) });
-        data.add(inst);
+    private static void add(Instances data, double id, double firstBill, double age, String target) {
+        double[] values = {id, firstBill, 0, 0, 0, 0, 0, age,
+                data.classAttribute().indexOfValue(target)};
+        data.add(new DenseInstance(1, values));
     }
 }

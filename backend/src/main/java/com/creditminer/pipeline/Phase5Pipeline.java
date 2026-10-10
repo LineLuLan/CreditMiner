@@ -3,16 +3,16 @@ package com.creditminer.pipeline;
 import com.creditminer.service.ClassificationService;
 import com.creditminer.service.ClassificationService.Algo;
 import com.creditminer.service.DataLoader;
-import com.creditminer.service.Preprocessor;
 import com.creditminer.service.Splitter;
 import com.creditminer.service.Splitter.Split;
+import com.creditminer.service.ModelFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.extern.slf4j.Slf4j;
 import weka.classifiers.Classifier;
+import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.evaluation.ThresholdCurve;
-import weka.classifiers.trees.RandomForest;
 import weka.core.Attribute;
 import weka.core.Instances;
 import weka.core.OptionHandler;
@@ -24,6 +24,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,6 +33,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 /**
@@ -55,13 +58,14 @@ public class Phase5Pipeline {
     private static final String COMPARISON_CSV = "data/processed/phase5_comparison.csv";
     private static final String EVALUATION_JSON = "data/processed/phase5_evaluation.json";
     private static final String IMPORTANCE_JSON = "data/processed/phase5_feature_importance.json";
+    private static final String TRAIN_ARFF = "data/processed/train.arff";
+    private static final String TEST_ARFF = "data/processed/test.arff";
     private static final int MAX_CURVE_POINTS = 100;
 
     private static final double TRAIN_RATIO = 0.8;
     private static final long SEED = 42;
     private static final int CV_FOLDS = 10;
-    /** Class index for "Attrited Customer" — depends on ARFF nominal value order. */
-    private static final String POSITIVE_CLASS = "Attrited Customer";
+    private static final String POSITIVE_CLASS = "Yes";
 
     public static void main(String[] args) throws Exception {
         String inputArff = args.length > 0 ? args[0] : DEFAULT_INPUT;
@@ -69,22 +73,22 @@ public class Phase5Pipeline {
         log.info("=== Phase 5 — Classification ===");
         DataLoader loader = new DataLoader();
         Instances raw = loader.loadArff(inputArff);
-        Attribute classAttr = raw.attribute("Attrition_Flag");
-        if (classAttr == null) throw new IllegalStateException("Attrition_Flag missing on " + inputArff);
+        Attribute classAttr = raw.attribute("Default");
+        if (classAttr == null) throw new IllegalStateException("Default missing on " + inputArff);
         raw.setClassIndex(classAttr.index());
 
-        // Drop CLIENTNUM — ID, not a feature.
-        Instances data = removeAttributes(raw, "CLIENTNUM");
-        log.info("Loaded {} rows × {} features (CLIENTNUM dropped)",
+        Instances data = removeAttributes(raw, "ID");
+        log.info("Loaded {} rows x {} model columns (ID dropped)",
                 data.numInstances(), data.numAttributes());
 
-        Preprocessor pre = new Preprocessor();
         Splitter splitter = new Splitter();
         ClassificationService cs = new ClassificationService(null, null, null, null, null);
 
         Split base = splitter.stratified(data, TRAIN_RATIO, SEED);
         Instances train = base.train();
         Instances test = base.test();
+        loader.saveArff(train, TRAIN_ARFF);
+        loader.saveArff(test, TEST_ARFF);
 
         int positiveIdx = data.classAttribute().indexOfValue(POSITIVE_CLASS);
         if (positiveIdx < 0) throw new IllegalStateException("Class label '" + POSITIVE_CLASS + "' missing");
@@ -92,113 +96,198 @@ public class Phase5Pipeline {
         new File(MODELS_DIR).mkdirs();
         new File(COMPARISON_CSV).getParentFile().mkdirs();
 
-        List<Map<String, Object>> rows = new ArrayList<>();
         List<RunResult> results = new ArrayList<>();
-        Map<Algo, Classifier> bestPerAlgo = new LinkedHashMap<>();
-        int smoteTrainRows = 0;
+        int smoteTrainRows = cs.applySmote(train).numInstances();
 
         for (Algo algo : Algo.values()) {
-            Instances trainPrep = preprocessFor(algo, train, pre);
-            Instances testPrep = preprocessFor(algo, test, pre);
-            Instances smoteBase = cs.applySmote(train);
-            Instances smoteTrain = preprocessFor(algo, smoteBase, pre);
-            smoteTrainRows = smoteBase.numInstances();
-
-            // Baseline
-            RunResult baseline = trainAndScore(cs, algo, "baseline",
-                    cs.build(algo), trainPrep, testPrep, positiveIdx);
-            Map<String, Object> baselineRow = baseline.csvRow();
-            rows.add(baselineRow);
-            results.add(baseline);
-            bestPerAlgo.put(algo, baseline.classifier());
-
-            // SMOTE variant
-            RunResult smote = trainAndScore(cs, algo, "smote",
-                    cs.build(algo), smoteTrain, testPrep, positiveIdx);
-            Map<String, Object> smoteRow = smote.csvRow();
-            rows.add(smoteRow);
-            results.add(smote);
-            // Prefer the SMOTE variant if it has a better F1-Attrited
-            if (asDouble(smoteRow.get("test_f1_attrited"))
-                    > asDouble(baselineRow.get("test_f1_attrited"))) {
-                bestPerAlgo.put(algo, smote.classifier());
-            }
+            results.add(trainCandidate(cs, algo, "baseline",
+                    classifierFor(cs, algo, false), train, positiveIdx));
+            results.add(trainCandidate(cs, algo, "smote",
+                    classifierFor(cs, algo, true), train, positiveIdx));
         }
 
-        // Cost-sensitive J48 + RF (no preprocessing — tree-based)
         for (Algo algo : List.of(Algo.J48, Algo.RandomForest)) {
-            Classifier base2 = cs.build(algo);
-            Classifier wrapped = cs.costSensitive(base2);
-            RunResult cost = trainAndScore(cs, algo, "cost", wrapped, train, test, positiveIdx);
-            rows.add(cost.csvRow());
-            results.add(cost);
+            Classifier wrapped = new ModelFactory().create(
+                    modelAlgorithm(algo), ModelFactory.Variant.cost, (int) SEED);
+            results.add(trainCandidate(cs, algo, "cost", wrapped, train, positiveIdx));
         }
 
-        // Persist canonical .model files (best baseline / SMOTE variant per algo).
-        for (Map.Entry<Algo, Classifier> e : bestPerAlgo.entrySet()) {
-            String path = MODELS_DIR + "/" + modelFileName(e.getKey());
-            SerializationHelper.write(path, e.getValue());
-            log.info("Saved {} → {}", e.getKey(), path);
+        Map<Algo, Map<String, Object>> selectedRows = selectCanonicalRows(
+                results.stream().map(RunResult::csvRow).toList());
+        Map<Algo, Classifier> bestPerAlgo = new LinkedHashMap<>();
+        for (Map.Entry<Algo, Map<String, Object>> selected : selectedRows.entrySet()) {
+            RunResult candidate = results.stream()
+                    .filter(result -> result.csvRow() == selected.getValue())
+                    .findFirst()
+                    .orElseThrow();
+            bestPerAlgo.put(selected.getKey(), candidate.classifier());
         }
+
+        List<RunResult> evaluated = new ArrayList<>(results.size());
+        for (RunResult result : results) {
+            evaluated.add(evaluateHoldout(result, train, test, positiveIdx));
+        }
+        results = evaluated;
+        List<Map<String, Object>> rows = results.stream().map(RunResult::csvRow).toList();
+
+        // Remove aliases before saving variants: on case-insensitive filesystems,
+        // logistic.model and LOGISTIC.model identify the same path.
+        for (String legacy : List.of("j48.model", "rf.model", "nb.model", "logistic.model")) {
+            Files.deleteIfExists(Path.of(MODELS_DIR, legacy));
+        }
+
+        // Persist every evaluated variant using the assignment's method-name convention.
+        for (RunResult result : results) {
+            String path = variantModelFile(result.algo(), result.variant());
+            SerializationHelper.write(path, result.classifier());
+            log.info("Saved {} {} to {}", result.algo(), result.variant(), path);
+        }
+
+        Map<String, Object> bestDocument = bestVariantDocument(selectedRows);
+        bestDocument.put("file", Path.of(variantModelFile(
+                Algo.valueOf(bestDocument.get("algo").toString()),
+                bestDocument.get("variant").toString())).getFileName().toString());
+        writeJson(Path.of(MODELS_DIR, "best.json"), bestDocument);
 
         writeComparisonCsv(rows);
-        writeEvaluationJson(results, bestPerAlgo, train, test, smoteTrainRows, positiveIdx);
-        writeFeatureImportance(bestPerAlgo.get(Algo.RandomForest), train);
+        writeEvaluationJson(results, bestPerAlgo, selectedRows,
+                train, test, smoteTrainRows, positiveIdx);
+        writeFeatureImportance(bestPerAlgo.get(Algo.RandomForest), test,
+                selectedRows.get(Algo.RandomForest).get("variant").toString());
         printConsoleSummary(rows);
         log.info("=== Phase 5 DONE ===");
     }
 
     // -------------------- helpers --------------------
 
-    private static Instances preprocessFor(Algo algo, Instances data, Preprocessor pre) {
-        switch (algo) {
-            case NaiveBayes:
-            case Logistic: {
-                // Standardize numerics; one-hot only for Logistic
-                Instances std = pre.standardize(data);
-                if (algo == Algo.Logistic) std = pre.encodeNominal(std);
-                return std;
-            }
-            case J48:
-            case RandomForest:
-            default:
-                return data;
+    static Classifier classifierFor(ClassificationService service, Algo algo, boolean smote) {
+        return new ModelFactory().create(modelAlgorithm(algo),
+                smote ? ModelFactory.Variant.smote : ModelFactory.Variant.baseline,
+                (int) SEED);
+    }
+
+    static List<String> configuredVariants() {
+        List<String> variants = new ArrayList<>();
+        for (Algo algo : Algo.values()) {
+            variants.add(algo.name() + ":baseline");
+            variants.add(algo.name() + ":smote");
+        }
+        variants.add(Algo.J48.name() + ":cost");
+        variants.add(Algo.RandomForest.name() + ":cost");
+        return variants;
+    }
+
+    /**
+     * Selects one persisted candidate per algorithm using training-only evidence.
+     * Order: CV F1 descending, CV ROC AUC descending, baseline before SMOTE before cost.
+     */
+    static Map<Algo, Map<String, Object>> selectCanonicalRows(List<Map<String, Object>> rows) {
+        Map<Algo, Map<String, Object>> selected = new LinkedHashMap<>();
+        for (Algo algo : Algo.values()) {
+            Map<String, Object> best = rows.stream()
+                    .filter(row -> algo.name().equals(row.get("algo")))
+                    .min(Phase5Pipeline::compareSelectionRows)
+                    .orElseThrow(() -> new IllegalStateException("No candidate for " + algo));
+            selected.put(algo, best);
+        }
+        return selected;
+    }
+
+    static Map<String, Object> bestVariantDocument(Map<Algo, Map<String, Object>> selectedRows) {
+        Map<String, Object> best = selectedRows.values().stream()
+                .min(Phase5Pipeline::compareSelectionRows)
+                .orElseThrow(() -> new IllegalStateException("No canonical candidates"));
+        Map<String, Object> document = new LinkedHashMap<>();
+        document.put("algo", best.get("algo"));
+        document.put("variant", best.get("variant"));
+        document.put("selectionRule",
+                "max CV F1 (Default=Yes), then CV ROC AUC, then fixed variant/algorithm order");
+        return document;
+    }
+
+    private static int compareSelectionRows(Map<String, Object> left, Map<String, Object> right) {
+        int f1 = Double.compare(selectionMetric(right.get("cv_f1_default")),
+                selectionMetric(left.get("cv_f1_default")));
+        if (f1 != 0) return f1;
+        int roc = Double.compare(selectionMetric(right.get("cv_roc_auc")),
+                selectionMetric(left.get("cv_roc_auc")));
+        if (roc != 0) return roc;
+        int variant = Integer.compare(variantOrder(left.get("variant")), variantOrder(right.get("variant")));
+        if (variant != 0) return variant;
+        return Integer.compare(algoOrder(left.get("algo")), algoOrder(right.get("algo")));
+    }
+
+    private static int variantOrder(Object variant) {
+        return switch (String.valueOf(variant)) {
+            case "baseline" -> 0;
+            case "smote" -> 1;
+            case "cost" -> 2;
+            default -> Integer.MAX_VALUE;
+        };
+    }
+
+    private static int algoOrder(Object algo) {
+        try {
+            return Algo.valueOf(String.valueOf(algo)).ordinal();
+        } catch (IllegalArgumentException exception) {
+            return Integer.MAX_VALUE;
         }
     }
 
-    private static RunResult trainAndScore(
+    private static double selectionMetric(Object value) {
+        double metric = asDouble(value);
+        return Double.isFinite(metric) ? metric : Double.NEGATIVE_INFINITY;
+    }
+
+    private static RunResult trainCandidate(
             ClassificationService cs, Algo algo, String variant,
-            Classifier clf, Instances train, Instances test, int positiveIdx) throws Exception {
+            Classifier clf, Instances train, int positiveIdx) throws Exception {
 
-        log.info("--- {} {} ({} rows train, {} rows test) ---",
-                algo, variant, train.numInstances(), test.numInstances());
+        log.info("--- {} {} ({} rows train) ---", algo, variant, train.numInstances());
 
-        // CV first (uses an unbuilt copy)
-        Evaluation cv = cs.crossValidate(cloneClassifier(clf), train, CV_FOLDS);
-
-        // Then train on full train set + evaluate on test
+        Classifier cvClassifier = cloneClassifier(clf);
+        Evaluation cv = new Evaluation(train);
+        // cvTimeMs wraps only the 10-fold run: classifier copy and Evaluation setup sit outside the timer.
+        long cvStart = System.nanoTime();
+        cv.crossValidateModel(cvClassifier, train, CV_FOLDS, new Random(SEED));
+        long cvTimeMs = elapsedMillis(cvStart);
         long trainStart = System.nanoTime();
         clf.buildClassifier(train);
-        long trainTimeMs = Math.round((System.nanoTime() - trainStart) / 1_000_000.0);
-        Evaluation testEval = new Evaluation(train);
-        testEval.evaluateModel(clf, test);
+        long trainTimeMs = elapsedMillis(trainStart);
 
         Map<String, Double> cvMetrics = ClassificationService.headline(cv, positiveIdx);
-        Map<String, Double> testMetrics = ClassificationService.headline(testEval, positiveIdx);
-
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("algo", algo.name());
         row.put("variant", variant);
         cvMetrics.forEach((k, v) -> row.put("cv_" + k, v));
-        testMetrics.forEach((k, v) -> row.put("test_" + k, v));
+        row.put("trainTimeMs", trainTimeMs);
+        row.put("buildTimeMs", trainTimeMs);
+        row.put("cvTimeMs", cvTimeMs);
         row.put("__model", clf);
-        return new RunResult(row, algo, variant, clf, cv, testEval, trainTimeMs);
+        return new RunResult(row, algo, variant, clf, cv, null,
+                trainTimeMs, cvTimeMs, 0, 0, 0.0);
+    }
+
+    private static RunResult evaluateHoldout(
+            RunResult candidate, Instances train, Instances test, int positiveIdx) throws Exception {
+        Evaluation testEvaluation = new Evaluation(train);
+        long predictStart = System.nanoTime();
+        testEvaluation.evaluateModel(candidate.classifier(), test);
+        long predictNanos = System.nanoTime() - predictStart;
+        long predictTimeMs = Math.max(1, Math.round(predictNanos / 1_000_000.0));
+        double microsPerRecord = predictMicrosPerRecord(predictTimeMs, test.numInstances());
+        ClassificationService.headline(testEvaluation, positiveIdx)
+                .forEach((key, value) -> candidate.csvRow().put("test_" + key, value));
+        candidate.csvRow().put("testPredictTimeMs", predictTimeMs);
+        candidate.csvRow().put("testRows", test.numInstances());
+        candidate.csvRow().put("predictMicrosPerRecord", microsPerRecord);
+        return new RunResult(candidate.csvRow(), candidate.algo(), candidate.variant(),
+                candidate.classifier(), candidate.cv(), testEvaluation, candidate.trainTimeMs(),
+                candidate.cvTimeMs(), predictTimeMs, test.numInstances(), microsPerRecord);
     }
 
     private static Classifier cloneClassifier(Classifier clf) throws Exception {
-        return (Classifier) weka.core.Utils.forName(Classifier.class,
-                clf.getClass().getName(),
-                clf instanceof weka.core.OptionHandler oh ? oh.getOptions() : new String[0]);
+        return AbstractClassifier.makeCopy(clf);
     }
 
     private static Instances removeAttributes(Instances data, String... names) throws Exception {
@@ -214,13 +303,36 @@ public class Phase5Pipeline {
         return Filter.useFilter(data, rm);
     }
 
-    private static String modelFileName(Algo algo) {
+    private static String variantModelFile(Algo algo, String variant) {
+        ModelFactory.Algorithm method = modelAlgorithm(algo);
+        return MODELS_DIR + "/" + ModelFactory.fileName(
+                method, ModelFactory.Variant.valueOf(variant));
+    }
+
+    private static ModelFactory.Algorithm modelAlgorithm(Algo algo) {
         return switch (algo) {
-            case J48 -> "j48.model";
-            case RandomForest -> "rf.model";
-            case NaiveBayes -> "nb.model";
-            case Logistic -> "logistic.model";
+            case J48 -> ModelFactory.Algorithm.DECISIONTREE;
+            case RandomForest -> ModelFactory.Algorithm.RANDOMFOREST;
+            case NaiveBayes -> ModelFactory.Algorithm.NAIVEBAYES;
+            case Logistic -> ModelFactory.Algorithm.LOGISTIC;
         };
+    }
+
+    static double predictMicrosPerRecord(long roundedMillis, int rows) {
+        return rows == 0 ? 0.0
+                : Math.round((roundedMillis * 1_000.0 / rows) * 100.0) / 100.0;
+    }
+
+    private static long elapsedMillis(long startNanos) {
+        return Math.max(1, Math.round((System.nanoTime() - startNanos) / 1_000_000.0));
+    }
+
+    private static void writeJson(Path path, Object value) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.findAndRegisterModules();
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        if (path.getParent() != null) Files.createDirectories(path.getParent());
+        mapper.writeValue(path.toFile(), value);
     }
 
     private static double asDouble(Object o) {
@@ -301,6 +413,7 @@ public class Phase5Pipeline {
     private static void writeEvaluationJson(
             List<RunResult> results,
             Map<Algo, Classifier> bestPerAlgo,
+            Map<Algo, Map<String, Object>> selectedRows,
             Instances train,
             Instances test,
             int smoteTrainRows,
@@ -323,19 +436,7 @@ public class Phase5Pipeline {
             variants.add(buildVariantEvidence(result, bestPerAlgo, positiveIdx));
         }
 
-        RunResult best = null;
-        for (RunResult result : results) {
-            if (best == null || asDouble(result.csvRow().get("test_f1_attrited"))
-                    > asDouble(best.csvRow().get("test_f1_attrited"))) {
-                best = result;
-            }
-        }
-        Map<String, Object> bestVariant = new LinkedHashMap<>();
-        if (best != null) {
-            bestVariant.put("algo", best.algo().name());
-            bestVariant.put("variant", best.variant());
-        }
-        bestVariant.put("selectionRule", "max test F1 (Attrited)");
+        Map<String, Object> bestVariant = bestVariantDocument(selectedRows);
 
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("generatedAt", Instant.now().toString());
@@ -365,10 +466,15 @@ public class Phase5Pipeline {
         Map<String, Object> variant = new LinkedHashMap<>();
         variant.put("algo", result.algo().name());
         variant.put("variant", result.variant());
-        variant.put("modelFile", canonical ? MODELS_DIR + "/" + modelFileName(result.algo()) : null);
+        variant.put("modelFile", variantModelFile(result.algo(), result.variant()));
         variant.put("isCanonical", canonical);
         variant.put("hyperparameters", hyperparameters);
         variant.put("trainTimeMs", result.trainTimeMs());
+        variant.put("buildTimeMs", result.trainTimeMs());
+        variant.put("cvTimeMs", result.cvTimeMs());
+        variant.put("testPredictTimeMs", result.testPredictTimeMs());
+        variant.put("testRows", result.testRows());
+        variant.put("predictMicrosPerRecord", result.predictMicrosPerRecord());
         variant.put("cv", evaluationMetrics(result.cv(), positiveIdx));
 
         Map<String, Object> test = evaluationMetrics(result.test(), positiveIdx);
@@ -410,9 +516,9 @@ public class Phase5Pipeline {
     private static Map<String, Object> evaluationMetrics(Evaluation eval, int positiveIdx) {
         Map<String, Object> metrics = new LinkedHashMap<>();
         metrics.put("accuracy", round4(eval.pctCorrect() / 100.0));
-        metrics.put("precisionAttrited", round4(eval.precision(positiveIdx)));
-        metrics.put("recallAttrited", round4(eval.recall(positiveIdx)));
-        metrics.put("f1Attrited", round4(eval.fMeasure(positiveIdx)));
+        metrics.put("precisionDefault", round4(eval.precision(positiveIdx)));
+        metrics.put("recallDefault", round4(eval.recall(positiveIdx)));
+        metrics.put("f1Default", round4(eval.fMeasure(positiveIdx)));
         metrics.put("rocAuc", round4(eval.areaUnderROC(positiveIdx)));
         metrics.put("prAuc", round4(eval.areaUnderPRC(positiveIdx)));
         metrics.put("kappa", round4(eval.kappa()));
@@ -420,22 +526,22 @@ public class Phase5Pipeline {
     }
 
     private static Map<String, Object> confusionMatrix(Evaluation eval, Instances header) {
-        int existingIdx = requiredClassIndex(header, "Existing Customer");
-        int attritedIdx = requiredClassIndex(header, POSITIVE_CLASS);
+        int noIndex = requiredClassIndex(header, "No");
+        int yesIndex = requiredClassIndex(header, POSITIVE_CLASS);
         double[][] raw = eval.confusionMatrix();
 
         List<List<Long>> matrix = List.of(
-                List.of(Math.round(raw[existingIdx][existingIdx]), Math.round(raw[existingIdx][attritedIdx])),
-                List.of(Math.round(raw[attritedIdx][existingIdx]), Math.round(raw[attritedIdx][attritedIdx])));
+                List.of(Math.round(raw[noIndex][noIndex]), Math.round(raw[noIndex][yesIndex])),
+                List.of(Math.round(raw[yesIndex][noIndex]), Math.round(raw[yesIndex][yesIndex])));
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("labels", List.of("Existing Customer", POSITIVE_CLASS));
+        result.put("labels", List.of("No", POSITIVE_CLASS));
         result.put("matrix", matrix);
         return result;
     }
 
     private static List<Map<String, Object>> perClassMetrics(Evaluation eval, Instances header) {
         List<Map<String, Object>> perClass = new ArrayList<>(2);
-        for (String label : List.of("Existing Customer", POSITIVE_CLASS)) {
+        for (String label : List.of("No", POSITIVE_CLASS)) {
             int classIdx = requiredClassIndex(header, label);
             long support = Math.round(eval.numTruePositives(classIdx) + eval.numFalseNegatives(classIdx));
             Map<String, Object> metrics = new LinkedHashMap<>();
@@ -451,7 +557,7 @@ public class Phase5Pipeline {
 
     private static Map<String, Integer> classDistribution(Instances data) {
         Map<String, Integer> distribution = new LinkedHashMap<>();
-        for (String label : List.of("Existing Customer", POSITIVE_CLASS)) {
+        for (String label : List.of("No", POSITIVE_CLASS)) {
             int classIdx = requiredClassIndex(data, label);
             int count = 0;
             for (int i = 0; i < data.numInstances(); i++) {
@@ -489,7 +595,7 @@ public class Phase5Pipeline {
             return base + ", wrapped with a 5:1 false-negative cost.";
         }
         if ("smote".equals(variant)) {
-            return base + ", trained on the SMOTE-balanced training split.";
+            return base + ", with SMOTE fitted only on each training partition.";
         }
         return base + ", trained on the original stratified training split.";
     }
@@ -508,40 +614,9 @@ public class Phase5Pipeline {
         return Math.round(v * 10000.0) / 10000.0;
     }
 
-    private static void writeFeatureImportance(Classifier rfClassifier, Instances train) throws Exception {
-        if (!(rfClassifier instanceof RandomForest rf)) {
-            log.warn("Best RF variant is not a plain RandomForest — skipping feature importance");
-            return;
-        }
-        double[] importance = new double[train.numAttributes()];
-        try {
-            rf.computeAverageImpurityDecreasePerAttribute(importance);
-        } catch (Throwable t) {
-            log.warn("RandomForest.computeAverageImpurityDecreasePerAttribute(double[]) failed: {}",
-                    t.getMessage());
-            return;
-        }
-        Map<String, Object> doc = new LinkedHashMap<>();
-        doc.put("model", "RandomForest");
-        doc.put("metric", "MeanDecreaseImpurity");
-        List<Map<String, Object>> ranking = new ArrayList<>();
-        for (int i = 0; i < importance.length; i++) {
-            if (i == train.classIndex()) continue;
-            Map<String, Object> e = new LinkedHashMap<>();
-            e.put("name", train.attribute(i).name());
-            e.put("importance", round(importance[i]));
-            ranking.add(e);
-        }
-        ranking.sort((a, b) -> Double.compare(asDouble(b.get("importance")), asDouble(a.get("importance"))));
-        doc.put("ranking", ranking);
-        doc.put("generatedAt", Instant.now().toString());
-
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.findAndRegisterModules();
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
-        File f = new File(IMPORTANCE_JSON);
-        if (f.getParentFile() != null) f.getParentFile().mkdirs();
-        mapper.writeValue(f, doc);
+    private static void writeFeatureImportance(Classifier rfClassifier, Instances holdout, String variant)
+            throws Exception {
+        FeatureImportanceExporter.write(rfClassifier, holdout, variant, Path.of(IMPORTANCE_JSON));
         log.info("Wrote {}", IMPORTANCE_JSON);
     }
 
@@ -561,10 +636,10 @@ public class Phase5Pipeline {
         for (Map<String, Object> row : rows) {
             System.out.printf("%-14s %-9s %10.4f %10.4f %10.4f %10.4f %10.4f %10.4f%n",
                     row.get("algo"), row.get("variant"),
-                    asDouble(row.get("cv_f1_attrited")),
+                    asDouble(row.get("cv_f1_default")),
                     asDouble(row.get("cv_roc_auc")),
                     asDouble(row.get("cv_pr_auc")),
-                    asDouble(row.get("test_f1_attrited")),
+                    asDouble(row.get("test_f1_default")),
                     asDouble(row.get("test_roc_auc")),
                     asDouble(row.get("test_pr_auc")));
         }
@@ -578,6 +653,10 @@ public class Phase5Pipeline {
             Classifier classifier,
             Evaluation cv,
             Evaluation test,
-            long trainTimeMs) {
+            long trainTimeMs,
+            long cvTimeMs,
+            long testPredictTimeMs,
+            int testRows,
+            double predictMicrosPerRecord) {
     }
 }

@@ -12,7 +12,6 @@ import {
 } from "recharts";
 import {
   CHART_AXIS_TICK,
-  CHART_COLORS,
   CHART_SEMANTIC,
   CHART_TOOLTIP_PROPS,
 } from "@/components/charts/chart-theme";
@@ -59,7 +58,7 @@ export function DataPreparationCharts({
           data={outlierData}
           ariaLabel="Combined outlier flags by column"
           dataKey="combined"
-          color={CHART_COLORS[2]}
+          color={CHART_SEMANTIC.neutral}
         />
       </ReportFigure>
     </div>

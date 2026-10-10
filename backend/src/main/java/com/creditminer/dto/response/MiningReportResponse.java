@@ -22,6 +22,7 @@ public class MiningReportResponse {
     private ClusteringEvidence clustering;
     private RulesEvidence rules;
     private AnomalyEvidence anomalies;
+    private JsonNode sequences;
     private Methodology methodology;
     private List<InsightResponse> insights;
     private List<String> warnings;
@@ -36,11 +37,11 @@ public class MiningReportResponse {
         private int categoricalColumns;
         private int totalMissingValues;
         private long dbCustomerRows;
-        private long attritedCustomers;
-        private double churnRate;
-        private List<NameCount> attritionBreakdown;
+        private long defaultCustomers;
+        private double defaultRate;
+        private List<NameCount> defaultBreakdown;
         private List<ColumnMissing> topMissingColumns;
-        private Map<String, Long> tierBreakdown;
+        private Map<String, Long> riskTierBreakdown;
         private List<String> leakageColumnsDropped;
     }
 
@@ -69,8 +70,8 @@ public class MiningReportResponse {
     @Builder
     public static class RulesEvidence {
         private long totalRules;
-        private long churnRules;
-        private long retentionRules;
+        private long defaultRules;
+        private long nonDefaultRules;
         private double avgSupport;
         private double avgConfidence;
         private double avgLift;
@@ -157,6 +158,7 @@ public class MiningReportResponse {
     @Data
     @Builder
     public static class Methodology {
+        private String datasetSource;
         private PreprocessingMethodology preprocessing;
         private FeatureEngineeringMethodology featureEngineering;
         private JsonNode split;
@@ -172,7 +174,11 @@ public class MiningReportResponse {
         private int rowsOut;
         private int duplicatesDropped;
         private Map<String, Integer> unknownRewritten;
+        private Map<String, String> categoryMappingRules;
+        private Map<String, String> renamedColumns;
         private Map<String, Double> numericMedianImputed;
+        private Map<String, Integer> negativeBillByColumn;
+        private int negativeBillTotal;
         private Map<String, OutlierColumnMethodology> outlierByColumn;
         private List<String> leakageColumnsDropped;
         private String outlierPolicy;
@@ -231,8 +237,8 @@ public class MiningReportResponse {
     public static class AssociationMethodology {
         private String discretization;
         private List<String> attributesUsed;
-        private AssociationPass retentionPass;
-        private AssociationPass churnPass;
+        private AssociationPass defaultPass;
+        private AssociationPass nonDefaultPass;
     }
 
     @Data
@@ -240,6 +246,8 @@ public class MiningReportResponse {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class AssociationPass {
         private Double minSupport;
+        private List<Double> attemptedSupports;
+        private Double finalSupport;
         private Double minConfidence;
         private Double minLift;
         private Integer numRules;

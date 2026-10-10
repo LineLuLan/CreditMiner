@@ -38,6 +38,7 @@ replay_pid*
 *.jar
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/**/lib/*.jar
+!backend/lib/*.jar
 
 # Spring Boot
 backend/.spring-boot-devtools.properties
@@ -119,3 +120,9 @@ temp/
 
 # local session handoffs
 .handoff/
+.m2-cache/
+.m2-agent/
+
+# Generated assignment submission
+dist/
+web/public/report.pdf

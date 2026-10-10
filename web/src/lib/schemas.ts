@@ -1,159 +1,263 @@
 import { z } from "zod";
+import { SequenceArtifactViewSchema } from "@/components/report/sequence-data";
 
-/**
- * Zod schemas mirroring the BE → FE handoff contract
- * (see docs/BE_Handoff.md §4).
- *
- * Single source of truth on the FE side. ALL types in
- * `web/src/types/api.types.ts` are inferred from these — never write
- * a type by hand.
- */
+/** Runtime schemas for the backend API contract. */
 
-// ---------- Enums ----------
-export const Gender = z.enum(["M", "F"]);
-export const AttritionFlag = z.enum(["Existing Customer", "Attrited Customer"]);
-export const CardCategory = z.enum(["Blue", "Silver", "Gold", "Platinum"]);
-export const IncomeCategory = z.enum([
-  "Less than $40K",
-  "$40K - $60K",
-  "$60K - $80K",
-  "$80K - $120K",
-  "$120K +",
-  "Unknown",
-]);
-export const EducationLevel = z.enum([
-  "Uneducated",
-  "High School",
-  "College",
-  "Graduate",
-  "Post-Graduate",
-  "Doctorate",
-  "Unknown",
-]);
-export const MaritalStatus = z.enum(["Single", "Married", "Divorced", "Unknown"]);
-export const CustomerTier = z.enum(["Bronze", "Silver", "Gold", "Platinum"]);
+// ---------- Shared enums ----------
+export const Sex = z.enum(["Male", "Female"]);
+export const Education = z.enum(["Graduate", "University", "HighSchool", "Other"]);
+export const Marriage = z.enum(["Married", "Single", "Other"]);
+export const DefaultFlag = z.enum(["No", "Yes"]);
+export const RiskTier = z.enum(["Low", "Medium", "High"]);
 
-// ---------- PredictRequest ----------
-export const PredictRequestSchema = z.object({
-  customerAge: z.number().int().min(18).max(100),
-  gender: Gender,
-  dependentCount: z.number().int().min(0).max(10),
-  educationLevel: EducationLevel,
-  maritalStatus: MaritalStatus,
-  incomeCategory: IncomeCategory,
-  cardCategory: CardCategory,
-  monthsOnBook: z.number().int().min(0),
-  totalRelationshipCount: z.number().int().min(1).max(10),
-  monthsInactive12Mon: z.number().int().min(0).max(12),
-  contactsCount12Mon: z.number().int().min(0).max(20),
-  creditLimit: z.number().nonnegative(),
-  totalRevolvingBal: z.number().nonnegative(),
-  totalTransAmt: z.number().nonnegative(),
-  totalTransCt: z.number().int().min(0),
-  avgUtilizationRatio: z.number().min(0).max(1),
-  // Optional Q4/Q1 quarterly change ratios (BE defaults to 1.0 when omitted).
-  totalAmtChngQ4Q1: z.number().nonnegative().optional(),
-  totalCtChngQ4Q1: z.number().nonnegative().optional(),
-});
+const RepaymentStatus = z.number().int().min(-2).max(9);
 
-// ---------- PredictResponse ----------
-export const FeatureContributionSchema = z.object({
-  name: z.string(),
-  contribution: z.number(),
-});
+// ---------- Prediction ----------
+export const PredictRequestSchema = z
+  .object({
+    limitBal: z.number(),
+    sex: Sex,
+    education: Education,
+    marriage: Marriage,
+    age: z.number().int(),
+    pay1: RepaymentStatus,
+    pay2: RepaymentStatus,
+    pay3: RepaymentStatus,
+    pay4: RepaymentStatus,
+    pay5: RepaymentStatus,
+    pay6: RepaymentStatus,
+    billAmt1: z.number(),
+    billAmt2: z.number(),
+    billAmt3: z.number(),
+    billAmt4: z.number(),
+    billAmt5: z.number(),
+    billAmt6: z.number(),
+    payAmt1: z.number().nonnegative(),
+    payAmt2: z.number().nonnegative(),
+    payAmt3: z.number().nonnegative(),
+    payAmt4: z.number().nonnegative(),
+    payAmt5: z.number().nonnegative(),
+    payAmt6: z.number().nonnegative(),
+  })
+  .passthrough();
 
-export const PredictResponseSchema = z.object({
-  churnProb: z.number().min(0).max(1),
-  label: z.enum(["Existing", "Attrited"]),
-  riskScore: z.number().min(0).max(1),
-  cluster: z.number().int(),
-  clusterName: z.string(),
-  topFeatures: z.array(FeatureContributionSchema),
-  recommendation: z.string(),
-  modelUsed: z.string(),
-});
+export const FeatureContributionSchema = z
+  .object({
+    name: z.string(),
+    contribution: z.number(),
+  })
+  .passthrough();
+
+export const PredictResponseSchema = z
+  .object({
+    defaultProb: z.number().min(0).max(1),
+    label: DefaultFlag,
+    riskTier: RiskTier,
+    cluster: z.number().int(),
+    clusterName: z.string(),
+    topFeatures: z.array(FeatureContributionSchema),
+    recommendation: z.string(),
+    modelUsed: z.string(),
+    importanceMethod: z.string().optional(),
+  })
+  .passthrough();
 
 // ---------- Overview ----------
-export const OverviewResponseSchema = z.object({
-  totalCustomers: z.number().int(),
-  attritedCount: z.number().int(),
-  churnRate: z.number().min(0).max(1),
-  avgRiskScore: z.number(),
-  avgUtilization: z.number(),
-  tierBreakdown: z.record(z.number()),
-});
+export const OverviewResponseSchema = z
+  .object({
+    totalCustomers: z.number().int().nonnegative(),
+    defaultCount: z.number().int().nonnegative(),
+    defaultRate: z.number().min(0).max(1),
+    avgPayRatio: z.number(),
+    avgUtilization: z.number(),
+    riskTierBreakdown: z.record(z.number().int().nonnegative()),
+  })
+  .passthrough();
 
 // ---------- EDA ----------
-export const EdaDistributionStatsSchema = z.object({
-  count: z.number(),
-  mean: z.number(),
-  std: z.number(),
-  min: z.number(),
-  q1: z.number(),
-  median: z.number(),
-  q3: z.number(),
-  max: z.number(),
-});
+export const EdaColumnSummarySchema = z
+  .object({
+    name: z.string(),
+    type: z.enum(["numeric", "nominal"]),
+    count: z.number().int().nonnegative(),
+    missing: z.number().int().nonnegative(),
+    missingPct: z.number().nonnegative(),
+    mean: z.number().nullable().optional(),
+    std: z.number().nullable().optional(),
+    min: z.number().nullable().optional(),
+    max: z.number().nullable().optional(),
+    median: z.number().nullable().optional(),
+    distinctCount: z.number().int().nonnegative().optional(),
+    topValue: z.string().optional(),
+    topCount: z.number().int().nonnegative().optional(),
+  })
+  .passthrough();
 
-export const EdaDistributionSeriesSchema = z.object({
-  label: AttritionFlag,
-  counts: z.array(z.number()),
-  stats: EdaDistributionStatsSchema.nullable().optional(),
-});
+export const EdaDescribeSchema = z
+  .object({
+    totalRows: z.number().int().nonnegative(),
+    totalColumns: z.number().int().nonnegative(),
+    classColumn: z.string(),
+    leakageColumnsDropped: z.array(z.string()),
+    columns: z.array(EdaColumnSummarySchema),
+    generatedAt: z.string(),
+  })
+  .passthrough();
 
-export const EdaDistributionSchema = z.object({
-  column: z.string(),
-  type: z.enum(["numeric", "nominal"]),
-  binEdges: z.array(z.number()),
-  categories: z.array(z.string()).optional(),
-  counts: z.array(z.number()),
-  stats: EdaDistributionStatsSchema.nullable().optional(),
-  series: z.array(EdaDistributionSeriesSchema).nullable().optional(),
-});
+export const EdaDistributionStatsSchema = z
+  .object({
+    count: z.number(),
+    mean: z.number(),
+    std: z.number(),
+    min: z.number(),
+    q1: z.number(),
+    median: z.number(),
+    q3: z.number(),
+    max: z.number(),
+  })
+  .passthrough();
 
-export const EdaCorrelationSchema = z.object({
-  columns: z.array(z.string()),
-  matrix: z.array(z.array(z.number())),
-});
+export const EdaDistributionSeriesSchema = z
+  .object({
+    label: DefaultFlag,
+    counts: z.array(z.number()),
+    stats: EdaDistributionStatsSchema.nullable().optional(),
+  })
+  .passthrough();
 
-export const EdaChurnGroupSchema = z.object({
-  group: z.string(),
-  count: z.number().int(),
-  attritedCount: z.number().int(),
-  churnRate: z.number(),
-});
+export const EdaDistributionSchema = z
+  .object({
+    column: z.string(),
+    type: z.enum(["numeric", "nominal"]),
+    binEdges: z.array(z.number()),
+    categories: z.array(z.string()).optional(),
+    counts: z.array(z.number()),
+    stats: EdaDistributionStatsSchema.nullable().optional(),
+    series: z.array(EdaDistributionSeriesSchema).nullable().optional(),
+  })
+  .passthrough();
+
+export const EdaCorrelationSchema = z
+  .object({
+    columns: z.array(z.string()),
+    matrix: z.array(z.array(z.number())),
+  })
+  .passthrough();
+
+export const EdaDefaultGroupSchema = z
+  .object({
+    group: z.string(),
+    count: z.number().int().nonnegative(),
+    defaultCount: z.number().int().nonnegative(),
+    defaultRate: z.number().min(0).max(1),
+  })
+  .passthrough();
 
 // ---------- Customers ----------
-export const CustomerSummarySchema = z.object({
-  clientNum: z.number(),
-  attritionFlag: AttritionFlag,
-  customerAge: z.number().int().nullable(),
-  gender: Gender.nullable(),
-  cardCategory: CardCategory.nullable(),
-  customerTier: CustomerTier.nullable(),
-  riskScore: z.number().nullable(),
-  clusterId: z.number().int().nullable(),
-  isOutlier: z.boolean().nullable(),
-  isAnomaly: z.boolean().nullable(),
-});
+export const CustomerSummarySchema = z
+  .object({
+    clientId: z.number().int(),
+    defaultFlag: DefaultFlag,
+    age: z.number().int().nullable(),
+    sex: Sex.nullable(),
+    education: Education.nullable(),
+    riskTier: RiskTier.nullable(),
+    payRatio: z.number().nullable(),
+    clusterId: z.number().int().nullable(),
+    isOutlier: z.boolean().nullable(),
+    isAnomaly: z.boolean().nullable(),
+  })
+  .passthrough();
+
+export const CustomerDetailSchema = z
+  .object({
+    clientId: z.number().int(),
+    limitBal: z.number(),
+    sex: Sex,
+    education: Education,
+    marriage: Marriage,
+    age: z.number().int(),
+    pay1: z.number().int(),
+    pay2: z.number().int(),
+    pay3: z.number().int(),
+    pay4: z.number().int(),
+    pay5: z.number().int(),
+    pay6: z.number().int(),
+    billAmt1: z.number(),
+    billAmt2: z.number(),
+    billAmt3: z.number(),
+    billAmt4: z.number(),
+    billAmt5: z.number(),
+    billAmt6: z.number(),
+    payAmt1: z.number(),
+    payAmt2: z.number(),
+    payAmt3: z.number(),
+    payAmt4: z.number(),
+    payAmt5: z.number(),
+    payAmt6: z.number(),
+    defaultFlag: DefaultFlag,
+    utilization1: z.number(),
+    avgUtilization: z.number(),
+    payRatio: z.number(),
+    monthsDelayed: z.number().int(),
+    maxDelay: z.number().int(),
+    billTrend: z.number(),
+    riskTier: RiskTier,
+    clusterId: z.number().int().nullable(),
+    isOutlier: z.boolean(),
+    isAnomaly: z.boolean(),
+    centroidDistance: z.number().nullable().optional(),
+  })
+  .passthrough();
 
 export const PageResponseSchema = <T extends z.ZodTypeAny>(item: T) =>
-  z.object({
-    total: z.number().int(),
-    page: z.number().int(),
-    size: z.number().int(),
-    items: z.array(item),
-  });
+  z
+    .object({
+      total: z.number().int().nonnegative(),
+      page: z.number().int().positive(),
+      size: z.number().int().positive(),
+      items: z.array(item),
+    })
+    .passthrough();
+
+export const SequencePatternSchema = SequenceArtifactViewSchema.shape.topDefaultPatterns.element;
+export const SequenceArtifactSchema = SequenceArtifactViewSchema;
 
 export * from "./mining-report-schemas";
 
 // ---------- Error envelope ----------
-export const ApiErrorSchema = z.object({
-  error: z.object({
-    code: z.string(),
-    message: z.string(),
-    details: z.unknown().optional(),
-    timestamp: z.string().optional(),
-    path: z.string().optional(),
-  }),
+export const ApiErrorSchema = z
+  .object({
+    error: z
+      .object({
+        code: z.string(),
+        message: z.string(),
+        details: z.unknown().optional(),
+        timestamp: z.string().optional(),
+        path: z.string().optional(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+export const PcaMetaSchema = z.object({
+  explainedVariance: z.array(z.number()),
+  explainedVarianceScope: z.string().optional(),
+  zoomBounds: z.object({ xMin: z.number(), xMax: z.number(), yMin: z.number(), yMax: z.number() }),
+  outsideCount: z.number().int().nonnegative(),
+  pointCount: z.number().int().nonnegative(),
+});
+
+export const FactSchema = z.object({
+  factId: z.string(), label: z.string(), value: z.number(), unit: z.string(),
+  n: z.number().nullish(), baseline: z.number().nullish(), multiplier: z.number().nullish(),
+  ci95: z.object({ low: z.number(), high: z.number() }).nullish(),
+  name: z.string().optional(), aucDrop: z.number().optional(),
+  definition: z.string(), source: z.string(), category: z.string(),
+}).passthrough();
+
+export const FactsResponseSchema = z.object({
+  version: z.string(), generatedAt: z.string(),
+  baseline: z.object({ defaultRate: z.number(), totalClients: z.number(), defaultCount: z.number() }),
+  facts: z.array(FactSchema),
 });

@@ -5,9 +5,9 @@ import lombok.Data;
 
 @Data
 @Builder
-public class ChurnGroupResponse {
+public class DefaultGroupResponse {
     private String group;
     private int count;
-    private int attritedCount;
-    private double churnRate;
+    private int defaultCount;
+    private double defaultRate;
 }

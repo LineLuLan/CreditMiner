@@ -19,8 +19,10 @@ import {
 } from "@/components/charts/chart-theme";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatInt, formatPct } from "@/lib/utils";
-import type { EdaChurnGroup, MiningReport } from "@/types/api.types";
+import { friendlyRuleValue } from "@/lib/rules-format";
+import type { EdaDefaultGroup, MiningReport } from "@/types/api.types";
 import { DataPreparationCharts } from "./DataPreparationCharts";
+import { imputationSentence } from "./report-copy";
 import {
   EmptyEvidence,
   ReportDetails,
@@ -31,31 +33,38 @@ import {
 
 export function DataUnderstandingSection({
   report,
-  churnBy,
-  churnDimension,
+  defaultBy,
+  defaultDimension,
 }: {
   report: MiningReport;
-  churnBy?: EdaChurnGroup[];
-  churnDimension: string;
+  defaultBy?: EdaDefaultGroup[];
+  defaultDimension: string;
 }) {
-  const attrition = report.dataset.attritionBreakdown.map((row) => ({
-    name: row.name.replace("Attrited Customer", "Churn").replace("Existing Customer", "Active"),
+  const classBalance = report.dataset.defaultBreakdown.map((row) => ({
+    name: row.name === "Yes" ? "Default" : "Non-default",
     value: row.count,
   }));
-  const tiers = Object.entries(report.dataset.tierBreakdown).sort(
+  const tiers = Object.entries(report.dataset.riskTierBreakdown).sort(
     ([left], [right]) => tierRank(left) - tierRank(right) || left.localeCompare(right),
   );
-  const chartData = (churnBy ?? [])
+  const chartData = (defaultBy ?? [])
     .filter((row) => row.count > 0)
-    .map((row) => ({ ...row, group: `${row.group} (n=${formatInt(row.count)})` }));
+    .map((row) => {
+      const label = friendlyRuleValue(row.group, defaultDimension);
+      const group = /^PAY_[1-6]$/.test(defaultDimension)
+        ? label.toLowerCase().replace(/\bmonths?\b/g, "mo")
+        : label;
+      return { ...row, group: `${group} (n=${formatInt(row.count)})` };
+    });
   const maxRate =
-    Math.max(report.dataset.churnRate, ...chartData.map((row) => row.churnRate), 0.2) * 1.12;
+    Math.max(report.dataset.defaultRate, ...chartData.map((row) => row.defaultRate), 0.2) * 1.12;
+  const dimensionLabel = defaultDimensionLabel(defaultDimension);
 
   return (
     <ReportSection
       id="section-3"
       title="3 Data understanding"
-      takeaway={`${formatPct(report.dataset.churnRate)} of ${formatInt(report.dataset.totalRows)} customers churn.`}
+      takeaway={`${formatPct(report.dataset.defaultRate)} of ${formatInt(report.dataset.totalRows)} clients defaulted the next month.`}
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <DataMetric label="Rows" value={formatInt(report.dataset.totalRows)} />
@@ -66,20 +75,20 @@ export function DataUnderstandingSection({
       <div className="report-chart-grid grid gap-5 lg:grid-cols-2">
         <ReportFigure
           id="class-balance"
-          caption={`Class balance for ${formatInt(report.dataset.totalRows)} customers.`}
+          caption={`Default class balance for ${formatInt(report.dataset.totalRows)} clients.`}
         >
           <Card className="break-inside-avoid">
             <CardContent className="report-chart p-3">
-              <DonutChart data={attrition} height={250} />
+              <DonutChart data={classBalance} height={250} />
             </CardContent>
           </Card>
         </ReportFigure>
-        <ReportTable id="tier-balance" caption="Customer-tier balance in the prepared dataset.">
+        <ReportTable id="tier-balance" caption="Risk-tier balance in the prepared dataset.">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/30">
                 <th className="p-3 text-left">Tier</th>
-                <th className="p-3 text-right">Customers</th>
+                <th className="p-3 text-right">Clients</th>
                 <th className="p-3 text-right">Share</th>
               </tr>
             </thead>
@@ -98,8 +107,8 @@ export function DataUnderstandingSection({
         </ReportTable>
       </div>
       <ReportFigure
-        id="churn-dimension"
-        caption={`Churn rate by ${churnDimension}. The dashed line shows the portfolio rate.`}
+        id="default-dimension"
+        caption={`Default rate by ${dimensionLabel}. The dashed line shows the portfolio rate.`}
       >
         {chartData.length > 0 ? (
           <Card className="break-inside-avoid">
@@ -107,7 +116,7 @@ export function DataUnderstandingSection({
               <div
                 className="report-chart h-72 w-full"
                 role="img"
-                aria-label={`Churn rate by ${churnDimension}`}
+                aria-label={`Default rate by ${dimensionLabel}`}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -133,13 +142,13 @@ export function DataUnderstandingSection({
                       formatter={(value: number) => formatPct(value)}
                     />
                     <ReferenceLine
-                      x={report.dataset.churnRate}
+                      x={report.dataset.defaultRate}
                       stroke={CHART_SEMANTIC.warning}
                       strokeDasharray="5 4"
                     />
                     <Bar
-                      dataKey="churnRate"
-                      name="Churn rate"
+                      dataKey="defaultRate"
+                      name="Default rate"
                       radius={[0, 4, 4, 0]}
                       isAnimationActive={false}
                     >
@@ -147,9 +156,9 @@ export function DataUnderstandingSection({
                         <Cell
                           key={row.group}
                           fill={
-                            row.churnRate > report.dataset.churnRate
-                              ? CHART_SEMANTIC.destructive
-                              : CHART_SEMANTIC.primary
+                            row.defaultRate > report.dataset.defaultRate
+                              ? CHART_SEMANTIC.danger
+                              : CHART_SEMANTIC.neutral
                           }
                         />
                       ))}
@@ -161,12 +170,17 @@ export function DataUnderstandingSection({
           </Card>
         ) : (
           <EmptyEvidence>
-            Churn-by-dimension evidence is unavailable; the report remains readable without it.
+            Default-by-dimension evidence is unavailable. The report remains readable without it.
           </EmptyEvidence>
         )}
       </ReportFigure>
       <ReportDetails>
-        <p>Groups with fewer than 100 customers can change sharply. Read their rates with care.</p>
+        <p>Groups with fewer than 100 clients can change sharply. Read their rates with care.</p>
+        <p className="mt-2 break-words [overflow-wrap:anywhere]">
+          Source: UCI Machine Learning Repository, dataset 350 (Yeh &amp; Lien, 2009), {report.methodology?.preprocessing?.rowsIn == null ? "" : `${formatInt(report.methodology.preprocessing.rowsIn)} clients, `}
+          Taiwan, April-September 2005. Artifact attribution:{" "}
+          {report.methodology?.datasetSource ?? "not available"}.
+        </p>
       </ReportDetails>
     </ReportSection>
   );
@@ -176,6 +190,8 @@ export function DataPreparationSection({ report }: { report: MiningReport }) {
   const preprocessing = report.methodology?.preprocessing;
   const engineering = report.methodology?.featureEngineering;
   const rewrites = Object.entries(preprocessing?.unknownRewritten ?? {});
+  const mappingRules = Object.entries(preprocessing?.categoryMappingRules ?? {});
+  const negativeBills = Object.entries(preprocessing?.negativeBillByColumn ?? {});
   const outliers = Object.entries(preprocessing?.outlierByColumn ?? {});
   const features = engineering?.derivedFeatures ?? [];
 
@@ -183,18 +199,35 @@ export function DataPreparationSection({ report }: { report: MiningReport }) {
     <ReportSection
       id="section-4"
       title="4 Data preparation"
-      takeaway={`Preparation keeps ${formatInt(preprocessing?.rowsOut ?? report.dataset.totalRows)} customer rows and flags outliers without deleting them.`}
+      takeaway={`Preparation keeps ${formatInt(preprocessing?.rowsOut ?? report.dataset.totalRows)} client rows. It flags outliers without deleting them.`}
     >
+      <p className="text-sm leading-6 text-muted-foreground">
+        Phase 1 maps categorical codes to labels and rewrites undocumented codes to Other.
+        Phase 2 removes duplicate rows and records outlier flags; negative bill values and flagged rows are retained.
+      </p>
       <DataPreparationCharts rewrites={rewrites} outliers={outliers} />
       <ReportDetails label="Data tables" className="report-detail-print">
         <div className="grid gap-5 lg:grid-cols-2">
           <ReportTable
             id="unknown-rewrites"
-            caption="Unknown categorical values rewritten during preparation."
+            caption="Categorical codes mapped to labels; undocumented codes rewritten to Other."
           >
             <SimpleTable
-              headers={["Column", "Rows"]}
-              rows={rewrites.map(([name, count]) => [name, formatInt(count)])}
+              headers={["Column", "Mapping rule", "Undocumented rows -> Other"]}
+              rows={mappingRules.map(([name, rule]) => [
+                name,
+                rule,
+                preprocessing?.unknownRewritten ? formatInt(preprocessing.unknownRewritten[name] ?? 0) : "n/a",
+              ])}
+            />
+          </ReportTable>
+          <ReportTable
+            id="negative-bill-counts"
+            caption={`${formatMaybeInt(preprocessing?.negativeBillTotal)} negative bill amounts retained as valid credit balances.`}
+          >
+            <SimpleTable
+              headers={["Bill column", "Negative values"]}
+              rows={negativeBills.map(([name, count]) => [name, formatInt(count)])}
             />
           </ReportTable>
           <ReportTable
@@ -213,8 +246,9 @@ export function DataPreparationSection({ report }: { report: MiningReport }) {
           </ReportTable>
         </div>
         <p className="mt-3">
-          Numeric gaps use median values. Unknown categories get explicit labels. Outliers stay in
-          the data.
+          {imputationSentence(preprocessing)}{" "}
+          Unknown categories get explicit labels. Negative bill
+          amounts and flagged outliers stay in the data.
         </p>
       </ReportDetails>
       <ReportTable
@@ -313,6 +347,11 @@ function formatMaybeInt(value: number | undefined): string {
 }
 
 function tierRank(tier: string): number {
-  const order: Record<string, number> = { Bronze: 0, Silver: 1, Gold: 2, Platinum: 3 };
+  const order: Record<string, number> = { Low: 0, Medium: 1, High: 2 };
   return order[tier] ?? Number.MAX_SAFE_INTEGER;
+}
+
+function defaultDimensionLabel(dimension: string): string {
+  if (dimension === "PAY_1") return "September 2005 repayment status";
+  return dimension.replaceAll("_", " ").toLowerCase();
 }

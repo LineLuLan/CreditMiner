@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCount, formatPct1 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface ConfusionMatrixProps {
@@ -18,7 +19,7 @@ export function ConfusionMatrix({ labels, matrix, compact = false, title }: Conf
     );
   }
 
-  const names = labels?.length === 2 ? labels : ["Existing", "Attrited"];
+  const names = labels?.length === 2 ? labels : ["No", "Yes"];
   const max = Math.max(...matrix.flat(), 1);
 
   return (
@@ -74,10 +75,10 @@ export function ConfusionMatrix({ labels, matrix, compact = false, title }: Conf
                   }}
                 >
                   <span className={cn("font-bold", compact ? "text-xs" : "text-lg")}>
-                    {value.toLocaleString("en-US")}
+                    {formatCount(value)}
                   </span>
                   <span className={cn("text-muted-foreground", compact ? "text-[9px]" : "text-xs")}>
-                    {(ratio * 100).toFixed(1)}%
+                    {formatPct1(ratio)}
                   </span>
                 </div>
               );

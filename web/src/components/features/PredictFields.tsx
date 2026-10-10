@@ -18,123 +18,72 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PredictRequest } from "@/types/api.types";
+import { PredictMoneyInput } from "./PredictMoneyInput";
+import { PAY_STATUS_OPTIONS } from "@/lib/constants";
 
-export const SAMPLE_LOW_RISK: PredictRequest = {
-  customerAge: 45,
-  gender: "M",
-  dependentCount: 3,
-  educationLevel: "Graduate",
-  maritalStatus: "Married",
-  incomeCategory: "$60K - $80K",
-  cardCategory: "Blue",
-  monthsOnBook: 36,
-  totalRelationshipCount: 5,
-  monthsInactive12Mon: 2,
-  contactsCount12Mon: 3,
-  creditLimit: 12500,
-  totalRevolvingBal: 800,
-  totalTransAmt: 4500,
-  totalTransCt: 45,
-  avgUtilizationRatio: 0.064,
-  totalAmtChngQ4Q1: 1,
-  totalCtChngQ4Q1: 1,
+export const SAMPLE_PROFILE: PredictRequest = {
+  limitBal: 200000,
+  sex: "Female",
+  education: "University",
+  marriage: "Single",
+  age: 35,
+  pay1: 0,
+  pay2: 0,
+  pay3: 0,
+  pay4: 0,
+  pay5: 0,
+  pay6: 0,
+  billAmt1: 50000,
+  billAmt2: 48000,
+  billAmt3: 46000,
+  billAmt4: 44000,
+  billAmt5: 42000,
+  billAmt6: 40000,
+  payAmt1: 5000,
+  payAmt2: 5000,
+  payAmt3: 5000,
+  payAmt4: 5000,
+  payAmt5: 5000,
+  payAmt6: 5000,
 };
 
-const SAMPLE_MID_RISK: PredictRequest = {
-  customerAge: 49,
-  gender: "F",
-  dependentCount: 2,
-  educationLevel: "College",
-  maritalStatus: "Married",
-  incomeCategory: "$40K - $60K",
-  cardCategory: "Blue",
-  monthsOnBook: 30,
-  totalRelationshipCount: 3,
-  monthsInactive12Mon: 3,
-  contactsCount12Mon: 3,
-  creditLimit: 6500,
-  totalRevolvingBal: 1500,
-  totalTransAmt: 2400,
-  totalTransCt: 30,
-  avgUtilizationRatio: 0.42,
-  totalAmtChngQ4Q1: 0.75,
-  totalCtChngQ4Q1: 0.7,
-};
-
-const SAMPLE_HIGH_RISK: PredictRequest = {
-  customerAge: 55,
-  gender: "M",
-  dependentCount: 4,
-  educationLevel: "High School",
-  maritalStatus: "Divorced",
-  incomeCategory: "Less than $40K",
-  cardCategory: "Blue",
-  monthsOnBook: 24,
-  totalRelationshipCount: 2,
-  monthsInactive12Mon: 5,
-  contactsCount12Mon: 4,
-  creditLimit: 2500,
-  totalRevolvingBal: 2000,
-  totalTransAmt: 1200,
-  totalTransCt: 15,
-  avgUtilizationRatio: 0.8,
-  totalAmtChngQ4Q1: 0.4,
-  totalCtChngQ4Q1: 0.3,
-};
-
-export const PREDICT_SAMPLES: Array<{
-  label: string;
-  buttonText: string;
-  tooltip: string;
-  value: PredictRequest;
-  tone: "success" | "warning" | "destructive";
-}> = [
-  {
-    label: "Low-risk",
-    buttonText: "Load low-risk sample",
-    tooltip: "Healthy utilization and frequent activity indicate low churn risk.",
-    value: SAMPLE_LOW_RISK,
-    tone: "success",
-  },
-  {
-    label: "Mid-risk",
-    buttonText: "Load mid-risk sample",
-    tooltip: "Moderate utilization and lower spending create a borderline churn score.",
-    value: SAMPLE_MID_RISK,
-    tone: "warning",
-  },
-  {
-    label: "High-risk",
-    buttonText: "Load high-risk sample",
-    tooltip: "High utilization, low activity, and fewer transactions indicate high churn risk.",
-    value: SAMPLE_HIGH_RISK,
-    tone: "destructive",
-  },
-];
-
-const EDUCATION_OPTIONS: PredictRequest["educationLevel"][] = [
-  "Uneducated",
-  "High School",
-  "College",
+const EDUCATION_OPTIONS: PredictRequest["education"][] = [
   "Graduate",
-  "Post-Graduate",
-  "Doctorate",
-  "Unknown",
+  "University",
+  "HighSchool",
+  "Other",
 ];
-const MARITAL_OPTIONS: PredictRequest["maritalStatus"][] = [
-  "Single",
-  "Married",
-  "Divorced",
-  "Unknown",
-];
-const INCOME_OPTIONS: PredictRequest["incomeCategory"][] = [
-  "Less than $40K",
-  "$40K - $60K",
-  "$60K - $80K",
-  "$80K - $120K",
-  "$120K +",
-  "Unknown",
-];
+
+const MARRIAGE_OPTIONS: PredictRequest["marriage"][] = ["Married", "Single", "Other"];
+
+const STATUS_FIELDS = [
+  { name: "pay1", label: "September 2005" },
+  { name: "pay2", label: "August 2005" },
+  { name: "pay3", label: "July 2005" },
+  { name: "pay4", label: "June 2005" },
+  { name: "pay5", label: "May 2005" },
+  { name: "pay6", label: "April 2005" },
+] as const;
+
+const BILL_FIELDS = [
+  { name: "billAmt1", label: "September 2005" },
+  { name: "billAmt2", label: "August 2005" },
+  { name: "billAmt3", label: "July 2005" },
+  { name: "billAmt4", label: "June 2005" },
+  { name: "billAmt5", label: "May 2005" },
+  { name: "billAmt6", label: "April 2005" },
+] as const;
+
+const PAYMENT_FIELDS = [
+  { name: "payAmt1", label: "September 2005" },
+  { name: "payAmt2", label: "August 2005" },
+  { name: "payAmt3", label: "July 2005" },
+  { name: "payAmt4", label: "June 2005" },
+  { name: "payAmt5", label: "May 2005" },
+  { name: "payAmt6", label: "April 2005" },
+] as const;
+
+type AmountFieldName = (typeof BILL_FIELDS)[number]["name"] | (typeof PAYMENT_FIELDS)[number]["name"];
 
 export function PredictFields({
   register,
@@ -150,102 +99,84 @@ export function PredictFields({
   return (
     <>
       <Card>
-        <CardHeader><CardTitle className="text-base">Demographics</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Profile</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Customer age" error={errors.customerAge?.message}>
-            <Input type="number" {...register("customerAge", { valueAsNumber: true })} />
+          <Field label="Credit limit (NT$)" error={errors.limitBal?.message}>
+            <PredictMoneyInput value={watch("limitBal")} onValueChange={(value) => setValue("limitBal", value, { shouldValidate: true, shouldDirty: true })} />
           </Field>
-          <Field label="Gender" error={errors.gender?.message}>
-            <Select value={watch("gender")} onValueChange={(value) => setValue("gender", value as PredictRequest["gender"])}>
-              <SelectTrigger aria-label="Gender"><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="M">Male</SelectItem><SelectItem value="F">Female</SelectItem></SelectContent>
+          <Field label="Sex" error={errors.sex?.message}>
+            <Select value={watch("sex")} onValueChange={(value) => setValue("sex", value as PredictRequest["sex"], { shouldValidate: true })}>
+              <SelectTrigger aria-label="Sex"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent>
             </Select>
           </Field>
-          <Field label="Dependents" error={errors.dependentCount?.message}>
-            <Input type="number" {...register("dependentCount", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Education level" error={errors.educationLevel?.message}>
-            <Select value={watch("educationLevel")} onValueChange={(value) => setValue("educationLevel", value as PredictRequest["educationLevel"])}>
-              <SelectTrigger aria-label="Education level"><SelectValue /></SelectTrigger>
-              <SelectContent>{EDUCATION_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
+          <Field label="Education" error={errors.education?.message}>
+            <Select value={watch("education")} onValueChange={(value) => setValue("education", value as PredictRequest["education"], { shouldValidate: true })}>
+              <SelectTrigger aria-label="Education"><SelectValue /></SelectTrigger>
+              <SelectContent>{EDUCATION_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option === "HighSchool" ? "High school" : option}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
-          <Field label="Marital status" error={errors.maritalStatus?.message}>
-            <Select value={watch("maritalStatus")} onValueChange={(value) => setValue("maritalStatus", value as PredictRequest["maritalStatus"])}>
-              <SelectTrigger aria-label="Marital status"><SelectValue /></SelectTrigger>
-              <SelectContent>{MARITAL_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
+          <Field label="Marriage" error={errors.marriage?.message}>
+            <Select value={watch("marriage")} onValueChange={(value) => setValue("marriage", value as PredictRequest["marriage"], { shouldValidate: true })}>
+              <SelectTrigger aria-label="Marriage"><SelectValue /></SelectTrigger>
+              <SelectContent>{MARRIAGE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
-          <Field label="Income category" error={errors.incomeCategory?.message}>
-            <Select value={watch("incomeCategory")} onValueChange={(value) => setValue("incomeCategory", value as PredictRequest["incomeCategory"])}>
-              <SelectTrigger aria-label="Income category"><SelectValue /></SelectTrigger>
-              <SelectContent>{INCOME_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
-            </Select>
+          <Field label="Age" error={errors.age?.message}>
+            <Input type="number" min={18} {...register("age", { valueAsNumber: true })} />
           </Field>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Account relationship</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Repayment status</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Card category" error={errors.cardCategory?.message}>
-            <Select value={watch("cardCategory")} onValueChange={(value) => setValue("cardCategory", value as PredictRequest["cardCategory"])}>
-              <SelectTrigger aria-label="Card category"><SelectValue /></SelectTrigger>
-              <SelectContent>{["Blue", "Silver", "Gold", "Platinum"].map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <Field label="Months on book" error={errors.monthsOnBook?.message}>
-            <Input type="number" {...register("monthsOnBook", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Months inactive (12mo)" error={errors.monthsInactive12Mon?.message}>
-            <Input type="number" {...register("monthsInactive12Mon", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Total relationships" error={errors.totalRelationshipCount?.message}>
-            <Input type="number" {...register("totalRelationshipCount", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Contacts (12mo)" error={errors.contactsCount12Mon?.message}>
-            <Input type="number" {...register("contactsCount12Mon", { valueAsNumber: true })} />
-          </Field>
+          {STATUS_FIELDS.map((field) => (
+            <Field key={field.name} label={field.label} error={errors[field.name]?.message}>
+              <Select value={String(watch(field.name))} onValueChange={(value) => setValue(field.name, Number(value), { shouldValidate: true })}>
+                <SelectTrigger aria-label={field.label}><SelectValue /></SelectTrigger>
+                <SelectContent>{PAY_STATUS_OPTIONS.map((option) => <SelectItem key={option.value} value={String(option.value)}>{option.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+          ))}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle className="text-base">Transactional behaviour</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Credit limit" error={errors.creditLimit?.message}>
-            <Input type="number" {...register("creditLimit", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Total revolving bal" error={errors.totalRevolvingBal?.message}>
-            <Input type="number" {...register("totalRevolvingBal", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Total trans amount" error={errors.totalTransAmt?.message}>
-            <Input type="number" {...register("totalTransAmt", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Total trans count" error={errors.totalTransCt?.message}>
-            <Input type="number" {...register("totalTransCt", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Avg utilization (0-1)" error={errors.avgUtilizationRatio?.message}>
-            <Input type="number" step="0.001" {...register("avgUtilizationRatio", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Q4/Q1 amount ratio (optional)" error={errors.totalAmtChngQ4Q1?.message}>
-            <Input type="number" step="0.01" placeholder="default 1.0 (no change)" {...register("totalAmtChngQ4Q1", { valueAsNumber: true })} />
-          </Field>
-          <Field label="Q4/Q1 count ratio (optional)" error={errors.totalCtChngQ4Q1?.message}>
-            <Input type="number" step="0.01" placeholder="default 1.0 (no change)" {...register("totalCtChngQ4Q1", { valueAsNumber: true })} />
-          </Field>
-        </CardContent>
-      </Card>
+      <AmountFields title="Bill amounts" fields={BILL_FIELDS} watch={watch} setValue={setValue} errors={errors} allowNegative />
+      <AmountFields title="Payment amounts" fields={PAYMENT_FIELDS} watch={watch} setValue={setValue} errors={errors} />
     </>
+  );
+}
+
+function AmountFields({ title, fields, watch, setValue, errors, allowNegative = false }: {
+  title: string;
+  fields: ReadonlyArray<{ name: AmountFieldName; label: string }>;
+  watch: UseFormWatch<PredictRequest>;
+  setValue: UseFormSetValue<PredictRequest>;
+  errors: FieldErrors<PredictRequest>;
+  allowNegative?: boolean;
+}) {
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">{title} (NT$)</CardTitle></CardHeader>
+      <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {fields.map((field) => (
+          <Field key={field.name} label={field.label} error={errors[field.name]?.message}>
+            <PredictMoneyInput value={watch(field.name)} allowNegative={allowNegative} onValueChange={(value) => setValue(field.name, value, { shouldValidate: true, shouldDirty: true })} />
+          </Field>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactElement }) {
   const id = React.useId();
   return (
-    <div className="space-y-1.5">
+    <div className="min-w-0 space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
       {React.cloneElement(children, { id })}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
     </div>
   );
 }

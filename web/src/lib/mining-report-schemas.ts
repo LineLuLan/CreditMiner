@@ -4,22 +4,62 @@ import { z } from "zod";
 export const ClusterSchema = z.object({
   clusterId: z.number().int(),
   personaName: z.string(),
+  displayName: z.string().nullish(),
   size: z.number().int(),
   centroid: z.record(z.number()),
   avgRisk: z.number(),
-  churnRate: z.number(),
+  defaultRate: z.number(),
   description: z.string(),
+  shareOfClients: z.number().nullish(),
+  shareOfDefaults: z.number().nullish(),
+  defaultRateMultiplier: z.number().nullish(),
+  baseline: z.object({ size: z.number(), defaultRate: z.number(), centroid: z.record(z.number()) }).nullish(),
+  centroidDelta: z.record(z.number()).nullish(),
+  traits: z.array(z.string()).nullish(),
+  evidence: z.object({ k: z.number(), silhouette: z.number(), method: z.string() }).nullish(),
+  baselineDelta: z.number().optional(),
+  pcaExplainedVariance: z.union([z.number(), z.array(z.number()), z.record(z.number())]).optional(),
+  zoomBounds: z
+    .object({
+      xMin: z.number().optional(),
+      xMax: z.number().optional(),
+      yMin: z.number().optional(),
+      yMax: z.number().optional(),
+      x: z.tuple([z.number(), z.number()]).optional(),
+      y: z.tuple([z.number(), z.number()]).optional(),
+    })
+    .passthrough()
+    .optional(),
 });
 
 // ---------- Rules ----------
-export const RuleSchema = z.object({
+export const RuleConditionSchema = z.object({
+  attribute: z.string(),
+  label: z.string().optional(),
+  operator: z.string().optional(),
+  value: z.union([z.string(), z.number()]),
+  unit: z.string().optional(),
+});
+const RuleBaseSchema = z.object({
   ruleId: z.number(),
   lhs: z.string(),
   rhs: z.string(),
   support: z.number(),
   confidence: z.number(),
   lift: z.number(),
-  category: z.enum(["churn", "retention"]),
+  category: z.enum(["default", "non-default"]),
+  conditions: z.array(RuleConditionSchema).optional(),
+  shortName: z.string().optional(),
+  familyId: z.string().optional(),
+  familyLabel: z.string().optional(),
+  jointCount: z.number().int().nonnegative().optional(),
+  lhsCount: z.number().int().nonnegative().optional(),
+  baseline: z.number().optional(),
+});
+
+type RuleContract = z.infer<typeof RuleBaseSchema> & { familyMembers?: RuleContract[] };
+export const RuleSchema: z.ZodType<RuleContract> = RuleBaseSchema.extend({
+  familyMembers: z.lazy(() => RuleSchema.array()).optional(),
 });
 
 // ---------- Insights ----------
@@ -29,8 +69,8 @@ export const InsightSchema = z.object({
   discovery: z.string(),
   evidence: z.string(),
   recommendation: z.string(),
-  category: z.enum(["churn", "cluster", "risk", "opportunity"]),
-  priority: z.number().int(),
+  category: z.enum(["driver", "segment", "context"]),
+  priority: z.number().int().positive(),
 });
 
 export const InsightVisualBarSchema = z.object({
@@ -60,7 +100,7 @@ export const InsightVisualSchema = z.object({
 
 // ---------- Anomalies ----------
 export const AnomalySchema = z.object({
-  clientNum: z.number(),
+  clientId: z.number(),
   reason: z.string(),
   score: z.number(),
   clusterId: z.number().int().nullable(),
@@ -68,7 +108,7 @@ export const AnomalySchema = z.object({
 
 // ---------- PCA-2D ----------
 export const PcaPointSchema = z.object({
-  clientNum: z.number(),
+  clientId: z.number(),
   clusterId: z.number().int(),
   x: z.number(),
   y: z.number(),
@@ -104,9 +144,9 @@ export const ModelMetricSchema = z.object({
 
 const OptionalMetricSetSchema = z.object({
   accuracy: z.number().nullable().optional(),
-  precisionAttrited: z.number().nullable().optional(),
-  recallAttrited: z.number().nullable().optional(),
-  f1Attrited: z.number().nullable().optional(),
+  precisionDefault: z.number().nullable().optional(),
+  recallDefault: z.number().nullable().optional(),
+  f1Default: z.number().nullable().optional(),
   rocAuc: z.number().nullable().optional(),
   prAuc: z.number().nullable().optional(),
   kappa: z.number().nullable().optional(),
@@ -128,6 +168,11 @@ export const EvaluationVariantSchema = z.object({
     .object({ options: z.string().nullable().optional(), summary: z.string().optional() })
     .optional(),
   trainTimeMs: z.number().nullable().optional(),
+  buildTimeMs: z.number().nullable().optional(),
+  cvTimeMs: z.number().nullable().optional(),
+  testPredictTimeMs: z.number().nullable().optional(),
+  testRows: z.number().int().nullable().optional(),
+  predictMicrosPerRecord: z.number().nullable().optional(),
   cv: OptionalMetricSetSchema.optional(),
   test: OptionalMetricSetSchema.extend({
     confusionMatrix: ConfusionMatrixSchema,
@@ -199,13 +244,18 @@ export const ClassificationEvaluationSchema = z.object({
 });
 
 export const MethodologySchema = z.object({
+  datasetSource: z.string().optional(),
   preprocessing: z
     .object({
       rowsIn: z.number().optional(),
       rowsOut: z.number().optional(),
       duplicatesDropped: z.number().optional(),
       unknownRewritten: z.record(z.number()).optional(),
+      categoryMappingRules: z.record(z.string()).optional(),
+      renamedColumns: z.record(z.string()).optional(),
       numericMedianImputed: z.record(z.number()).optional(),
+      negativeBillByColumn: z.record(z.number()).optional(),
+      negativeBillTotal: z.number().optional(),
       outlierByColumn: z
         .record(
           z.object({
@@ -262,17 +312,21 @@ export const MethodologySchema = z.object({
     .object({
       discretization: z.string().optional(),
       attributesUsed: z.array(z.string()).optional(),
-      retentionPass: z
+      nonDefaultPass: z
         .object({
           minSupport: z.number().optional(),
+          attemptedSupports: z.array(z.number()).optional(),
           minConfidence: z.number().optional(),
           minLift: z.number().optional(),
           numRules: z.number().optional(),
+          metric: z.string().optional(),
         })
         .optional(),
-      churnPass: z
+      defaultPass: z
         .object({
           minSupport: z.number().optional(),
+          attemptedSupports: z.array(z.number()).optional(),
+          finalSupport: z.number().optional(),
           minLift: z.number().optional(),
           numRules: z.number().optional(),
           metric: z.string().optional(),
@@ -295,6 +349,7 @@ export const FeatureImportanceReportSchema = z.object({
   name: z.string(),
   importance: z.number(),
   share: z.number(),
+  aucDrop: z.number().nullish(),
 });
 
 export const ElbowPointSchema = z.object({
@@ -313,11 +368,11 @@ export const MiningReportSchema = z.object({
     categoricalColumns: z.number().int(),
     totalMissingValues: z.number().int(),
     dbCustomerRows: z.number(),
-    attritedCustomers: z.number(),
-    churnRate: z.number(),
-    attritionBreakdown: z.array(NameCountSchema),
+    defaultCustomers: z.number(),
+    defaultRate: z.number(),
+    defaultBreakdown: z.array(NameCountSchema),
     topMissingColumns: z.array(ColumnMissingSchema),
-    tierBreakdown: z.record(z.number()),
+    riskTierBreakdown: z.record(z.number()),
     leakageColumnsDropped: z.array(z.string()),
   }),
   classification: z.object({
@@ -337,8 +392,8 @@ export const MiningReportSchema = z.object({
   }),
   rules: z.object({
     totalRules: z.number(),
-    churnRules: z.number(),
-    retentionRules: z.number(),
+    defaultRules: z.number(),
+    nonDefaultRules: z.number(),
     avgSupport: z.number(),
     avgConfidence: z.number(),
     avgLift: z.number(),
@@ -361,6 +416,7 @@ export const MiningReportSchema = z.object({
     rule: z.string().nullable().optional(),
     topAnomalies: z.array(AnomalySchema),
   }),
+  sequences: z.unknown(),
   methodology: MethodologySchema.nullable().optional(),
   insights: z.array(InsightSchema),
   warnings: z.array(z.string()),

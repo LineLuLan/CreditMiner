@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDecimal } from "@/lib/format";
 import { EDA_FIELD_LABELS, EDA_FIELD_SHORT_LABELS } from "@/lib/constants";
 
 interface Props {
@@ -54,11 +55,11 @@ export function HeatmapChart({ columns, matrix }: Props) {
                   <div
                     className="h-7 w-full rounded-sm"
                     style={{ backgroundColor: corrColor(value) }}
-                    title={`${columns[i]} x ${columns[j]}: r = ${value.toFixed(2)}`}
-                    aria-label={`${columns[i]} x ${columns[j]}: r = ${value.toFixed(2)}`}
+                    title={`${columns[i]} x ${columns[j]}: r = ${formatDecimal(value, 2)}`}
+                    aria-label={`${columns[i]} x ${columns[j]}: r = ${formatDecimal(value, 2)}`}
                   >
                     <span className="block h-full w-full text-center text-[9px] leading-7 text-foreground/80">
-                      {value.toFixed(1)}
+                      {formatDecimal(value, 1)}
                     </span>
                   </div>
                 </td>

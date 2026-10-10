@@ -12,12 +12,16 @@
     --popover-foreground: 222.2 84% 4.9%;
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
+    --secondary: 214 32% 92.5%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 192 75% 92%;
+    --muted: 214 32% 92.5%;
+    --muted-foreground: 215 19% 38%;
+    --accent: 192 60% 86%;
     --accent-foreground: 196 80% 22%;
+    --danger: 0 72% 50%;
+    --danger-foreground: 0 0% 100%;
+    --chart-neutral: 215 16% 57%;
+    --chart-baseline: var(--foreground) / 0.6;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --success: 152 60% 36%;
@@ -26,8 +30,8 @@
     --warning-foreground: 30 80% 12%;
     --info: 199 89% 48%;
     --info-foreground: 200 95% 96%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 214 26% 84%;
+    --input: 214 26% 84%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
     --chart-1: 221 83% 53%;
@@ -52,6 +56,10 @@
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 192 55% 22%;
     --accent-foreground: 192 80% 88%;
+    --danger: 0 84% 62%;
+    --danger-foreground: 222.2 84% 4.9%;
+    --chart-neutral: 215 15% 40%;
+    --chart-baseline: var(--foreground) / 0.6;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --success: 152 55% 45%;
@@ -83,7 +91,13 @@
   }
 }
 
+/* Recharts generates this class at runtime; keep it outside Tailwind layers. */
+.recharts-legend-item-text {
+  color: hsl(var(--foreground)) !important;
+}
+
 @layer components {
+
   .h1 {
     @apply text-4xl font-bold tracking-tight md:text-5xl;
   }
@@ -154,6 +168,10 @@
     --muted-foreground: 215.4 16.3% 35%;
     --border: 214.3 31.8% 78%;
     --input: 214.3 31.8% 78%;
+    --danger: 0 72% 50%;
+    --danger-foreground: 0 0% 100%;
+    --chart-neutral: 215 16% 57%;
+    --chart-baseline: var(--foreground) / 0.6;
     --ring: 221.2 83.2% 35%;
     --chart-1: 221 83% 45%;
     --chart-2: 160 70% 34%;
@@ -328,5 +346,23 @@
   .insights-page,
   .methodology-page {
     background: white !important;
+  }
+
+  .paper-report-shell main,
+  .paper-document,
+  .paper-cover {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .paper-cover {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .paper-numbered-section {
+    break-before: page;
+    page-break-before: always;
   }
 }

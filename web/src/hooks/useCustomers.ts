@@ -2,14 +2,9 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { CustomerQueryParams } from "@/lib/api";
 
-export function useCustomers(params: {
-  page?: number;
-  size?: number;
-  attritionFlag?: string;
-  clusterId?: number;
-  sort?: string;
-}) {
+export function useCustomers(params: CustomerQueryParams) {
   return useQuery({
     queryKey: ["customers", params],
     queryFn: () => api.customers(params),

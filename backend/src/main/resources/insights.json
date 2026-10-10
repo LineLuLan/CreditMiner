@@ -1,66 +1,82 @@
 [
   {
-    "title": "Falling card activity predicts churn",
-    "discovery": "Customers whose transaction count fell by half from Q1 to Q4 churned at 50.9%. The portfolio rate is 16.1%.",
-    "evidence": "1,370 customers, lift 3.2. Transaction count has the strongest correlation with churn (r = -0.371). 23 of the 30 churn rules contain a low transaction count or a low count change. Source: phase9_insight_facts.json, models/rules.json.",
-    "recommendation": "Compute the Q4/Q1 transaction ratio each month. Open a retention case when the ratio is below 0.5.",
-    "category": "churn",
+    "title": "Two months late now predicts default",
+    "discovery": "Clients two months late on the latest statement defaulted at 69.1%. The portfolio rate is 22.1%.",
+    "evidence": "2,666 clients; 3.1 times the portfolio default rate. This is an observed group rate, not an individual prediction. facts: default-rate-pay1-late2, default-rate-overall.",
+    "recommendation": "Review accounts that are two or more months late on the latest statement.",
+    "category": "driver",
     "priority": 1
   },
   {
-    "title": "Unused credit lines churn most",
-    "discovery": "Customers with a zero revolving balance churned at 36.1%. Customers with a balance of $1,000 to $2,000 churned at 4.6%.",
-    "evidence": "2,470 customers, lift 2.25. High utilization (above 0.75) churned at 15.5%, which is below the portfolio rate. 8 of the 30 churn rules contain a low balance and low utilization. Source: phase9_insight_facts.json, models/rules.json.",
-    "recommendation": "Flag a card that has a zero balance for two statements. Offer a balance transfer or an instalment plan.",
-    "category": "churn",
-    "priority": 1
-  },
-  {
-    "title": "Inactive customers with low use churn at 47%",
-    "discovery": "Customers with 3 or more inactive months and a low transaction count churned at 46.8%.",
-    "evidence": "1,241 customers, lift 2.9. Inactivity alone is weaker: 4 or more inactive months gives 24.6%. 9 of the 30 churn rules contain inactivity above 2.5 months. Source: phase9_insight_facts.json (combos), models/rules.json.",
-    "recommendation": "Start a re-engagement message at the second inactive month. Call the customer at the third month if the transaction count is low.",
-    "category": "churn",
-    "priority": 1
-  },
-  {
-    "title": "Many bank contacts signal distress",
-    "discovery": "Customers who contacted the bank 5 times in a year churned at 33.5%. Customers with no contacts churned at 1.8%.",
-    "evidence": "Contact count has the strongest positive correlation with churn (r = +0.204). 10 of the 30 churn rules contain more than 2.5 contacts. Source: phase9_insight_facts.json, models/rules.json.",
-    "recommendation": "Send customers with 4 or more contacts to a resolution desk. Record the reason for each contact.",
-    "category": "risk",
+    "title": "Worst delay of three or more months",
+    "discovery": "Clients whose worst delay was three or more months defaulted at 62.8%, compared with 11.7% when the worst delay was zero or less.",
+    "evidence": "1,192 clients had a worst delay of three or more months; 19,918 had no positive delay across the six statements. facts: default-rate-worst-delay-ge3, default-rate-worst-delay-le0, default-rate-overall.",
+    "recommendation": "Review the worst repayment delay across all six statements.",
+    "category": "driver",
     "priority": 2
   },
   {
-    "title": "Customers with 1 or 2 products churn twice as often",
-    "discovery": "Customers with 1 or 2 products churned at 25.6% and 27.8%. Customers with 6 products churned at 10.5%.",
-    "evidence": "The two churn rules with the highest lift (5.9, confidence 95%) contain a product count of 3 or less. RandomForest importance rank 7. Source: phase9_insight_facts.json, models/rules.json.",
-    "recommendation": "Sell a second product in the first year. Track churn by product count.",
-    "category": "risk",
-    "priority": 2
-  },
-  {
-    "title": "One segment holds 64% of all churn",
-    "discovery": "The At-Risk Mid-Tier segment has 39% of customers and 63.8% of all churned customers. Its churn rate is 26.1%.",
-    "evidence": "K-means, k = 3, selected by silhouette (0.218). Segment profile: credit limit $6,486, revolving balance $498, 60 transactions per year. Source: phase9_insight_facts.json (byCluster).",
-    "recommendation": "Put the retention budget in this segment. A decrease from 26% to 21% keeps about 200 customers per year.",
-    "category": "opportunity",
-    "priority": 2
-  },
-  {
-    "title": "Premium Loyal customers use 7% of their credit",
-    "discovery": "The Premium Loyal segment has the highest credit limit ($24,287) and uses 6.8% of it. Its churn rate is 11.7%.",
-    "evidence": "1,920 customers. They spend the most: $6,737 per year in 75 transactions. Source: phase9_insight_facts.json (byCluster).",
-    "recommendation": "Offer rewards and instalment purchases to increase card use. Do not spend the retention budget here.",
-    "category": "opportunity",
+    "title": "Each late month adds risk",
+    "discovery": "Default rates rose across the late-month counts, from 11.7% with none to 70.3% with all six.",
+    "evidence": "3,743 clients had three or more late months and defaulted at 60.0%. Counts describe the six observed statements. facts: default-rate-months-delayed-0, default-rate-months-delayed-1, default-rate-months-delayed-2, default-rate-months-delayed-3, default-rate-months-delayed-4, default-rate-months-delayed-5, default-rate-months-delayed-6, default-rate-months-delayed-ge3.",
+    "recommendation": "Count late months when prioritizing repayment reviews.",
+    "category": "driver",
     "priority": 3
   },
   {
-    "title": "Card colour does not predict churn. Value score does.",
-    "discovery": "Blue cards churned at 16.1% and Silver cards at 14.8%. The Bronze value tier churned at 30.4% and the Gold tier at 7.7%.",
-    "evidence": "Income, education, gender and marital status are all within 2 points of the portfolio rate. Source: phase9_insight_facts.json.",
-    "recommendation": "Segment retention campaigns by value score and activity. Do not segment by card colour or demographics.",
-    "category": "risk",
-    "priority": 3
+    "title": "One cluster holds almost half of all defaults",
+    "discovery": "Cluster 0 contains 18.4% of clients and 44.5% of all defaults. Its default rate is 53.5%.",
+    "evidence": "Cluster 0: 5,516 clients and 2,950 defaults; 44.5% of portfolio defaults. Cluster 1: 24,449 clients and 15.1% default. facts: share-of-clients-cluster-0, share-of-defaults-cluster-0, default-rate-cluster-0, default-rate-cluster-1.",
+    "recommendation": "Review repayment histories within the higher-default cluster.",
+    "category": "segment",
+    "priority": 4
+  },
+  {
+    "title": "Low credit limits carry the most default",
+    "discovery": "The lowest credit-limit quarter defaulted at 31.8%. The highest quarter defaulted at 14.0%.",
+    "evidence": "7,673 clients in the lowest quarter. Quartile default rates: 31.8%, 24.7%, 17.4%, 14.0%. facts: default-rate-limit-q1, default-rate-limit-q2, default-rate-limit-q3, default-rate-limit-q4.",
+    "recommendation": "Review repayment history alongside the credit limit.",
+    "category": "driver",
+    "priority": 5
+  },
+  {
+    "title": "Small payments signal default",
+    "discovery": "The lowest latest-payment quarter defaulted at 31.7%. The highest quarter defaulted at 13.8%.",
+    "evidence": "7,805 clients in the lowest quarter. Quartile default rates by latest payment amount (PAY_AMT1): 31.7%, 22.1%, 20.5%, 13.8%. The amount is a single-statement figure; it does not establish consecutive low-payment statements. facts: default-rate-payment-amount-q1, default-rate-payment-amount-q2, default-rate-payment-amount-q3, default-rate-payment-amount-q4.",
+    "recommendation": "Review clients whose latest payment falls in the lowest quarter alongside their repayment history.",
+    "category": "driver",
+    "priority": 6
+  },
+  {
+    "title": "Paying a larger share of the bill lowers risk",
+    "discovery": "Higher six-month aggregate payment-ratio quartiles had lower observed default rates: 29.2%, 26.2%, 17.9%, 15.3%.",
+    "evidence": "The lowest quartile has 7,493 clients; the highest has 7,491. PAY_RATIO divides six-month payments by positive bills (denominator at least 1), capped at 5. This association does not show that increasing payments causes lower default. facts: default-rate-payment-ratio-q1, default-rate-payment-ratio-q2, default-rate-payment-ratio-q3, default-rate-payment-ratio-q4.",
+    "recommendation": "Review the six-month aggregate payment ratio with delay history.",
+    "category": "driver",
+    "priority": 7
+  },
+  {
+    "title": "Age matters only at the edges",
+    "discovery": "Clients aged 30-39 had the lowest age-band default rate, 20.3%. Clients aged 60 or more had the highest, 28.3%.",
+    "evidence": "Age 30-39: 11,226 clients. Age 60+: only 339 clients, so the estimate is less precise. These are descriptive group differences. facts: default-rate-age-le29, default-rate-age-30-39, default-rate-age-40-49, default-rate-age-50-59, default-rate-age-60-plus.",
+    "recommendation": "Compare confidence intervals and use age bands for fairness checks.",
+    "category": "context",
+    "priority": 8
+  },
+  {
+    "title": "Demographic default rates differ",
+    "discovery": "Education default rates span 18.1 percentage points including Other. Married clients defaulted at 23.5%, single clients at 20.9%.",
+    "evidence": "Graduate 19.2% (n=10,563); University 23.7% (n=14,019); HighSchool 25.2% (n=4,915); Other 7.1% (n=468). Married 23.5% (n=13,643); Single 20.9% (n=15,945); Other 23.6% (n=377). Male 24.2% (n=11,874); Female 20.8% (n=18,091). These unadjusted comparisons do not measure causal effects. facts: default-rate-education-graduate, default-rate-education-university, default-rate-education-highschool, default-rate-education-other, default-rate-marriage-married, default-rate-marriage-single, default-rate-marriage-other, default-rate-sex-male, default-rate-sex-female.",
+    "recommendation": "Use demographic comparisons for fairness checks alongside repayment evidence.",
+    "category": "context",
+    "priority": 9
+  },
+  {
+    "title": "The risk tier rule separates clients well",
+    "discovery": "An engineered tier built from the delay features and average utilization has default rates of Low 10.9%, Medium 15.7%, High 45.2%.",
+    "evidence": "The High tier has 8,713 clients. The tier reuses worst delay, late-month count and average utilization; it is not independent evidence beyond those inputs. facts: default-rate-risk-tier-low, default-rate-risk-tier-medium, default-rate-risk-tier-high.",
+    "recommendation": "Use the engineered tier as a summary and inspect its input features.",
+    "category": "segment",
+    "priority": 10
   }
 ]

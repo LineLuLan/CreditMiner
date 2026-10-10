@@ -6,16 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Format a number as a localized integer (e.g. 10,127). */
-export function formatInt(n: number): string {
-  return Number.isFinite(n) ? n.toLocaleString("en-US") : "—";
-}
-
-/** Format a 0..1 ratio as a percentage with 1 decimal (e.g. 16.1%). */
-export function formatPct(ratio: number, fractionDigits = 1): string {
-  if (!Number.isFinite(ratio)) return "—";
-  return `${(ratio * 100).toFixed(fractionDigits)}%`;
-}
+export { formatInt, formatPct } from "@/lib/format";
 
 /** Format a USD currency amount (e.g. $12,500). */
 export function formatUsd(amount: number, fractionDigits = 0): string {

@@ -1,19 +1,25 @@
 package com.creditminer;
 
-import org.junit.jupiter.api.Disabled;
+import com.creditminer.service.DatabaseSeeder;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 
-/**
- * Sanity test that proves Spring context boots.
- *
- * <p>Disabled by default because it needs a live Postgres (or H2 swap-in).
- * Enable in CI once {@code application-test.yml} provisions an H2 datasource.</p>
- */
-@Disabled("TODO: enable after configuring application-test.yml with H2 datasource")
+/** Proves that the local demo configuration boots without an external database. */
+@SpringBootTest(properties = {
+        "creditminer.data.enriched-arff=target/test-missing/enriched.arff",
+        "creditminer.models.classifier=target/test-missing/rf.model",
+        "creditminer.models.clusterer=target/test-missing/kmeans.model",
+        "creditminer.models.clusterer-normalizer=target/test-missing/normalizer.model",
+        "creditminer.models.kmeans-input-header=target/test-missing/header.model"
+})
+@ActiveProfiles("demo")
 class CreditMinerApplicationTests {
+    @MockBean
+    private DatabaseSeeder databaseSeeder;
 
     @Test
     void contextLoads() {
-        // Spring Boot will fail fast if any bean wiring is broken.
     }
 }

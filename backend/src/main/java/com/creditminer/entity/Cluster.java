@@ -40,11 +40,11 @@ public class Cluster {
     @Column(name = "centroid_json", columnDefinition = "jsonb")
     private String centroidJson;
 
-    @Column(name = "avg_risk", precision = 6, scale = 3)
+    @Column(name = "avg_risk", precision = 6, scale = 4)
     private BigDecimal avgRisk;
 
-    @Column(name = "churn_rate", precision = 6, scale = 3)
-    private BigDecimal churnRate;
+    @Column(name = "default_rate", precision = 6, scale = 4)
+    private BigDecimal defaultRate;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;

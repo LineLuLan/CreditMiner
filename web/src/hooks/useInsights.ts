@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export function useInsights(category?: string) {
+export function useInsights(category?: "driver" | "segment" | "context") {
   return useQuery({
     queryKey: ["insights", category],
     queryFn: () => api.insights(category),

@@ -1,91 +1,110 @@
-# Active State - CreditMiner
+# Active state — CreditMiner
 
-## Current Snapshot
+## Snapshot
 
-- Date: 2026-06-02
-- Working branch: `codex/reacquaint-cleanup` from `origin/develop`
-- Source of truth branch for re-onboarding: `develop`
-- Worktree goal: cleanup, review, project memory, safe local init, verification readiness, and a consolidated data-mining report feature
-- Safety scope: no production writes, no DB seed/reset/train, no `.env` reads, no deploy, no GitHub writes
+| Field | Current value |
+| --- | --- |
+| Date | 2026-09-28 |
+| Course | IT160IU Data Mining |
+| Scope | UCI credit-card default prediction and GSP repayment-sequence mining |
+| Delivery stage | Wave 4 integration and documentation complete; submission preparation remains |
+| Safe local demo | Spring `demo` profile, H2 in memory, backend port 8091 |
+| Development API | Spring `dev` profile, PostgreSQL, backend port 8080 |
+| Web | Next.js on port 3000 by default; port 3001 requires adding its origin to `creditminer.cors.allowed-origins` |
 
-## Re-Onboarding Findings
+## Current product
 
-- `main` lags behind `develop`; use `develop` for current project state.
-- Project memory files were absent and have now been added: `ProjectBrief.md`, `Architecture.md`, `ACTIVE_STATE.md`.
-- `.codegraph/` was absent and `codegraph` CLI is not installed; `.codegraph/` is now ignored.
-- A database password was present in `docs/BE_Handoff.md`; the current tracked doc has been redacted. Treat the exposed value as compromised and rotate it in Neon.
-- Toolchain available locally: `git`, `node`, `corepack`; user shell now has JDK 21.0.11 and Maven 3.9.16.
-- Toolchain missing locally: `pnpm` standalone, `docker`, `psql`, `codegraph`.
-- Current Codex process was started before the JDK/Maven PATH update; restart Codex/terminal sessions before relying on plain `java`/`mvn` lookup inside this agent.
-- Node local version is v24.16.0; CI uses Node 20 and `web/package.json` requires `>=20`.
+CreditMiner now presents one consistent data story from the UCI Default of Credit Card Clients dataset. The raw source contains 30,000 clients. Cleaning leaves 29,965 rows, and the seed-42 stratified split contains 23,972 training rows and 5,993 test rows.
 
-## Validation Log
+The offline workflow covers data description, cleaning, feature engineering, classification, clustering, PCA, anomaly evidence, Apriori rules, insight facts, and GSP sequence mining. The online workflow serves the artifacts through a Spring Boot API and a Next.js dashboard.
 
-- `git fetch origin --prune`: completed.
-- Branch created from `origin/develop`: completed.
-- Static health scans:
-  - TODO/stub scan found placeholder or stale comments in backend pipeline/report/anomaly/overview areas.
-  - DB write scan confirmed destructive or mutating SQL in `db/schema.sql`, `db/reset.sql`, and `db/migrations/2026-05-09_refresh_insights.sql`.
-  - API scan confirmed frontend uses typed API client and documented backend endpoints.
-- Frontend safe init/verification:
-  - `corepack pnpm install --frozen-lockfile`: passed; lockfile was already up to date.
-  - `corepack pnpm typecheck`: passed.
-  - `corepack pnpm lint`: passed with no warnings or errors.
-  - `corepack pnpm build`: passed; `/mining-report` included, all 11 static pages generated.
-  - Overview UI was refreshed into a clearer mining dashboard with dataset summary, mining signals, action links, readable chart labels, and a CRISP-DM evidence path.
-  - Shared Recharts/Radix tooltip styling was updated so dark-mode chart and small-control tooltips render readable foreground text.
-  - Browser smoke passed in dark mode against `http://localhost:3000`: overview rendered the refreshed dashboard, donut tooltip showed `Attrited : 1,627 (16.1%)`, no `Network Error`, and no console/page errors.
-  - Follow-up layout pass compacted Overview/EDA, prevented full-page horizontal overflow with `main min-w-0`, contained correlation heatmap scrolling inside its card, capped churn-by bar width, and disabled chart animations that made screenshots look partially rendered.
-  - Overview now states the core mining question: which customers are likely to churn, what segments/rules explain risk, and which retention actions should be prioritized.
-  - Mining Report was redesigned from tabbed evidence pages into a one-page executive dashboard covering the mining question, answer, report health, model evidence, dataset balance, segmentation, association rules, anomalies, and actionable insights.
-  - Mining Report follow-up compacted the top evidence header and changed actionable insights into action-first cards so recommendations, evidence, and priority are easier to scan.
-  - Mining Report rule evidence now renders business-readable rule cards instead of raw formula-heavy tables, and the classification driver chart has reduced left-axis padding.
-  - Mining Report rules/anomaly section now avoids cross-card height stretching, contains long rule lists in an internal scroll area, and the desktop sidebar stays fixed while the page scrolls.
-  - Mining Report actionable insights now include reader-facing summary tiles and per-insight interpretation text so teachers/reviewers can see the evidence-to-action reasoning.
-  - Cluster PCA scatter tooltip now includes the hovered point's cluster label (`C0`/`C1`/`C2`) alongside PC1/PC2.
-  - Added a Pipeline sidebar page mapping CRISP-DM/data-mining phases to backend artifacts, APIs, and frontend screens so reviewers can see where train results appear.
-  - Rules page no longer uses the low-information support-vs-confidence scatter; it now highlights support-ranked rules, repeated conditions, and business-readable rule evidence cards.
-  - Rules page condition-frequency panel is now a vertical draggable slider; the ranked rule evidence list is also contained in a vertical slider showing up to 6 rule cards at once on desktop.
-- Backend tests:
-  - `mvn -B test`: passed via explicit Maven path after JDK/Maven install; 12 tests run, 0 failures, 0 errors, 1 skipped.
-  - `mvn -B test`: passed again after mining-report artifact fallback; 12 tests run, 0 failures, 0 errors, 1 skipped.
-  - `mvn -B test`: passed after adding demo H2 profile; 12 tests run, 0 failures, 0 errors, 1 skipped.
-- Data-mining report feature:
-  - Backend added read-only `GET /api/mining-report` via `MiningReportController` and `MiningReportService`.
-  - Frontend added `/mining-report` with dataset, classification, clustering, rules, anomaly, and insight evidence tabs.
-  - Frontend contract mirrored in `web/src/lib/schemas.ts`, `web/src/types/api.types.ts`, `web/src/lib/api.ts`, and `web/src/hooks/useMiningReport.ts`.
-  - `MiningReportService` falls back to local artifacts/resources for clusters, rules, and insights when DB rows are unavailable, so artifact-only training can still feed the report page.
-- Local runner:
-  - `scripts/run-local.bat` starts backend and frontend dev servers in separate terminal windows when prerequisites are available.
-  - The runner has a `--check` mode and intentionally does not run setup, train, deploy, or read `.env` files.
-  - Backend now starts with Spring `demo` profile, using an in-memory H2 database seeded from local artifacts/resources at startup.
-  - Runner now checks existing `8080`/`3000` services, waits for backend health before opening frontend, and avoids duplicate dev server windows when rerun.
-  - Demo backend boot smoke passed: `/actuator/health` was `UP`; `/api/mining-report` returned 10127 rows, 3 clusters, 50 rules, and 5 insights.
-  - Local dashboard browser smoke passed against `http://localhost:3000`: overview rendered 10,127 customers with no `Network Error` text and no console/page errors.
-- Artifact training runner:
-  - `scripts/train-artifacts.bat` runs Phase 1, 2, 3, 5, 6, and 7 via Maven and writes output to `docs/TRAINING_LOG.md`.
-  - It is artifact-only and intentionally does not seed/reset databases, run SQL, deploy, or read `.env` files.
-  - Full artifact training completed on 2026-06-02 from `backend/data/raw/BankChurners.csv`; summary lives in `docs/TRAINING_LOG.md`.
-  - Generated local artifacts under `backend/data/processed` and `backend/models`; these are intentionally gitignored.
-- DB verification: intentionally not run in this pass.
-- DB/dev tooling checks: `docker`, `psql`, and `codegraph` are not installed.
-- Secret scan: path/line-only scan found no tracked or untracked worktree hits for configured high-risk patterns.
-- Diff hygiene: `git diff --check` passed; Git emitted Windows line-ending conversion warnings only.
+## Wave 4 completed
 
-## Current Backlog
+### Dataset and pipeline
 
-- Rotate the previously exposed Neon database password before future shared or hosted use.
-- Install or expose local JDK 17, Maven, Docker, psql, and pnpm/Corepack shim for full local verification.
-- Fix or replace `TrainPipeline` so `scripts/train.*` invokes the real phase pipeline sequence, or update scripts/docs to call phase-specific runners explicitly.
-- Make `db/schema.sql` safe for non-empty databases or clearly split destructive reset from create-only schema application.
-- Add a test datasource so `CreditMinerApplicationTests` can run in CI without a live Postgres dependency.
-- Decide whether `ReportService` is still needed for W8 deliverables; implement or remove the placeholder service.
-- Review stale backend comments in `OverviewController` and `AnomalyService`; avoid behavior changes until current API responses are re-verified.
-- Backend-verify `GET /api/mining-report` with JDK 17 + Maven available; then run a local API smoke against a safe dev database or approved hosted credentials.
+- Replaced the earlier dataset contract with UCI dataset 350 fields and labels.
+- Standardized the source path as `backend/data/raw/default_credit_card_clients.csv`.
+- Updated Phases 1–3 for the new schema, category remaps, duplicate removal, outlier flags, negative bill retention, and engineered features.
+- Phase 5 generated a stratified 80/20 split with seed 42.
+- Updated Phase 5 to compare ten Weka classifier variants with 10-fold cross-validation and holdout evaluation.
+- Added build, cross-validation, holdout prediction, and per-record prediction timings.
+- Selected cost-sensitive RandomForest from the generated evidence.
+- Updated Phase 6 for `k=2`, PCA, cluster summaries, and centroid-distance anomaly evidence.
+- Updated Phase 7 for separate default and non-default Apriori rule passes.
+- Updated insight-fact generation for the current artifact set.
+- Added Phase 10 GSP mining over six-month repayment histories.
+- Added exact pattern supports and a fold-local sequence-feature experiment.
 
-## Next Actions
+### Backend and CLI
 
-- Frontend install/typecheck/lint/build completed with Corepack; keep this log current after future code changes.
-- Run a path/line-only secret scan after edits.
-- Review the final diff for accidental generated files or secrets.
-- When backend toolchain is available, run `mvn -B test` from `backend`.
+- Updated the API contract to current customer, overview, EDA, cluster, rule, anomaly, and prediction fields.
+- Added `GET /api/sequences` and the sequence section in `GET /api/mining-report`.
+- Kept all application routes under `/api`.
+- Added the shaded `backend/target/creditminer-cli.jar` deliverable.
+- Added CLI commands for `preprocess`, `train`, `predict`, `evaluate`, and `sequence`.
+- Kept relative and absolute path handling in the CLI.
+- Added the `demo` profile with H2 in-memory data seeded from local artifacts.
+- Kept `dev` and `prod` on PostgreSQL with Hibernate schema validation.
+- Kept the optional, git-ignored `backend/.env` properties import for production-style local configuration.
+- Expanded backend coverage to 75 tests.
+
+### Web and reports
+
+- Updated the web data contracts to the current API fields.
+- Added or updated overview, EDA, clusters, customers, rules, insights, prediction, and pipeline views.
+- Added the `/sequences` page for GSP results.
+- Updated `/mining-report` as the STE-style evidence report.
+- Added `/report/paper` as the print-first academic report source.
+- Added sequence and runtime content to the report components.
+- Kept the frontend stack on Next.js 14.2, TypeScript, Tailwind, shadcn, Recharts, TanStack Query, and zod.
+
+### Documentation and delivery support
+
+- Rewrote the root project documents for the current scope.
+- Added a technical architecture document with component and data-flow diagrams.
+- Added API, pipeline, documentation-index, and submission guides.
+- Archived the earlier iteration documents instead of presenting them as current guidance.
+- Refreshed helper scripts for the eight artifact phases, current profiles, and current source filename.
+- Refreshed checked-in API samples from the Wave 4 backend responses.
+- Documented the planned submission-build script and the expected folder structure.
+
+## Checked artifact results
+
+| Measure | Result |
+| --- | ---: |
+| Rows after cleaning | 29,965 |
+| Default rate | 22.1% |
+| Selected model | RandomForest, cost-sensitive |
+| 10-fold CV F1, `Default=Yes` | 0.5263 |
+| Holdout F1, `Default=Yes` | 0.5333 |
+| Holdout ROC AUC | 0.777 |
+| Frequent GSP patterns at support 0.10 | 2,037 default / 1,729 non-default |
+| Strongest reported default pattern | `<{PARTIAL}{LATE_2}>`: 48.2% vs 14.1% |
+
+## Quality gates
+
+The documented backend gate is `mvn -B test` from `backend`; the suite contains 75 tests. The frontend gates are install with a frozen lockfile, typecheck, lint, build, Playwright E2E, accessibility checks, and optional Lighthouse CI.
+
+This documentation update did not run builds, tests, training, database work, or servers. Use the latest command output, not this file, to claim a passing gate.
+
+## Open items
+
+Only submission coordination remains open:
+
+1. Replace all team placeholders with confirmed full names and student IDs.
+2. Confirm the final submission format and naming rules with the instructor.
+3. Build the final `yourMemberIDs_Names` submission folder and ZIP, then inspect `report.pdf` and `code/` before delivery.
+
+## Operating boundaries
+
+- Do not commit secrets or a populated `.env` file.
+- Do not point write-capable database tools at an unconfirmed environment.
+- Do not regenerate only part of the artifact chain when schema or feature order changes.
+- Do not claim a gate passed unless that command ran and its result was recorded.
+- Do not replace unknown team details with guesses.
+
+## Next action
+
+Confirm the team roster and instructor requirements. Then follow [docs/SUBMISSION.md](docs/SUBMISSION.md) to build and inspect the final archive.
+
+For project operation, see [README.md](README.md). For system boundaries, see [Architecture.md](Architecture.md). For the course scope, see [ProjectBrief.md](ProjectBrief.md).

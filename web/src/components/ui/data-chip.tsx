@@ -15,7 +15,7 @@ export function DataChip({ label, value, tone = "default", className, ...props }
         tone === "default" && "bg-muted/45 text-muted-foreground",
         tone === "primary" && "border-primary/30 bg-primary/10 text-primary",
         tone === "destructive" &&
-          "border-destructive/30 bg-destructive/10 text-destructive",
+          "border-danger/30 bg-danger/10 text-danger",
         className,
       )}
       {...props}

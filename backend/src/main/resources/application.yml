@@ -43,7 +43,7 @@ springdoc:
 # CreditMiner-specific config
 creditminer:
   data:
-    raw-csv: ${CM_RAW_CSV:data/raw/BankChurners.csv}
+    raw-csv: ${CM_RAW_CSV:data/raw/default_credit_card_clients.csv}
     phase1-arff: ${CM_PHASE1_ARFF:data/processed/phase1_raw.arff}
     describe-json: ${CM_DESCRIBE_JSON:data/processed/phase1_describe.json}
     processed-arff: ${CM_PROCESSED_ARFF:data/processed/clean.arff}
@@ -57,15 +57,17 @@ creditminer:
     phase6-elbow-json: ${CM_PHASE6_ELBOW:data/processed/phase6_elbow.json}
     phase6-anomalies-json: ${CM_PHASE6_ANOMALIES:data/processed/phase6_anomalies.json}
     phase6-clusters-json: ${CM_PHASE6_CLUSTERS:data/processed/phase6_clusters.json}
+    phase10-sequences-json: ${CM_PHASE10_SEQUENCES:data/processed/phase10_sequences.json}
     assoc-arff: ${CM_ASSOC_ARFF:data/processed/clean_assoc.arff}
     phase6-pca-json: ${CM_PHASE6_PCA:data/processed/phase6_pca_2d.json}
   models:
-    classifier: ${CM_MODEL_CLASSIFIER:models/rf.model}
+    classifier: ${CM_MODEL_CLASSIFIER:models/RANDOMFOREST_COST.model}
     clusterer: ${CM_MODEL_CLUSTERER:models/kmeans.model}
+    clusterer-normalizer: ${CM_MODEL_KMEANS_NORMALIZER:models/kmeans-normalizer.model}
     kmeans-input-header: ${CM_MODEL_KMEANS_INPUT_HEADER:models/kmeans-input-header.model}
     rules-json: ${CM_MODEL_RULES:models/rules.json}
-    j48: ${CM_MODEL_J48:models/j48.model}
-    nb: ${CM_MODEL_NB:models/nb.model}
+    j48: ${CM_MODEL_J48:models/DECISIONTREE.model}
+    nb: ${CM_MODEL_NB:models/NAIVEBAYES.model}
   cors:
     allowed-origins: http://localhost:3000,http://127.0.0.1:3000
   pipeline:

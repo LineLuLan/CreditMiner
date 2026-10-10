@@ -1,20 +1,16 @@
 import type * as React from "react";
+import { CHART_SEMANTIC as SEMANTIC, CLUSTER_COLORS } from "@/lib/chart-theme";
+
+export { CLUSTER_COLORS, clusterColor } from "@/lib/chart-theme";
 
 /** Theme-aware categorical palette (light/dark via CSS vars). */
-export const CHART_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-] as const;
+export const CHART_COLORS = CLUSTER_COLORS;
 
 /** Semantic chart colors backed by the design tokens. */
 export const CHART_SEMANTIC = {
-  primary: "hsl(var(--primary))",
-  success: "hsl(var(--success))",
+  ...SEMANTIC,
   warning: "hsl(var(--warning))",
-  destructive: "hsl(var(--destructive))",
+  destructive: SEMANTIC.danger,
   info: "hsl(var(--info))",
 } as const;
 

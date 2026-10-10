@@ -110,7 +110,7 @@ public class DescribeCacheService {
 
     private static void ensureClassIndex(Instances data) {
         if (data.classIndex() >= 0) return;
-        Attribute classAttr = data.attribute("Attrition_Flag");
+        Attribute classAttr = data.attribute("Default");
         if (classAttr != null) {
             data.setClassIndex(classAttr.index());
         }

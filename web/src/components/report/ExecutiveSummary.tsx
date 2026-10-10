@@ -1,13 +1,15 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { AlertTriangle, Boxes, Download, Target, TrendingUp, UserMinus, Users } from "lucide-react";
+import { AlertTriangle, Boxes, TrendingUp, UserMinus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useClusters } from "@/hooks/useClusters";
+import { useFacts } from "@/hooks/useFacts";
 import { formatInt, formatPct } from "@/lib/utils";
 import type { EvaluationVariant, MiningReport } from "@/types/api.types";
 import { ReportDetails, ReportSection } from "./ReportPrimitives";
+import { DEFAULT_SELECTION_RULE } from "./report-copy";
 
 export function findBestVariant(report: MiningReport): EvaluationVariant | undefined {
   const selected = report.classification.evaluation?.bestVariant;
@@ -16,9 +18,14 @@ export function findBestVariant(report: MiningReport): EvaluationVariant | undef
     variants.find(
       (variant) => variant.algo === selected?.algo && variant.variant === selected?.variant,
     ) ??
+    // Fallback mirrors the API selection rule: CV F1 (Default=Yes) first, CV ROC AUC as the tiebreaker.
     variants
-      .filter((variant) => variant.test?.f1Attrited != null)
-      .sort((a, b) => (b.test?.f1Attrited ?? -1) - (a.test?.f1Attrited ?? -1))[0]
+      .filter((variant) => variant.cv?.f1Default != null)
+      .sort(
+        (a, b) =>
+          (b.cv?.f1Default ?? -1) - (a.cv?.f1Default ?? -1) ||
+          (b.cv?.rocAuc ?? -1) - (a.cv?.rocAuc ?? -1),
+      )[0]
   );
 }
 
@@ -31,54 +38,58 @@ export function findDeployedVariant(report: MiningReport): EvaluationVariant | u
 export function modelDeploymentStatement(report: MiningReport): string {
   const best = findBestVariant(report);
   const deployed = findDeployedVariant(report);
-  const bestName = modelName(
-    best?.algo ?? report.classification.bestModel,
-    best?.variant ?? report.classification.bestVariant,
-  );
+  const bestName = `${best?.algo ?? report.classification.bestModel} (${best?.variant ?? report.classification.bestVariant})`;
+  const selectionRule = report.classification.evaluation?.bestVariant?.selectionRule ?? DEFAULT_SELECTION_RULE;
   const deployedName = modelName(
     deployed?.algo ?? report.classification.bestModel,
     deployed?.variant ?? "canonical",
   );
-  return `${bestName} has the best held-out F1; the prediction API uses ${deployedName}.`;
+  return `${bestName} is the selected model under the rule: ${selectionRule}. The prediction API uses ${deployedName}.`;
 }
 
 export function ExecutiveSummary({ report }: { report: MiningReport }) {
+  const { getFact } = useFacts({ report });
+  const { data: enrichedClusters } = useClusters();
+  const defaultRate = getFact("default-rate").value ?? report.dataset.defaultRate;
+  const totalClients = getFact("total-clients").value ?? report.dataset.totalRows;
+  const defaultCount = getFact("default-count").value ?? report.dataset.defaultCustomers;
   const highestRisk = report.clustering.clusters
-    .slice()
-    .sort((a, b) => b.churnRate - a.churnRate)[0];
+    .map((cluster) => ({ ...cluster, ...(enrichedClusters?.find((item) => item.clusterId === cluster.clusterId) ?? {}) }))
+    .sort((a, b) =>
+      (getFact("default-rate-cluster-" + b.clusterId).value ?? b.defaultRate) -
+      (getFact("default-rate-cluster-" + a.clusterId).value ?? a.defaultRate),
+    )[0];
   const anomalyCount = report.anomalies.combinedAnomalyCount ?? report.anomalies.dbAnomalyCount;
   const best = findBestVariant(report);
 
   return (
-    <>
       <ReportSection
-        id="section-1"
-        title="1 Executive summary"
-        takeaway={`${formatPct(report.dataset.churnRate)} of customers churn, and behavior, segment, and model results show where to act.`}
+        id="section-2"
+        title="2 Executive summary"
+        takeaway={`${formatPct(defaultRate)} of clients defaulted the next month. Behavior, segment, and model results show where to review risk.`}
       >
         <Card className="break-inside-avoid overflow-hidden border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card">
           <CardContent className="space-y-5 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Badge variant="secondary">CRISP-DM report</Badge>
-              <Button type="button" onClick={() => window.print()} className="report-action">
-                <Download className="mr-2 h-4 w-4" />
-                Export PDF
-              </Button>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <SummaryMetric
                 icon={UserMinus}
-                label="Churn rate"
-                value={formatPct(report.dataset.churnRate)}
-                note={`${formatInt(report.dataset.attritedCustomers)} customers`}
+                label="Default rate"
+                value={formatPct(defaultRate)}
+                note={`${formatInt(defaultCount)} clients`}
               />
-              <ModelScoreTile variant={best} fallback={report.classification.bestModel} />
+              <ModelScoreTile variant={best} fallback={report.classification.bestModel}
+                f1={getFact("selected-model-holdout-f1").value ?? best?.test?.f1Default}
+                rocAuc={getFact("selected-model-holdout-auc").value ?? best?.test?.rocAuc}
+              />
               <SummaryMetric
                 icon={Boxes}
-                label="Highest-churn segment"
-                value={highestRisk ? formatPct(highestRisk.churnRate) : "n/a"}
-                note={highestRisk?.personaName ?? "No segment"}
+                label="Highest-default segment"
+                value={highestRisk ? formatPct(getFact("default-rate-cluster-" + highestRisk.clusterId).value ?? highestRisk.defaultRate) : "n/a"}
+                note={highestRisk?.displayName ?? highestRisk?.personaName ?? "No segment"}
               />
               <SummaryMetric
                 icon={TrendingUp}
@@ -98,8 +109,8 @@ export function ExecutiveSummary({ report }: { report: MiningReport }) {
               />
               <SummaryMetric
                 icon={Users}
-                label="Customers"
-                value={formatInt(report.dataset.totalRows)}
+                label="Clients"
+                value={formatInt(totalClients)}
                 note={`${report.clustering.bestK} segments`}
               />
             </div>
@@ -120,38 +131,15 @@ export function ExecutiveSummary({ report }: { report: MiningReport }) {
           </ReportDetails>
         ) : null}
       </ReportSection>
-
-      <ReportSection
-        id="section-2"
-        title="2 Business understanding"
-        takeaway="Find customers with high churn risk and show the evidence for each action."
-      >
-        <Card className="break-inside-avoid">
-          <CardContent className="grid gap-4 p-5 md:grid-cols-[auto_1fr]">
-            <div className="rounded-lg bg-primary/10 p-3 text-primary">
-              <Target className="h-5 w-5" />
-            </div>
-            <p className="font-medium leading-6">
-              Classification ranks risk. Segments, rules, and anomalies explain where teams must
-              review customers.
-            </p>
-          </CardContent>
-        </Card>
-        <ReportDetails>
-          <p>
-            Use minority-class F1 and PR-AUC to compare models. Use segment and rule evidence to
-            select retention actions.
-          </p>
-        </ReportDetails>
-      </ReportSection>
-    </>
   );
 }
 
-function ModelScoreTile({ variant, fallback }: { variant?: EvaluationVariant; fallback: string }) {
+function ModelScoreTile({ variant, fallback, f1, rocAuc }: {
+  variant?: EvaluationVariant; fallback: string; f1?: number | null; rocAuc?: number | null;
+}) {
   const scores = [
-    ["F1", variant?.test?.f1Attrited],
-    ["ROC-AUC", variant?.test?.rocAuc],
+    ["F1", f1],
+    ["ROC-AUC", rocAuc],
     ["PR-AUC", variant?.test?.prAuc],
   ] as const;
   return (

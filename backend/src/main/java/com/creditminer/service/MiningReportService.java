@@ -37,6 +37,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Read-only aggregate report for showing the CRISP-DM/data-mining evidence in one place.
@@ -48,6 +49,11 @@ public class MiningReportService {
 
     private static final TypeReference<Map<String, Double>> CENTROID_TYPE =
             new TypeReference<>() {};
+
+    private static final Map<String, Set<String>> DOCUMENTED_CODES = Map.of(
+            "EDUCATION", Set.of("1", "2", "3", "4"),
+            "MARRIAGE", Set.of("1", "2", "3"),
+            "SEX", Set.of("1", "2"));
 
     private final CustomerRepository customerRepository;
     private final ClusterRepository clusterRepository;
@@ -88,6 +94,9 @@ public class MiningReportService {
     @Value("${creditminer.data.phase6-clusters-json:data/processed/phase6_clusters.json}")
     private String clustersPath;
 
+    @Value("${creditminer.data.phase10-sequences-json:data/processed/phase10_sequences.json}")
+    private String sequencesPath;
+
     @Value("${creditminer.models.rules-json:models/rules.json}")
     private String rulesPath;
 
@@ -105,6 +114,7 @@ public class MiningReportService {
                 .clustering(clustering(warnings))
                 .rules(rules(warnings))
                 .anomalies(anomalies)
+                .sequences(sequences(warnings))
                 .methodology(methodology(classification.getEvaluation(), anomalies, warnings))
                 .insights(safeInsights(warnings))
                 .warnings(warnings)
@@ -144,30 +154,30 @@ public class MiningReportService {
         }
 
         long dbRows = safeLong(() -> customerRepository.count(), 0L, warnings, "customer row count");
-        long attrited = safeLong(() -> customerRepository.countByAttritionFlag("Attrited Customer"), 0L,
-                warnings, "attrited customer count");
-        double churnRate = dbRows == 0 ? 0.0 : round((double) attrited / dbRows, 4);
+        long defaultCount = safeLong(() -> customerRepository.countByDefaultFlag("Yes"), 0L,
+                warnings, "default customer count");
+        double defaultRate = dbRows == 0 ? 0.0 : round((double) defaultCount / dbRows, 4);
 
         return MiningReportResponse.DatasetEvidence.builder()
                 .totalRows(totalRows)
                 .totalColumns(describe == null ? 0 : describe.getTotalColumns())
-                .classColumn(describe == null ? "Attrition_Flag" : describe.getClassColumn())
+                .classColumn(describe == null ? "Default" : describe.getClassColumn())
                 .numericColumns(numeric)
                 .categoricalColumns(categorical)
                 .totalMissingValues(missingTotal)
                 .dbCustomerRows(dbRows)
-                .attritedCustomers(attrited)
-                .churnRate(churnRate)
-                .attritionBreakdown(attritionBreakdown(warnings))
+                .defaultCustomers(defaultCount)
+                .defaultRate(defaultRate)
+                .defaultBreakdown(defaultBreakdown(warnings))
                 .topMissingColumns(missing)
-                .tierBreakdown(tierBreakdown(warnings))
+                .riskTierBreakdown(riskTierBreakdown(warnings))
                 .leakageColumnsDropped(describe == null ? List.of() : describe.getLeakageColumnsDropped())
                 .build();
     }
 
-    private List<MiningReportResponse.NameCount> attritionBreakdown(List<String> warnings) {
+    private List<MiningReportResponse.NameCount> defaultBreakdown(List<String> warnings) {
         try {
-            DistributionResponse d = edaService.distribution("Attrition_Flag", null);
+            DistributionResponse d = edaService.distribution("Default", null);
             List<MiningReportResponse.NameCount> out = new ArrayList<>();
             for (int i = 0; i < d.getCategories().size(); i++) {
                 out.add(MiningReportResponse.NameCount.builder()
@@ -177,33 +187,33 @@ public class MiningReportService {
             }
             return out;
         } catch (Exception ex) {
-            warnings.add("Attrition distribution unavailable: " + ex.getMessage());
+            warnings.add("Default distribution unavailable: " + ex.getMessage());
             return List.of(
                     MiningReportResponse.NameCount.builder()
-                            .name("Existing Customer")
-                            .count(safeLong(() -> customerRepository.countByAttritionFlag("Existing Customer"),
-                                    0L, warnings, "existing customer count"))
+                            .name("No")
+                            .count(safeLong(() -> customerRepository.countByDefaultFlag("No"),
+                                    0L, warnings, "non-default customer count"))
                             .build(),
                     MiningReportResponse.NameCount.builder()
-                            .name("Attrited Customer")
-                            .count(safeLong(() -> customerRepository.countByAttritionFlag("Attrited Customer"),
-                                    0L, warnings, "attrited customer count fallback"))
+                            .name("Yes")
+                            .count(safeLong(() -> customerRepository.countByDefaultFlag("Yes"),
+                                    0L, warnings, "default customer count fallback"))
                             .build()
             );
         }
     }
 
-    private Map<String, Long> tierBreakdown(List<String> warnings) {
+    private Map<String, Long> riskTierBreakdown(List<String> warnings) {
         try {
             Map<String, Long> out = new LinkedHashMap<>();
-            for (Object[] row : customerRepository.tierBreakdown()) {
+            for (Object[] row : customerRepository.riskTierBreakdown()) {
                 if (row[0] != null && row[1] instanceof Number n) {
                     out.put(row[0].toString(), n.longValue());
                 }
             }
             return out;
         } catch (Exception ex) {
-            warnings.add("Tier breakdown unavailable: " + ex.getMessage());
+            warnings.add("Risk tier breakdown unavailable: " + ex.getMessage());
             return Map.of();
         }
     }
@@ -212,8 +222,8 @@ public class MiningReportService {
         List<MiningReportResponse.ModelMetric> metrics = modelMetrics(warnings);
         List<MiningReportResponse.FeatureImportance> features = featureImportance(warnings);
         MiningReportResponse.EvaluationEvidence evaluation = evaluation(warnings);
-        String bestModel = "RandomForest";
-        String bestVariant = "SMOTE";
+        String bestModel = "not available";
+        String bestVariant = "not available";
         if (evaluation != null && evaluation.getBestVariant() != null) {
             bestModel = evaluation.getBestVariant().path("algo").asText(bestModel);
             bestVariant = evaluation.getBestVariant().path("variant").asText(bestVariant);
@@ -231,15 +241,8 @@ public class MiningReportService {
     private List<MiningReportResponse.ModelMetric> modelMetrics(List<String> warnings) {
         File csv = new File(modelComparisonPath);
         if (!csv.exists()) {
-            warnings.add("Model comparison CSV missing; using documented RandomForest+SMOTE headline metrics.");
-            return List.of(MiningReportResponse.ModelMetric.builder()
-                    .model("RandomForest")
-                    .variant("SMOTE")
-                    .testF1(0.8758)
-                    .testRocAuc(0.9888)
-                    .testPrAuc(0.9429)
-                    .source("docs/BE_Handoff.md documented fallback")
-                    .build());
+            warnings.add("Model comparison CSV missing at " + modelComparisonPath);
+            return List.of();
         }
         try {
             List<String> lines = Files.readAllLines(csv.toPath(), StandardCharsets.UTF_8);
@@ -255,13 +258,13 @@ public class MiningReportService {
                         .model(csvValue(values, indexes, "algo"))
                         .variant(csvValue(values, indexes, "variant"))
                         .cvAccuracy(csvDouble(values, indexes, "cv_accuracy"))
-                        .cvF1(csvDouble(values, indexes, "cv_f1_attrited"))
+                        .cvF1(csvDouble(values, indexes, "cv_f1_default"))
                         .cvRocAuc(csvDouble(values, indexes, "cv_roc_auc"))
                         .cvPrAuc(csvDouble(values, indexes, "cv_pr_auc"))
                         .testAccuracy(csvDouble(values, indexes, "test_accuracy"))
-                        .testPrecision(csvDouble(values, indexes, "test_precision_attrited"))
-                        .testRecall(csvDouble(values, indexes, "test_recall_attrited"))
-                        .testF1(csvDouble(values, indexes, "test_f1_attrited"))
+                        .testPrecision(csvDouble(values, indexes, "test_precision_default"))
+                        .testRecall(csvDouble(values, indexes, "test_recall_default"))
+                        .testF1(csvDouble(values, indexes, "test_f1_default"))
                         .testRocAuc(csvDouble(values, indexes, "test_roc_auc"))
                         .testPrAuc(csvDouble(values, indexes, "test_pr_auc"))
                         .source(modelComparisonPath)
@@ -393,7 +396,7 @@ public class MiningReportService {
                 .size(c.getSize() == null ? 0 : c.getSize())
                 .centroid(centroid)
                 .avgRisk(toDouble(c.getAvgRisk()))
-                .churnRate(toDouble(c.getChurnRate()))
+                .defaultRate(toDouble(c.getDefaultRate()))
                 .description(c.getDescription())
                 .build();
     }
@@ -414,7 +417,7 @@ public class MiningReportService {
                         .size(n.path("size").asInt())
                         .centroid(mapper.convertValue(n.path("centroid"), CENTROID_TYPE))
                         .avgRisk(n.path("avgRisk").asDouble())
-                        .churnRate(n.path("churnRate").asDouble())
+                        .defaultRate(n.path("defaultRate").asDouble())
                         .description(n.path("description").asText())
                         .build());
             }
@@ -465,13 +468,19 @@ public class MiningReportService {
             rules = ruleArtifactFallback(warnings);
         }
 
+        if (!rules.isEmpty()) {
+            RuleService.Baseline baseline = RuleService.loadBaseline(mapper, rulesPath, customerRepository);
+            rules.forEach(r -> RuleNaming.enrich(r, baseline.totalRows(), baseline.defaultRate()));
+            if (baseline.totalRows() == null) warnings.add("Rule row counts unavailable; jointCount is null.");
+        }
+
         double support = 0;
         double confidence = 0;
         double lift = 0;
         double minLift = rules.isEmpty() ? 0 : Double.POSITIVE_INFINITY;
         double maxLift = 0;
-        long churn = 0;
-        long retention = 0;
+        long defaultRules = 0;
+        long nonDefaultRules = 0;
         for (RuleResponse r : rules) {
             double s = r.getSupport();
             double c = r.getConfidence();
@@ -481,8 +490,8 @@ public class MiningReportService {
             lift += l;
             minLift = Math.min(minLift, l);
             maxLift = Math.max(maxLift, l);
-            if ("churn".equalsIgnoreCase(r.getCategory())) churn++;
-            if ("retention".equalsIgnoreCase(r.getCategory())) retention++;
+            if ("default".equalsIgnoreCase(r.getCategory())) defaultRules++;
+            if ("non-default".equalsIgnoreCase(r.getCategory())) nonDefaultRules++;
         }
         int n = rules.size();
         List<RuleResponse> top = rules.stream()
@@ -491,8 +500,8 @@ public class MiningReportService {
                 .toList();
         return MiningReportResponse.RulesEvidence.builder()
                 .totalRules(n)
-                .churnRules(churn)
-                .retentionRules(retention)
+                .defaultRules(defaultRules)
+                .nonDefaultRules(nonDefaultRules)
                 .avgSupport(n == 0 ? 0.0 : round(support / n, 4))
                 .avgConfidence(n == 0 ? 0.0 : round(confidence / n, 4))
                 .avgLift(n == 0 ? 0.0 : round(lift / n, 4))
@@ -526,7 +535,8 @@ public class MiningReportService {
             long id = 1;
             for (JsonNode n : arr) {
                 out.add(RuleResponse.builder()
-                        .ruleId(id++)
+                        .ruleId(n.path("ruleId").asLong(id++))
+                        .jointCount(n.has("jointCount") ? n.path("jointCount").asLong() : null)
                         .lhs(n.path("lhs").asText())
                         .rhs(n.path("rhs").asText())
                         .support(n.path("support").asDouble())
@@ -570,6 +580,7 @@ public class MiningReportService {
             MiningReportResponse.AnomalyEvidence anomalies,
             List<String> warnings) {
         return MiningReportResponse.Methodology.builder()
+                .datasetSource("UCI Machine Learning Repository dataset 350, Yeh & Lien (2009), CC BY 4.0")
                 .preprocessing(preprocessingMethodology(warnings))
                 .featureEngineering(featureEngineeringMethodology(warnings))
                 .split(evaluation == null ? null : evaluation.getSplit())
@@ -585,11 +596,37 @@ public class MiningReportService {
                 .build();
     }
 
+    private JsonNode sequences(List<String> warnings) {
+        JsonNode source = readJson(sequencesPath, warnings, "phase10 sequences");
+        if (source == null) return null;
+        ObjectNode section = mapper.createObjectNode();
+        section.set("itemMapping", source.path("itemMapping"));
+        section.set("minSupport", source.path("minSupport"));
+        section.set("groups", source.path("groups"));
+        section.set("topDefaultPatterns", first(source.path("topDefaultPatterns"), 10));
+        section.set("topNonDefaultPatterns", first(source.path("topNonDefaultPatterns"), 10));
+        section.set("featureExperiment", source.path("featureExperiment"));
+        section.set("runtime", source.path("runtime"));
+        return section;
+    }
+
+    private ArrayNode first(JsonNode source, int limit) {
+        ArrayNode out = mapper.createArrayNode();
+        if (!source.isArray()) return out;
+        for (int index = 0; index < Math.min(limit, source.size()); index++) {
+            out.add(source.get(index));
+        }
+        return out;
+    }
+
     private MiningReportResponse.PreprocessingMethodology preprocessingMethodology(List<String> warnings) {
         JsonNode phase2 = readJson(phase2ReportPath, warnings, "phase2 report");
         JsonNode phase1 = readJson(phase1DescribePath, warnings, "phase1 describe");
         Map<String, Integer> unknown = new LinkedHashMap<>();
+        Map<String, String> mappingRules = new LinkedHashMap<>();
+        Map<String, String> renamedColumns = new LinkedHashMap<>();
         Map<String, Double> medians = new LinkedHashMap<>();
+        Map<String, Integer> negativeBills = new LinkedHashMap<>();
         Map<String, MiningReportResponse.OutlierColumnMethodology> outliers = new LinkedHashMap<>();
         List<String> leakage = new ArrayList<>();
         if (phase2 != null) {
@@ -597,6 +634,8 @@ public class MiningReportService {
                     unknown.put(entry.getKey(), entry.getValue().asInt()));
             phase2.path("numericMedianImputed").fields().forEachRemaining(entry ->
                     medians.put(entry.getKey(), entry.getValue().asDouble()));
+            phase2.path("negativeBillByColumn").fields().forEachRemaining(entry ->
+                    negativeBills.put(entry.getKey(), entry.getValue().asInt()));
             phase2.path("outlierByColumn").fields().forEachRemaining(entry -> {
                 JsonNode value = entry.getValue();
                 outliers.put(entry.getKey(), MiningReportResponse.OutlierColumnMethodology.builder()
@@ -612,13 +651,43 @@ public class MiningReportService {
         }
         if (phase1 != null) {
             phase1.path("leakageColumnsDropped").forEach(node -> leakage.add(node.asText()));
+            JsonNode transformations = phase1.path("schemaTransformations");
+            transformations.path("renamedColumns").fields().forEachRemaining(entry ->
+                    renamedColumns.put(entry.getKey(), entry.getValue().asText()));
+            transformations.path("mappingRules").fields().forEachRemaining(entry ->
+                    mappingRules.put(renamedColumns.getOrDefault(entry.getKey(), entry.getKey()),
+                            entry.getValue().asText()));
+            // Intent: count only undocumented source codes, not every value mapped to Other.
+            // Status: Phase 1 fallback; Phase 2 entries win. Next: keep code sets aligned with UCI.
+            // Blockers: none. Confidence: covered by fixture and real-artifact tests.
+            if (unknown.isEmpty()) {
+                Map<String, String> sourceCounts = new LinkedHashMap<>();
+                sourceCounts.put("EDUCATION", "educationSourceCodeCounts");
+                sourceCounts.put("MARRIAGE", "marriageSourceCodeCounts");
+                sourceCounts.put("SEX", "sexSourceCodeCounts");
+                sourceCounts.forEach((column, countsKey) -> {
+                    int count = 0;
+                    var entries = transformations.path(countsKey).fields();
+                    while (entries.hasNext()) {
+                        var entry = entries.next();
+                        if (!DOCUMENTED_CODES.get(column).contains(entry.getKey())) {
+                            count += entry.getValue().asInt();
+                        }
+                    }
+                    if (count > 0) unknown.put(column, count);
+                });
+            }
         }
         return MiningReportResponse.PreprocessingMethodology.builder()
                 .rowsIn(phase2 == null ? 0 : phase2.path("totalRowsIn").asInt())
                 .rowsOut(phase2 == null ? 0 : phase2.path("totalRowsOut").asInt())
                 .duplicatesDropped(phase2 == null ? 0 : phase2.path("duplicatesDropped").asInt())
                 .unknownRewritten(unknown)
+                .categoryMappingRules(mappingRules)
+                .renamedColumns(renamedColumns)
                 .numericMedianImputed(medians)
+                .negativeBillByColumn(negativeBills)
+                .negativeBillTotal(phase2 == null ? 0 : phase2.path("negativeBillTotal").asInt())
                 .outlierByColumn(outliers)
                 .leakageColumnsDropped(leakage)
                 .outlierPolicy("flag only, rows retained")
@@ -697,18 +766,20 @@ public class MiningReportService {
     private MiningReportResponse.AssociationMethodology associationMethodology(List<String> warnings) {
         JsonNode rules = readJson(rulesPath, warnings, "rules");
         JsonNode config = rules == null ? null : rules.path("config");
-        JsonNode retention = config == null ? null
-                : (config.has("retentionPass") ? config.path("retentionPass") : config);
-        JsonNode churn = config == null ? null : config.path("churnPass");
+        JsonNode defaultPass = config == null ? null : config.path("defaultPass");
+        JsonNode nonDefaultPass = config == null ? null
+                : (config.has("nonDefaultPass") ? config.path("nonDefaultPass") : config);
         List<String> attributes = associationAttributes(warnings);
         long discretizedCount = attributes.stream()
                 .filter(AssociationService.NUMERIC_TO_DISCRETIZE::contains)
                 .count();
         return MiningReportResponse.AssociationMethodology.builder()
-                .discretization("3 equal-frequency bins on " + discretizedCount + " numerics")
+                .discretization(rules != null && rules.has("discretization")
+                        ? rules.path("discretization").toString()
+                        : "3 equal-frequency bins on " + discretizedCount + " numerics")
                 .attributesUsed(attributes)
-                .retentionPass(associationPass(retention))
-                .churnPass(associationPass(churn))
+                .defaultPass(associationPass(defaultPass))
+                .nonDefaultPass(associationPass(nonDefaultPass))
                 .build();
     }
 
@@ -716,6 +787,8 @@ public class MiningReportService {
         if (config == null || config.isMissingNode()) return null;
         return MiningReportResponse.AssociationPass.builder()
                 .minSupport(numberOrNull(config, "minSupport"))
+                .attemptedSupports(doubleList(config.path("attemptedSupports")))
+                .finalSupport(numberOrNull(config, "finalSupport"))
                 .minConfidence(numberOrNull(config, "minConfidence"))
                 .minLift(numberOrNull(config, "minLift"))
                 .numRules(config.has("numRules") ? config.path("numRules").asInt() : null)
@@ -744,12 +817,13 @@ public class MiningReportService {
 
     private static String featureFormula(String name) {
         return switch (name) {
-            case "Utilization_Score" -> "Utilization_Score = Total_Revolving_Bal / Credit_Limit";
-            case "Spending_Intensity" -> "Spending_Intensity = Total_Trans_Amt / Total_Trans_Ct";
-            case "Engagement_Score" -> "Engagement_Score = Total_Trans_Ct / Months_on_book";
-            case "Customer_Value_Score" -> "Customer_Value_Score = 0.4*z(Total_Trans_Amt) + 0.3*z(Credit_Limit) + 0.2*z(Months_on_book) - 0.1*z(Months_Inactive_12_mon)";
-            case "Risk_Score" -> "Risk_Score = 0.4*Utilization_Score + 0.3*(Months_Inactive_12_mon/12) + 0.3*(1 - Engagement_norm)";
-            case "Customer_Tier" -> "Customer_Tier = quartile bins of Customer_Value_Score (Bronze, Silver, Gold, Platinum)";
+            case "UTILIZATION_1" -> "BILL_AMT1 / LIMIT_BAL, clipped to [-1, 5]";
+            case "AVG_UTILIZATION" -> "mean(BILL_AMT1..6 / LIMIT_BAL), clipped to [-1, 5]";
+            case "PAY_RATIO" -> "sum(PAY_AMT1..6) / max(1, sum(positive BILL_AMT1..6)), clipped to [0, 5]";
+            case "MONTHS_DELAYED" -> "count(PAY_1..6 >= 1)";
+            case "MAX_DELAY" -> "max(PAY_1..6)";
+            case "BILL_TREND" -> "(BILL_AMT1 - BILL_AMT6) / LIMIT_BAL, clipped to [-5, 5]";
+            case "RISK_TIER" -> "High for serious/repeated delay or utilization >= 1; Low for no delays and utilization < 0.5; otherwise Medium";
             default -> null;
         };
     }
@@ -829,6 +903,15 @@ public class MiningReportService {
     private static Double numberOrNull(JsonNode node, String field) {
         return node == null || !node.has(field) || !node.path(field).isNumber()
                 ? null : node.path(field).asDouble();
+    }
+
+    private static List<Double> doubleList(JsonNode node) {
+        if (node == null || !node.isArray()) return List.of();
+        List<Double> values = new ArrayList<>();
+        for (JsonNode value : node) {
+            if (value.isNumber() && Double.isFinite(value.asDouble())) values.add(value.asDouble());
+        }
+        return values;
     }
 
     private static Integer intOrNull(JsonNode node, String field) {

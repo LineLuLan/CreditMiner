@@ -13,8 +13,8 @@ import {
 } from "recharts";
 import {
   CHART_AXIS_TICK,
-  CHART_COLORS,
   CHART_LEGEND_STYLE,
+  CHART_SEMANTIC,
   CHART_TOOLTIP_PROPS,
 } from "@/components/charts/chart-theme";
 import { Card, CardContent } from "@/components/ui/card";
@@ -75,26 +75,25 @@ export function ModelComparisonChart({
                   formatter={(value: number, name: string) => [formatPct(value), name]}
                 />
                 <Legend wrapperStyle={CHART_LEGEND_STYLE} />
-                <Bar dataKey="f1" name="Test F1" radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                <Bar dataKey="f1" name="Test F1" fill={CHART_SEMANTIC.primary} radius={[0, 3, 3, 0]} isAnimationActive={false}>
                   {data.map((row) => (
                     <Cell
                       key={`f1-${row.label}`}
-                      fill={CHART_COLORS[0]}
-                      fillOpacity={row.isBest ? 1 : 0.35}
+                      fill={row.isBest ? CHART_SEMANTIC.primary : CHART_SEMANTIC.neutral}
                     />
                   ))}
                 </Bar>
                 <Bar
                   dataKey="prAuc"
                   name="Test PR-AUC"
+                  fill={CHART_SEMANTIC.success}
                   radius={[0, 3, 3, 0]}
                   isAnimationActive={false}
                 >
                   {data.map((row) => (
                     <Cell
                       key={`pr-${row.label}`}
-                      fill={CHART_COLORS[1]}
-                      fillOpacity={row.isBest ? 1 : 0.35}
+                      fill={row.isBest ? CHART_SEMANTIC.success : CHART_SEMANTIC.neutral}
                     />
                   ))}
                 </Bar>

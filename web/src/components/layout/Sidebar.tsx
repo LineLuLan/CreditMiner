@@ -12,6 +12,7 @@ import {
   Network,
   Sparkles,
   Users,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME, NAV_ITEMS } from "@/lib/constants";
@@ -42,7 +43,7 @@ export function Sidebar() {
       </div>
       <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto p-3">
         {NAV_ITEMS.map((item) => {
-          const Icon = ICON_MAP[item.icon as keyof typeof ICON_MAP];
+          const Icon = item.href === "/pipeline" ? Workflow : ICON_MAP[item.icon as keyof typeof ICON_MAP];
           const active =
             pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           return (
@@ -76,7 +77,7 @@ export function Sidebar() {
       </nav>
       <div className="border-t p-4 text-xs text-muted-foreground">
         <p className="font-medium text-foreground">Demo build</p>
-        <p>CRISP-DM · CreditCard churn · k=3 clusters</p>
+        <p>CRISP-DM {"\u00b7"} UCI credit default {"\u00b7"} k=2</p>
       </div>
     </aside>
   );

@@ -1,35 +1,35 @@
 {
   "kMin" : 2,
   "kMax" : 8,
-  "bestK" : 3,
+  "bestK" : 2,
   "strategy" : "argmax silhouette",
   "scores" : [ {
     "k" : 2,
-    "wcss" : 6496.2878,
-    "silhouette" : 0.2172
+    "wcss" : 2843.4909,
+    "silhouette" : 0.4682
   }, {
     "k" : 3,
-    "wcss" : 5512.4152,
-    "silhouette" : 0.218
+    "wcss" : 2385.1693,
+    "silhouette" : 0.2433
   }, {
     "k" : 4,
-    "wcss" : 5046.2889,
-    "silhouette" : 0.1718
+    "wcss" : 2020.6459,
+    "silhouette" : 0.2594
   }, {
     "k" : 5,
-    "wcss" : 4547.3455,
-    "silhouette" : 0.1751
+    "wcss" : 1846.0273,
+    "silhouette" : 0.2461
   }, {
     "k" : 6,
-    "wcss" : 4333.7293,
-    "silhouette" : 0.1552
+    "wcss" : 1569.0965,
+    "silhouette" : 0.2616
   }, {
     "k" : 7,
-    "wcss" : 4163.5204,
-    "silhouette" : 0.1366
+    "wcss" : 1388.0123,
+    "silhouette" : 0.2611
   }, {
     "k" : 8,
-    "wcss" : 4014.4706,
-    "silhouette" : 0.137
+    "wcss" : 1274.0317,
+    "silhouette" : 0.2576
   } ]
 }

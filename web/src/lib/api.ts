@@ -1,12 +1,37 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
+import { z } from "zod";
 import { API_BASE_URL } from "@/lib/constants";
+import {
+  AnomalySchema,
+  ClusterSchema,
+  CustomerDetailSchema,
+  CustomerSummarySchema,
+  EdaCorrelationSchema,
+  EdaDefaultGroupSchema,
+  EdaDescribeSchema,
+  EdaDistributionSchema,
+  InsightSchema,
+  InsightVisualSchema,
+  MiningReportSchema,
+  OverviewResponseSchema,
+  PageResponseSchema,
+  PcaPointSchema,
+  PcaMetaSchema,
+  FactsResponseSchema,
+  PredictRequestSchema,
+  PredictResponseSchema,
+  RuleSchema,
+  SequenceArtifactSchema,
+} from "@/lib/schemas";
 import type {
   Anomaly,
   ApiError,
   Cluster,
+  CustomerDetail,
   CustomerSummary,
-  EdaChurnGroup,
   EdaCorrelation,
+  EdaDefaultGroup,
+  EdaDescribe,
   EdaDistribution,
   Insight,
   InsightVisual,
@@ -17,30 +42,9 @@ import type {
   PredictRequest,
   PredictResponse,
   Rule,
+  SequenceArtifact,
 } from "@/types/api.types";
-import {
-  EdaChurnGroupSchema,
-  EdaCorrelationSchema,
-  EdaDistributionSchema,
-  InsightVisualSchema,
-  MiningReportSchema,
-  OverviewResponseSchema,
-  RuleSchema,
-} from "@/lib/schemas";
-import { z } from "zod";
 
-/**
- * HTTP client for the CreditMiner backend.
- *
- * <p>Wraps axios with:
- * <ul>
- *   <li>Base URL from {@link API_BASE_URL}</li>
- *   <li>10 s timeout</li>
- *   <li>Error envelope normalization — every thrown error is shaped like
- *       {@link ApiError}'s {@code error} object</li>
- * </ul>
- * </p>
- */
 const client: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10_000,
@@ -48,78 +52,118 @@ const client: AxiosInstance = axios.create({
 });
 
 client.interceptors.response.use(
-  (r) => r,
-  (err: AxiosError<ApiError>) => {
-    const data = err.response?.data;
+  (response) => response,
+  (error: AxiosError<ApiError>) => {
+    const data = error.response?.data;
     const normalized = data?.error ?? {
-      code: err.code ?? "NETWORK_ERROR",
-      message: err.message ?? "Request failed",
+      code: error.code ?? "NETWORK_ERROR",
+      message: error.message ?? "Request failed",
     };
     return Promise.reject(normalized);
   },
 );
 
-// ===== Endpoints =====
+export interface CustomerQueryParams {
+  page?: number;
+  size?: number;
+  defaultFlag?: "No" | "Yes";
+  clusterId?: number;
+  sort?: string;
+}
 
 export const api = {
+  facts: () => client.get("/facts").then((response) => FactsResponseSchema.parse(response.data)),
+  edaPcaMeta: () => client.get("/eda/pca-2d/meta").then((response) => PcaMetaSchema.parse(response.data)),
   overview: () =>
-    client.get<OverviewResponse>("/overview").then((r) => OverviewResponseSchema.parse(r.data)),
-
-  edaDistribution: (col: string, bins = 20, split?: string) =>
     client
-      .get<EdaDistribution>(`/eda/distribution`, { params: { col, bins, split } })
-      .then((r) => EdaDistributionSchema.parse(r.data)),
+      .get<OverviewResponse>("/overview")
+      .then((response) => OverviewResponseSchema.parse(response.data)),
+
+  edaDescribe: () =>
+    client
+      .get<EdaDescribe>("/eda/describe")
+      .then((response) => EdaDescribeSchema.parse(response.data)),
+
+  edaDistribution: (col: string, bins = 20, split?: "Default") =>
+    client
+      .get<EdaDistribution>("/eda/distribution", { params: { col, bins, split } })
+      .then((response) => EdaDistributionSchema.parse(response.data)),
 
   edaCorrelation: () =>
-    client.get<EdaCorrelation>(`/eda/correlation`).then((r) => EdaCorrelationSchema.parse(r.data)),
-
-  edaChurnBy: (dim: string) =>
     client
-      .get<EdaChurnGroup[]>(`/eda/churn-by`, { params: { dim } })
-      .then((r) => z.array(EdaChurnGroupSchema).parse(r.data)),
+      .get<EdaCorrelation>("/eda/correlation")
+      .then((response) => EdaCorrelationSchema.parse(response.data)),
 
-  edaPca2d: () => client.get<PcaPoint[]>(`/eda/pca-2d`).then((r) => r.data),
+  edaDefaultBy: (dim: string) =>
+    client
+      .get<EdaDefaultGroup[]>("/eda/default-by", { params: { dim } })
+      .then((response) => z.array(EdaDefaultGroupSchema).parse(response.data)),
 
-  customers: (params: {
-    page?: number;
-    size?: number;
-    attritionFlag?: string;
-    clusterId?: number;
-    sort?: string;
-  }) => client.get<PageResponse<CustomerSummary>>(`/customers`, { params }).then((r) => r.data),
+  edaPca2d: () =>
+    client
+      .get<PcaPoint[]>("/eda/pca-2d")
+      .then((response) => z.array(PcaPointSchema).parse(response.data)),
 
-  customer: (id: number) => client.get(`/customers/${id}`).then((r) => r.data),
+  customers: (params: CustomerQueryParams) =>
+    client
+      .get<PageResponse<CustomerSummary>>("/customers", {
+        params: { sort: "clientId,asc", ...params },
+      })
+      .then((response) => PageResponseSchema(CustomerSummarySchema).parse(response.data)),
 
-  clusters: () => client.get<Cluster[]>(`/clusters`).then((r) => r.data),
+  customer: (id: number) =>
+    client
+      .get<CustomerDetail>(`/customers/${id}`)
+      .then((response) => CustomerDetailSchema.parse(response.data)),
+
+  clusters: () =>
+    client
+      .get<Cluster[]>("/clusters")
+      .then((response) => z.array(ClusterSchema).parse(response.data)),
 
   clusterCustomers: (id: number, page = 1, size = 20) =>
     client
-      .get<PageResponse<CustomerSummary>>(`/clusters/${id}/customers`, { params: { page, size } })
-      .then((r) => r.data),
+      .get<PageResponse<CustomerSummary>>(`/clusters/${id}/customers`, {
+        params: { page, size, sort: "clientId,asc" },
+      })
+      .then((response) => PageResponseSchema(CustomerSummarySchema).parse(response.data)),
 
-  // Note: BE retention rules cap at lift = 1/0.84 ≈ 1.19 due to 84% Existing
-  // class prevalence. minLift=1.2 returns 0 rows; default is 1.0 to surface all 50.
-  rules: (minLift = 1.0, category?: string) =>
+  rules: (minLift = 1.0, category?: "default" | "non-default") =>
     client
-      .get<Rule[]>(`/rules`, { params: { minLift, category } })
-      .then((r) => z.array(RuleSchema).parse(r.data)),
+      .get<Rule[]>("/rules", { params: { minLift, category } })
+      .then((response) => z.array(RuleSchema).parse(response.data)),
 
-  predict: (body: PredictRequest) =>
-    client.post<PredictResponse>(`/predict`, body).then((r) => r.data),
+  predict: (body: PredictRequest) => {
+    const request = PredictRequestSchema.parse(body);
+    return client
+      .post<PredictResponse>("/predict", request)
+      .then((response) => PredictResponseSchema.parse(response.data));
+  },
 
-  insights: (category?: string) =>
-    client.get<Insight[]>(`/insights`, { params: { category } }).then((r) => r.data),
+  insights: (category?: "driver" | "segment" | "context") =>
+    client
+      .get<Insight[]>("/insights", { params: { category } })
+      .then((response) => z.array(InsightSchema).parse(response.data)),
 
   insightVisuals: () =>
     client
-      .get<InsightVisual[]>(`/insights/visuals`)
-      .then((r) => z.array(InsightVisualSchema).parse(r.data)),
+      .get<InsightVisual[]>("/insights/visuals")
+      .then((response) => z.array(InsightVisualSchema).parse(response.data)),
 
   anomalies: (limit = 50) =>
-    client.get<Anomaly[]>(`/anomalies`, { params: { limit } }).then((r) => r.data),
+    client
+      .get<Anomaly[]>("/anomalies", { params: { limit } })
+      .then((response) => z.array(AnomalySchema).parse(response.data)),
 
   miningReport: () =>
-    client.get<MiningReport>(`/mining-report`).then((r) => MiningReportSchema.parse(r.data)),
+    client
+      .get<MiningReport>("/mining-report")
+      .then((response) => MiningReportSchema.parse(response.data)),
+
+  sequences: () =>
+    client
+      .get<SequenceArtifact>("/sequences")
+      .then((response) => SequenceArtifactSchema.parse(response.data)),
 };
 
 export type ApiClient = typeof api;

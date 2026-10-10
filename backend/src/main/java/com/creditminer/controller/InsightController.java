@@ -38,6 +38,6 @@ public class InsightController {
     @GetMapping("/api/anomalies")
     @Operation(summary = "Top anomalous customers")
     public List<AnomalyResponse> anomalies(@RequestParam(value = "limit", defaultValue = "50") int limit) {
-        return anomalyService.topAnomalies(Math.min(500, Math.max(1, limit)));
+        return anomalyService.topAnomalies(Math.min(1000, Math.max(1, limit)));
     }
 }

@@ -1,53 +1,203 @@
 {
-  "totalRowsIn" : 10127,
-  "totalRowsOut" : 10127,
-  "duplicatesDropped" : 0,
-  "unknownRewritten" : {
-    "Education_Level" : 1519,
-    "Marital_Status" : 749,
-    "Income_Category" : 1112
-  },
+  "totalRowsIn" : 30000,
+  "totalRowsOut" : 29965,
+  "duplicatesDropped" : 35,
   "numericMedianImputed" : { },
+  "negativeBillByColumn" : {
+    "BILL_AMT1" : 590,
+    "BILL_AMT2" : 669,
+    "BILL_AMT3" : 655,
+    "BILL_AMT4" : 675,
+    "BILL_AMT5" : 655,
+    "BILL_AMT6" : 688
+  },
+  "negativeBillTotal" : 3932,
+  "duplicatesComparedWithout" : "ID",
+  "outlierRule" : "1.5 x IQR fences; rows flagged but retained",
   "outlierByColumn" : {
-    "Credit_Limit" : {
-      "zscoreCount" : 0,
-      "iqrCount" : 984,
-      "combinedCount" : 984,
-      "mean" : 8631.9537,
-      "std" : 9088.7767,
-      "q1" : 2555.0,
-      "q3" : 11067.5
+    "LIMIT_BAL" : {
+      "zscoreCount" : 130,
+      "iqrCount" : 167,
+      "combinedCount" : 167,
+      "mean" : 167442.005,
+      "std" : 129760.1352,
+      "q1" : 50000.0,
+      "q3" : 240000.0
     },
-    "Total_Trans_Amt" : {
-      "zscoreCount" : 391,
-      "iqrCount" : 896,
-      "combinedCount" : 896,
-      "mean" : 4404.0863,
-      "std" : 3397.1293,
-      "q1" : 2155.5,
-      "q3" : 4741.0
+    "AGE" : {
+      "zscoreCount" : 141,
+      "iqrCount" : 272,
+      "combinedCount" : 272,
+      "mean" : 35.488,
+      "std" : 9.2195,
+      "q1" : 28.0,
+      "q3" : 41.0
     },
-    "Avg_Utilization_Ratio" : {
-      "zscoreCount" : 0,
-      "iqrCount" : 0,
-      "combinedCount" : 0,
-      "mean" : 0.2749,
-      "std" : 0.2757,
-      "q1" : 0.023,
-      "q3" : 0.503
+    "PAY_1" : {
+      "zscoreCount" : 141,
+      "iqrCount" : 3129,
+      "combinedCount" : 3129,
+      "mean" : -0.0168,
+      "std" : 1.1235,
+      "q1" : -1.0,
+      "q3" : 0.0
     },
-    "Total_Revolving_Bal" : {
-      "zscoreCount" : 0,
-      "iqrCount" : 0,
-      "combinedCount" : 0,
-      "mean" : 1162.8141,
-      "std" : 814.9873,
-      "q1" : 359.0,
-      "q3" : 1784.0
+    "PAY_2" : {
+      "zscoreCount" : 157,
+      "iqrCount" : 4409,
+      "combinedCount" : 4409,
+      "mean" : -0.1319,
+      "std" : 1.1963,
+      "q1" : -1.0,
+      "q3" : 0.0
+    },
+    "PAY_3" : {
+      "zscoreCount" : 149,
+      "iqrCount" : 4208,
+      "combinedCount" : 4208,
+      "mean" : -0.1644,
+      "std" : 1.1959,
+      "q1" : -1.0,
+      "q3" : 0.0
+    },
+    "PAY_4" : {
+      "zscoreCount" : 168,
+      "iqrCount" : 3507,
+      "combinedCount" : 3507,
+      "mean" : -0.2189,
+      "std" : 1.1682,
+      "q1" : -1.0,
+      "q3" : 0.0
+    },
+    "PAY_5" : {
+      "zscoreCount" : 163,
+      "iqrCount" : 2967,
+      "combinedCount" : 2967,
+      "mean" : -0.2645,
+      "std" : 1.1322,
+      "q1" : -1.0,
+      "q3" : 0.0
+    },
+    "PAY_6" : {
+      "zscoreCount" : 128,
+      "iqrCount" : 3078,
+      "combinedCount" : 3078,
+      "mean" : -0.2894,
+      "std" : 1.1491,
+      "q1" : -1.0,
+      "q3" : 0.0
+    },
+    "BILL_AMT1" : {
+      "zscoreCount" : 685,
+      "iqrCount" : 2386,
+      "combinedCount" : 2386,
+      "mean" : 51283.0098,
+      "std" : 73658.1324,
+      "q1" : 3595.0,
+      "q3" : 67260.0
+    },
+    "BILL_AMT2" : {
+      "zscoreCount" : 668,
+      "iqrCount" : 2390,
+      "combinedCount" : 2390,
+      "mean" : 49236.3663,
+      "std" : 71195.5674,
+      "q1" : 3010.0,
+      "q3" : 64109.0
+    },
+    "BILL_AMT3" : {
+      "zscoreCount" : 659,
+      "iqrCount" : 2469,
+      "combinedCount" : 2469,
+      "mean" : 47067.9161,
+      "std" : 69371.3523,
+      "q1" : 2711.0,
+      "q3" : 60201.0
+    },
+    "BILL_AMT4" : {
+      "zscoreCount" : 679,
+      "iqrCount" : 2616,
+      "combinedCount" : 2616,
+      "mean" : 43313.3299,
+      "std" : 64353.5144,
+      "q1" : 2360.0,
+      "q3" : 54601.0
+    },
+    "BILL_AMT5" : {
+      "zscoreCount" : 650,
+      "iqrCount" : 2724,
+      "combinedCount" : 2724,
+      "mean" : 40358.3344,
+      "std" : 60817.1306,
+      "q1" : 1787.0,
+      "q3" : 50247.0
+    },
+    "BILL_AMT6" : {
+      "zscoreCount" : 650,
+      "iqrCount" : 2688,
+      "combinedCount" : 2688,
+      "mean" : 38917.0123,
+      "std" : 59574.1477,
+      "q1" : 1262.0,
+      "q3" : 49252.0
+    },
+    "PAY_AMT1" : {
+      "zscoreCount" : 390,
+      "iqrCount" : 2742,
+      "combinedCount" : 2742,
+      "mean" : 5670.0993,
+      "std" : 16571.8495,
+      "q1" : 1000.0,
+      "q3" : 5008.0
+    },
+    "PAY_AMT2" : {
+      "zscoreCount" : 307,
+      "iqrCount" : 2723,
+      "combinedCount" : 2723,
+      "mean" : 5927.9832,
+      "std" : 23053.4566,
+      "q1" : 850.0,
+      "q3" : 5000.0
+    },
+    "PAY_AMT3" : {
+      "zscoreCount" : 362,
+      "iqrCount" : 2596,
+      "combinedCount" : 2596,
+      "mean" : 5231.6888,
+      "std" : 17616.3611,
+      "q1" : 390.0,
+      "q3" : 4512.0
+    },
+    "PAY_AMT4" : {
+      "zscoreCount" : 396,
+      "iqrCount" : 2993,
+      "combinedCount" : 2993,
+      "mean" : 4831.6175,
+      "std" : 15674.4645,
+      "q1" : 300.0,
+      "q3" : 4016.0
+    },
+    "PAY_AMT5" : {
+      "zscoreCount" : 414,
+      "iqrCount" : 2944,
+      "combinedCount" : 2944,
+      "mean" : 4804.897,
+      "std" : 15286.3723,
+      "q1" : 261.0,
+      "q3" : 4042.0
+    },
+    "PAY_AMT6" : {
+      "zscoreCount" : 439,
+      "iqrCount" : 2960,
+      "combinedCount" : 2960,
+      "mean" : 5221.498,
+      "std" : 17786.9769,
+      "q1" : 131.0,
+      "q3" : 4000.0
     }
   },
-  "outlierTotalCombined" : 1684,
-  "outlierTotalCombinedPct" : 0.1663,
+  "outlierTotalCombined" : 16855,
+  "outlierTotalCombinedPct" : 0.5625,
   "outputArff" : "data/processed/clean.arff",
-  "generatedAt" : "2026-09-12T04:10:39.236163900Z"
+  "generatedAt" : "2026-09-26T05:27:47.173557100Z"
 }

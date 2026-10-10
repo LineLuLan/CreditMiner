@@ -13,10 +13,10 @@ export default function Error({
 }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-6">
-      <Card className="w-full max-w-md border-destructive/30 shadow-sm">
+      <Card className="w-full max-w-md border-danger/30 shadow-sm">
         <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
           <span
-            className="grid h-14 w-14 place-items-center rounded-full bg-destructive/10 text-destructive"
+            className="grid h-14 w-14 place-items-center rounded-full bg-danger/10 text-danger"
             aria-hidden
           >
             <AlertTriangle className="h-7 w-7" />

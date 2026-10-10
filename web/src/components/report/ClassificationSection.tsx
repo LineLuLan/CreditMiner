@@ -10,6 +10,7 @@ import type { EvaluationVariant, MiningReport } from "@/types/api.types";
 import { ModelComparisonChart } from "./ModelComparisonChart";
 import { ReportDetails, ReportTable, Takeaway } from "./ReportPrimitives";
 import { findBestVariant } from "./ExecutiveSummary";
+import { DEFAULT_SELECTION_RULE } from "./report-copy";
 
 type MetricKey =
   | "model"
@@ -66,15 +67,31 @@ export function ClassificationSection({ report }: { report: MiningReport }) {
   const variants = report.classification.evaluation?.variants ?? [];
   const best = findBestVariant(report);
   const rows = buildRows(report, variants);
+  const selectionRule = report.classification.evaluation?.bestVariant?.selectionRule ?? DEFAULT_SELECTION_RULE;
+  // Prefer the selected cost variant, then CV F1 and ROC AUC; missing costs stay neutral.
+  const costVariants = variants.filter((variant) => variant.variant === "cost").sort((a, b) => {
+    if (a === best) return -1;
+    if (b === best) return 1;
+    return ((b.cv?.f1Default ?? -Infinity) - (a.cv?.f1Default ?? -Infinity))
+      || ((b.cv?.rocAuc ?? -Infinity) - (a.cv?.rocAuc ?? -Infinity));
+  });
+  const costSummary = costVariants.find((variant) => variant.hyperparameters?.summary)?.hyperparameters?.summary;
+  const costOptions = costVariants.find((variant) => variant.hyperparameters?.options)?.hyperparameters?.options;
+  const costSentence = costSummary
+    ? `Cost-sensitive learning: ${costSummary}`
+    : costOptions
+      ? `Cost-sensitive learning uses the cost matrix ${costOptions}.`
+      : "Cost-sensitive learning uses the cost matrix recorded in each variant's hyperparameters.";
 
   return (
-    <div id="section-5-1" className="scroll-mt-20 space-y-5">
+    <div id="section-5-2" className="scroll-mt-20 space-y-5">
       <div>
-        <h3 className="report-heading text-xl font-semibold">5.1 Classification</h3>
+        <h3 className="report-heading text-xl font-semibold">5.2 Improvements</h3>
       </div>
+      <p className="text-sm leading-6 text-muted-foreground">SMOTE adds minority-class training examples [7]. {costSentence}</p>
       <Takeaway>
         {best?.algo ?? report.classification.bestModel} (
-        {best?.variant ?? report.classification.bestVariant}) has the strongest held-out churn F1.
+        {best?.variant ?? report.classification.bestVariant}) is the selected model under the rule: {selectionRule}.
       </Takeaway>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Metric label="Train rows" value={numberOrNA(split?.trainRows)} />
@@ -87,9 +104,12 @@ export function ClassificationSection({ report }: { report: MiningReport }) {
         <p className="mb-4">
           SMOTE changes only training rows from {numberOrNA(split?.trainRows)} to{" "}
           {numberOrNA(split?.smoteTrainRows)}. Cost-sensitive models increase the penalty for missed
-          churn.
+          defaults.
         </p>
-        <p className="mb-4">The positive class is churn. The held-out test data stays unchanged.</p>
+        <p className="mb-4">
+          The positive class is {split?.positiveClass ?? "Yes"}. The held-out test data stays
+          unchanged.
+        </p>
         <ModelComparisonTable rows={rows} best={best} sortable />
       </ReportDetails>
     </div>
@@ -101,11 +121,13 @@ export function ModelComparisonTable({
   best,
   sortable = false,
   appendix = false,
+  tableId = "appendix-models",
 }: {
   rows: ComparisonRow[];
   best?: EvaluationVariant;
   sortable?: boolean;
   appendix?: boolean;
+  tableId?: string;
 }) {
   const [sortKey, setSortKey] = useState<MetricKey>("testF1");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
@@ -193,7 +215,7 @@ export function ModelComparisonTable({
   );
 
   return appendix ? (
-    <ReportTable id="appendix-models" caption="Complete model comparison." allowPageBreak>
+    <ReportTable id={tableId} caption="Complete model comparison." allowPageBreak>
       {table}
     </ReportTable>
   ) : (
@@ -214,15 +236,15 @@ function buildRows(report: MiningReport, variants: EvaluationVariant[]): Compari
       model: metric.model,
       variant: metric.variant,
       cvAccuracy: metric.cvAccuracy ?? variant?.cv?.accuracy,
-      cvPrecision: variant?.cv?.precisionAttrited,
-      cvRecall: variant?.cv?.recallAttrited,
-      cvF1: metric.cvF1 ?? variant?.cv?.f1Attrited,
+      cvPrecision: variant?.cv?.precisionDefault,
+      cvRecall: variant?.cv?.recallDefault,
+      cvF1: metric.cvF1 ?? variant?.cv?.f1Default,
       cvRocAuc: metric.cvRocAuc ?? variant?.cv?.rocAuc,
       cvPrAuc: metric.cvPrAuc ?? variant?.cv?.prAuc,
       testAccuracy: metric.testAccuracy ?? variant?.test?.accuracy,
-      testPrecision: metric.testPrecision ?? variant?.test?.precisionAttrited,
-      testRecall: metric.testRecall ?? variant?.test?.recallAttrited,
-      testF1: metric.testF1 ?? variant?.test?.f1Attrited,
+      testPrecision: metric.testPrecision ?? variant?.test?.precisionDefault,
+      testRecall: metric.testRecall ?? variant?.test?.recallDefault,
+      testF1: metric.testF1 ?? variant?.test?.f1Default,
       testRocAuc: metric.testRocAuc ?? variant?.test?.rocAuc,
       testPrAuc: metric.testPrAuc ?? variant?.test?.prAuc,
     };

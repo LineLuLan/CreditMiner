@@ -1,342 +1,449 @@
 [
   {
-    "title": "Falling card activity predicts churn",
+    "title": "Two months late now predicts default",
     "headline": {
-      "value": "50.9%",
-      "label": "churn when the Q4/Q1 count ratio is below 0.5"
+      "value": "69.1%",
+      "label": "default when two months late"
     },
-    "lift": "3.2x",
-    "unit": "% churn",
+    "lift": "3.1x",
+    "unit": "% default",
     "baseline": {
-      "value": 16.1,
-      "label": "Portfolio 16.1%"
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
     },
-    "axis": "Q4/Q1 transaction-count ratio, by quarter of customers",
+    "axis": "Latest statement status (PAY_1)",
     "bars": [
       {
-        "label": "Lowest 25%",
-        "value": 37.6,
-        "n": 2537,
+        "label": "No use",
+        "value": 13.2,
+        "n": 2750,
+        "highlight": false
+      },
+      {
+        "label": "Paid in full",
+        "value": 16.8,
+        "n": 5682,
+        "highlight": false
+      },
+      {
+        "label": "Revolving",
+        "value": 12.8,
+        "n": 14737,
+        "highlight": false
+      },
+      {
+        "label": "1 month late",
+        "value": 34.0,
+        "n": 3667,
         "highlight": true
       },
       {
-        "label": "25-50%",
-        "value": 11.3,
-        "n": 2541,
-        "highlight": false
-      },
-      {
-        "label": "50-75%",
-        "value": 7.7,
-        "n": 2532,
-        "highlight": false
-      },
-      {
-        "label": "Highest 25%",
-        "value": 7.6,
-        "n": 2517,
-        "highlight": false
-      }
-    ]
-  },
-  {
-    "title": "Unused credit lines churn most",
-    "headline": {
-      "value": "36.1%",
-      "label": "churn with a zero revolving balance"
-    },
-    "lift": "2.25x",
-    "unit": "% churn",
-    "baseline": {
-      "value": 16.1,
-      "label": "Portfolio 16.1%"
-    },
-    "axis": "Average utilization ratio",
-    "bars": [
-      {
-        "label": "0",
-        "value": 36.1,
-        "n": 2470,
+        "label": "2 months late",
+        "value": 69.1,
+        "n": 2666,
         "highlight": true
       },
       {
-        "label": "0-0.25",
-        "value": 10.1,
-        "n": 3360,
-        "highlight": false
+        "label": "3 months late",
+        "value": 75.8,
+        "n": 322,
+        "highlight": true
       },
       {
-        "label": "0.25-0.5",
-        "value": 9.5,
-        "n": 1752,
-        "highlight": false
+        "label": "4 months late",
+        "value": 68.4,
+        "n": 76,
+        "highlight": true
       },
       {
-        "label": "0.5-0.75",
-        "value": 6.2,
-        "n": 1798,
-        "highlight": false
+        "label": "5 months late",
+        "value": 50.0,
+        "n": 26,
+        "highlight": true
       },
       {
-        "label": "> 0.75",
-        "value": 15.5,
-        "n": 747,
-        "highlight": false
-      }
-    ]
-  },
-  {
-    "title": "Inactive customers with low use churn at 47%",
-    "headline": {
-      "value": "46.8%",
-      "label": "churn with 3+ inactive months and low use"
-    },
-    "lift": "2.9x",
-    "unit": "% churn",
-    "baseline": {
-      "value": 16.1,
-      "label": "Portfolio 16.1%"
-    },
-    "axis": "Inactive months in the last 12 months",
-    "bars": [
-      {
-        "label": "1",
-        "value": 4.5,
-        "n": 2233,
-        "highlight": false
+        "label": "6 months late",
+        "value": 54.5,
+        "n": 11,
+        "highlight": true
       },
       {
-        "label": "2",
-        "value": 15.4,
-        "n": 3282,
-        "highlight": false
+        "label": "7 months late",
+        "value": 77.8,
+        "n": 9,
+        "highlight": true
       },
       {
-        "label": "3",
-        "value": 21.5,
-        "n": 3846,
-        "highlight": false
-      },
-      {
-        "label": "4+",
-        "value": 24.6,
-        "n": 737,
-        "highlight": false
-      },
-      {
-        "label": "3+ and low use",
-        "value": 46.8,
-        "n": 1241,
+        "label": "8 months late",
+        "value": 57.9,
+        "n": 19,
         "highlight": true
       }
     ]
   },
   {
-    "title": "Many bank contacts signal distress",
+    "title": "Worst delay of three or more months",
     "headline": {
-      "value": "33.5%",
-      "label": "churn at 5 contacts per year"
+      "value": "62.8%",
+      "label": "default with worst delay of three or more months"
     },
-    "lift": "2.1x",
-    "unit": "% churn",
+    "lift": "2.8x",
+    "unit": "% default",
     "baseline": {
-      "value": 16.1,
-      "label": "Portfolio 16.1%"
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
     },
-    "axis": "Contacts with the bank in 12 months",
+    "axis": "Worst delay across six statements (months)",
     "bars": [
       {
-        "label": "0",
-        "value": 1.8,
-        "n": 399,
-        "highlight": false
-      },
-      {
-        "label": "1",
-        "value": 7.2,
-        "n": 1499,
-        "highlight": false
-      },
-      {
-        "label": "2",
-        "value": 12.5,
-        "n": 3227,
-        "highlight": false
-      },
-      {
-        "label": "3",
-        "value": 20.2,
-        "n": 3380,
-        "highlight": false
-      },
-      {
-        "label": "4",
-        "value": 22.6,
-        "n": 1392,
-        "highlight": true
-      },
-      {
-        "label": "5",
-        "value": 33.5,
-        "n": 176,
-        "highlight": true
-      }
-    ]
-  },
-  {
-    "title": "Customers with 1 or 2 products churn twice as often",
-    "headline": {
-      "value": "27.8%",
-      "label": "churn with 2 products"
-    },
-    "lift": "1.7x",
-    "unit": "% churn",
-    "baseline": {
-      "value": 16.1,
-      "label": "Portfolio 16.1%"
-    },
-    "axis": "Number of products held",
-    "bars": [
-      {
-        "label": "1",
-        "value": 25.6,
-        "n": 910,
-        "highlight": true
-      },
-      {
-        "label": "2",
-        "value": 27.8,
-        "n": 1243,
-        "highlight": true
-      },
-      {
-        "label": "3",
-        "value": 17.3,
-        "n": 2305,
-        "highlight": false
-      },
-      {
-        "label": "4",
-        "value": 11.8,
-        "n": 1912,
-        "highlight": false
-      },
-      {
-        "label": "5",
-        "value": 12.0,
-        "n": 1891,
-        "highlight": false
-      },
-      {
-        "label": "6",
-        "value": 10.5,
-        "n": 1866,
-        "highlight": false
-      }
-    ]
-  },
-  {
-    "title": "One segment holds 64% of all churn",
-    "headline": {
-      "value": "63.8%",
-      "label": "of churned customers are in At-Risk Mid-Tier"
-    },
-    "lift": "1.6x",
-    "unit": "% churn",
-    "baseline": {
-      "value": 16.1,
-      "label": "Portfolio 16.1%"
-    },
-    "axis": "Customer segment",
-    "bars": [
-      {
-        "label": "Premium Loyal",
+        "label": "<= 0",
         "value": 11.7,
-        "n": 1920,
+        "n": 19918,
         "highlight": false
       },
       {
-        "label": "At-Risk Mid-Tier",
-        "value": 26.1,
-        "n": 3981,
+        "label": "1",
+        "value": 25.1,
+        "n": 1668,
         "highlight": true
       },
       {
-        "label": "Low-Income Stable",
-        "value": 8.6,
-        "n": 4226,
-        "highlight": false
+        "label": "2",
+        "value": 43.6,
+        "n": 7187,
+        "highlight": true
+      },
+      {
+        "label": "3+",
+        "value": 62.8,
+        "n": 1192,
+        "highlight": true
       }
     ]
   },
   {
-    "title": "Premium Loyal customers use 7% of their credit",
+    "title": "Each late month adds risk",
     "headline": {
-      "value": "6.8%",
-      "label": "of the credit limit is used by Premium Loyal"
+      "value": "60.0%",
+      "label": "default with three or more late months"
     },
-    "lift": null,
-    "unit": "% utilization",
-    "baseline": null,
-    "axis": "Average utilization by segment",
-    "bars": [
-      {
-        "label": "Premium Loyal",
-        "value": 6.8,
-        "n": 1920,
-        "highlight": true
-      },
-      {
-        "label": "At-Risk Mid-Tier",
-        "value": 7.5,
-        "n": 3981,
-        "highlight": false
-      },
-      {
-        "label": "Low-Income Stable",
-        "value": 55.7,
-        "n": 4226,
-        "highlight": false
-      }
-    ]
-  },
-  {
-    "title": "Card colour does not predict churn. Value score does.",
-    "headline": {
-      "value": "30.4%",
-      "label": "churn in the Bronze value tier"
-    },
-    "lift": "1.9x",
-    "unit": "% churn",
+    "lift": "2.7x",
+    "unit": "% default",
     "baseline": {
-      "value": 16.1,
-      "label": "Portfolio 16.1%"
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
     },
-    "axis": "Customer value tier",
+    "axis": "Late months across six statements",
     "bars": [
       {
-        "label": "Bronze",
-        "value": 30.4,
-        "n": 2532,
+        "label": "No late months",
+        "value": 11.7,
+        "n": 19918,
+        "highlight": false
+      },
+      {
+        "label": "3+ late months",
+        "value": 60.0,
+        "n": 3743,
+        "highlight": true
+      }
+    ]
+  },
+  {
+    "title": "One cluster holds almost half of all defaults",
+    "headline": {
+      "value": "53.5%",
+      "label": "default in cluster 0"
+    },
+    "lift": "2.4x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "K-means cluster",
+    "bars": [
+      {
+        "label": "High-Default Persistent Delayers",
+        "value": 53.5,
+        "n": 5516,
         "highlight": true
       },
       {
-        "label": "Silver",
-        "value": 13.5,
-        "n": 2531,
+        "label": "Lower-Default Current Payers",
+        "value": 15.1,
+        "n": 24449,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Low credit limits carry the most default",
+    "headline": {
+      "value": "31.8%",
+      "label": "default in the lowest quarter"
+    },
+    "lift": "1.4x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Credit-limit quartiles",
+    "bars": [
+      {
+        "label": "Q1",
+        "value": 31.8,
+        "n": 7673,
+        "highlight": true
+      },
+      {
+        "label": "Q2",
+        "value": 24.7,
+        "n": 7607,
+        "highlight": true
+      },
+      {
+        "label": "Q3",
+        "value": 17.4,
+        "n": 7627,
         "highlight": false
       },
       {
-        "label": "Gold",
-        "value": 7.7,
-        "n": 2532,
+        "label": "Q4",
+        "value": 14.0,
+        "n": 7058,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Small payments signal default",
+    "headline": {
+      "value": "31.7%",
+      "label": "default in the lowest quarter"
+    },
+    "lift": "1.4x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Latest-payment amount quartiles",
+    "bars": [
+      {
+        "label": "Q1",
+        "value": 31.7,
+        "n": 7805,
+        "highlight": true
+      },
+      {
+        "label": "Q2",
+        "value": 22.1,
+        "n": 7179,
         "highlight": false
       },
       {
-        "label": "Platinum",
-        "value": 12.6,
-        "n": 2532,
+        "label": "Q3",
+        "value": 20.5,
+        "n": 7492,
         "highlight": false
+      },
+      {
+        "label": "Q4",
+        "value": 13.8,
+        "n": 7489,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Paying a larger share of the bill lowers risk",
+    "headline": {
+      "value": "29.2%",
+      "label": "default in the lowest payment-ratio quarter"
+    },
+    "lift": "1.3x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Six-month aggregate payment-ratio quartiles",
+    "bars": [
+      {
+        "label": "Q1",
+        "value": 29.2,
+        "n": 7493,
+        "highlight": true
+      },
+      {
+        "label": "Q2",
+        "value": 26.2,
+        "n": 7490,
+        "highlight": true
+      },
+      {
+        "label": "Q3",
+        "value": 17.9,
+        "n": 7491,
+        "highlight": false
+      },
+      {
+        "label": "Q4",
+        "value": 15.3,
+        "n": 7491,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Age matters only at the edges",
+    "headline": {
+      "value": "28.3%",
+      "label": "default at age 60+ (n=339)"
+    },
+    "lift": "1.3x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Age bands (years)",
+    "bars": [
+      {
+        "label": "<= 29",
+        "value": 22.9,
+        "n": 9603,
+        "highlight": true
+      },
+      {
+        "label": "30-39",
+        "value": 20.3,
+        "n": 11226,
+        "highlight": false
+      },
+      {
+        "label": "40-49",
+        "value": 22.9,
+        "n": 6456,
+        "highlight": true
+      },
+      {
+        "label": "50-59",
+        "value": 24.9,
+        "n": 2341,
+        "highlight": true
+      },
+      {
+        "label": "60+",
+        "value": 28.3,
+        "n": 339,
+        "highlight": true
+      }
+    ]
+  },
+  {
+    "title": "Demographic default rates differ",
+    "headline": {
+      "value": "18.1 pts",
+      "label": "education spread including Other"
+    },
+    "lift": "",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Education, marital status and sex",
+    "bars": [
+      {
+        "label": "Education: Graduate",
+        "value": 19.2,
+        "n": 10563,
+        "highlight": false
+      },
+      {
+        "label": "Education: University",
+        "value": 23.7,
+        "n": 14019,
+        "highlight": true
+      },
+      {
+        "label": "Education: HighSchool",
+        "value": 25.2,
+        "n": 4915,
+        "highlight": true
+      },
+      {
+        "label": "Education: Other",
+        "value": 7.1,
+        "n": 468,
+        "highlight": false
+      },
+      {
+        "label": "Marriage: Married",
+        "value": 23.5,
+        "n": 13643,
+        "highlight": true
+      },
+      {
+        "label": "Marriage: Single",
+        "value": 20.9,
+        "n": 15945,
+        "highlight": false
+      },
+      {
+        "label": "Marriage: Other",
+        "value": 23.6,
+        "n": 377,
+        "highlight": true
+      },
+      {
+        "label": "Sex: Male",
+        "value": 24.2,
+        "n": 11874,
+        "highlight": true
+      },
+      {
+        "label": "Sex: Female",
+        "value": 20.8,
+        "n": 18091,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "The risk tier rule separates clients well",
+    "headline": {
+      "value": "45.2%",
+      "label": "default in the engineered High tier"
+    },
+    "lift": "2.0x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Engineered risk tier",
+    "bars": [
+      {
+        "label": "Low",
+        "value": 10.9,
+        "n": 13406,
+        "highlight": false
+      },
+      {
+        "label": "Medium",
+        "value": 15.7,
+        "n": 7846,
+        "highlight": false
+      },
+      {
+        "label": "High",
+        "value": 45.2,
+        "n": 8713,
+        "highlight": true
       }
     ]
   }

@@ -20,6 +20,12 @@ const config: Config = {
         "chart-3": "hsl(var(--chart-3))",
         "chart-4": "hsl(var(--chart-4))",
         "chart-5": "hsl(var(--chart-5))",
+        "chart-neutral": "hsl(var(--chart-neutral))",
+        "chart-baseline": "hsl(var(--chart-baseline))",
+        danger: {
+          DEFAULT: "hsl(var(--danger))",
+          foreground: "hsl(var(--danger-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

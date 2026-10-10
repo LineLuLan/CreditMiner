@@ -15,7 +15,6 @@ import {
 import { HeatmapChart } from "@/components/charts/HeatmapChart";
 import {
   CHART_AXIS_TICK,
-  CHART_SEMANTIC,
   CHART_TOOLTIP_PROPS,
 } from "@/components/charts/chart-theme";
 import { Header } from "@/components/layout/Header";
@@ -30,16 +29,18 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useEdaChurnBy, useEdaCorrelation } from "@/hooks/useEda";
-import { CHURN_BY_DIMS, EDA_FIELD_LABELS } from "@/lib/constants";
-import { formatInt, formatPct } from "@/lib/utils";
+import { useEdaCorrelation, useEdaDefaultBy } from "@/hooks/useEda";
+import { CATEGORY_LABELS, DEFAULT_BY_DIMS, EDA_FIELD_LABELS } from "@/lib/constants";
+import { CHART_SEMANTIC } from "@/lib/chart-theme";
+import { formatDecimal, formatInt, formatMultiplier, formatPct } from "@/lib/format";
+import { friendlyRuleValue } from "@/lib/rules-format";
 import { DistributionPanel } from "./EdaSections";
 
 /**
- * Intent: make class differences and portfolio-relative churn visible in EDA.
+ * Intent: make class differences and portfolio-relative default visible in EDA.
  * Status: the split response remains optional and falls back to aggregate counts.
  * Next: preserve the fallback if the backend adds more distribution columns.
- * Blockers: none. Confidence: high after typecheck and responsive browser smoke checks.
+ * Blockers: none. Confidence: typecheck and server-free layout checks cover this view.
  */
 export default function EdaPage() {
   return (
@@ -54,8 +55,8 @@ export default function EdaPage() {
             <TabsTrigger value="correlation" className="px-2 text-xs sm:px-3 sm:text-sm">
               Correlation
             </TabsTrigger>
-            <TabsTrigger value="churn-by" className="px-2 text-xs sm:px-3 sm:text-sm">
-              Churn by
+            <TabsTrigger value="default-by" className="px-2 text-xs sm:px-3 sm:text-sm">
+              Default by
             </TabsTrigger>
           </TabsList>
           <TabsContent value="distribution">
@@ -64,8 +65,8 @@ export default function EdaPage() {
           <TabsContent value="correlation">
             <CorrelationPanel />
           </TabsContent>
-          <TabsContent value="churn-by">
-            <ChurnByPanel />
+          <TabsContent value="default-by">
+            <DefaultByPanel />
           </TabsContent>
         </Tabs>
       </div>
@@ -89,7 +90,7 @@ function CorrelationPanel() {
         {isLoading ? (
           <Skeleton className="h-[520px]" />
         ) : error ? (
-          <p className="text-sm text-destructive">
+          <p className="text-sm text-danger">
             {(error as { message?: string }).message ?? "Failed to load correlation"}
           </p>
         ) : data ? (
@@ -107,14 +108,14 @@ function CorrelationPanel() {
                   <li
                     key={`${pair.left}-${pair.right}`}
                     className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-start gap-2 text-xs"
-                    title={`${pair.left} x ${pair.right}: r = ${pair.value.toFixed(2)}`}
+                    title={`${EDA_FIELD_LABELS[pair.left] ?? pair.left} x ${EDA_FIELD_LABELS[pair.right] ?? pair.right}: r = ${formatDecimal(pair.value)}`}
                   >
                     <span className="text-muted-foreground">{index + 1}.</span>
                     <span className="min-w-0 leading-4">
                       {EDA_FIELD_LABELS[pair.left] ?? pair.left} x{" "}
                       {EDA_FIELD_LABELS[pair.right] ?? pair.right}
                     </span>
-                    <span className="font-semibold tabular-nums">{pair.value.toFixed(2)}</span>
+                    <span className="font-semibold tabular-nums">{formatDecimal(pair.value)}</span>
                   </li>
                 ))}
               </ol>
@@ -148,33 +149,33 @@ function getStrongestCorrelationPairs(columns: string[], matrix: number[][]) {
   return pairs.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 8);
 }
 
-function ChurnByPanel() {
-  const [dim, setDim] = React.useState<string>(CHURN_BY_DIMS[0]);
-  const { data, isLoading, error } = useEdaChurnBy(dim);
+function DefaultByPanel() {
+  const [dim, setDim] = React.useState<string>(DEFAULT_BY_DIMS[0]);
+  const { data, isLoading, error } = useEdaDefaultBy(dim);
   const dimId = React.useId();
   const chartData = React.useMemo(
     () =>
       (data ?? [])
         .filter((row) => row.count > 0)
-        .sort((a, b) => b.churnRate - a.churnRate)
+        .sort((a, b) => b.defaultRate - a.defaultRate)
         .map((row) => ({
-          group: row.group,
-          churnRate: row.churnRate,
-          churnPct: Math.round(row.churnRate * 1000) / 10,
+          group: (CATEGORY_LABELS[dim as keyof typeof CATEGORY_LABELS] as Record<string, string> | undefined)?.[row.group] ?? friendlyRuleValue(row.group, dim),
+          defaultRate: row.defaultRate,
+          defaultPct: Math.round(row.defaultRate * 1000) / 10,
           count: row.count,
-          attrited: row.attritedCount,
+          defaults: row.defaultCount,
         })),
-    [data],
+    [data, dim],
   );
   const totalCustomers = chartData.reduce((sum, row) => sum + row.count, 0);
-  const totalAttrited = chartData.reduce((sum, row) => sum + row.attrited, 0);
-  const overallChurnRate = totalCustomers > 0 ? totalAttrited / totalCustomers : 0;
-  const overallChurnPct = Math.round(overallChurnRate * 1000) / 10;
+  const totalDefaults = chartData.reduce((sum, row) => sum + row.defaults, 0);
+  const overallDefaultRate = totalCustomers > 0 ? totalDefaults / totalCustomers : 0;
+  const overallDefaultPct = Math.round(overallDefaultRate * 1000) / 10;
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Churn rate grouped by dimension</CardTitle>
+        <CardTitle className="text-base">Default rate grouped by dimension</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-1.5 sm:w-[260px]">
@@ -186,9 +187,9 @@ function ChurnByPanel() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {CHURN_BY_DIMS.map((dimension) => (
+              {DEFAULT_BY_DIMS.map((dimension) => (
                 <SelectItem key={dimension} value={dimension}>
-                  {EDA_FIELD_LABELS[dimension] ?? dimension} ({dimension})
+                  {EDA_FIELD_LABELS[dimension] ?? dimension}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -197,51 +198,43 @@ function ChurnByPanel() {
         {isLoading ? (
           <Skeleton className="h-64" />
         ) : error ? (
-          <p className="text-sm text-destructive">
-            {(error as { message?: string }).message ?? "Failed to load churn-by data"}
+          <p className="text-sm text-danger">
+            {(error as { message?: string }).message ?? "Failed to load default-by data"}
           </p>
         ) : data && chartData.length > 0 ? (
           <>
-            <div role="img" aria-label={`Churn rate by ${EDA_FIELD_LABELS[dim] ?? dim}`}>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={chartData} margin={{ top: 24, right: 16, left: -8, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="group"
-                    stroke="hsl(var(--muted-foreground))"
-                    tick={CHART_AXIS_TICK}
-                    interval={0}
-                    angle={-15}
-                    textAnchor="end"
-                    height={48}
-                  />
-                  <YAxis stroke="hsl(var(--muted-foreground))" tick={CHART_AXIS_TICK} unit="%" />
-                  <Tooltip {...CHART_TOOLTIP_PROPS} />
+            <div role="img" aria-label={`Default rate by ${EDA_FIELD_LABELS[dim] ?? dim}`}>
+              <ResponsiveContainer width="100%" height={Math.max(260, chartData.length * 30)}>
+                <BarChart data={chartData} layout="vertical" margin={{ top: 24, right: 16, left: 0, bottom: 8 }}>
+                  <CartesianGrid stroke="hsl(var(--border))" horizontal={false} />
+                  <YAxis dataKey="group" type="category" width={104} tick={CHART_AXIS_TICK} />
+                  <XAxis type="number" domain={[0, 100]} tick={CHART_AXIS_TICK} tickFormatter={(value: number) => formatPct(value / 100, 0)} />
+                  <Tooltip {...CHART_TOOLTIP_PROPS} formatter={(value: number) => [formatPct(value / 100), "Default rate"]} />
                   <ReferenceLine
-                    y={overallChurnPct}
-                    stroke={CHART_SEMANTIC.destructive}
+                    x={overallDefaultPct}
+                    stroke={CHART_SEMANTIC.baseline}
                     strokeDasharray="5 4"
                     label={{
-                      value: `Overall ${formatPct(overallChurnRate)}`,
+                      value: `Portfolio ${formatPct(overallDefaultRate)}`,
                       position: "insideTopRight",
                       fill: "hsl(var(--foreground))",
                       fontSize: 11,
                     }}
                   />
                   <Bar
-                    dataKey="churnPct"
-                    name="Churn %"
+                    dataKey="defaultPct"
+                    name="Default %"
                     maxBarSize={96}
-                    radius={[4, 4, 0, 0]}
+                    radius={[0, 4, 4, 0]}
                     isAnimationActive={false}
                   >
                     {chartData.map((row) => (
                       <Cell
                         key={row.group}
                         fill={
-                          row.churnRate > overallChurnRate
-                            ? CHART_SEMANTIC.destructive
-                            : CHART_SEMANTIC.primary
+                          row.defaultRate > overallDefaultRate
+                            ? CHART_SEMANTIC.danger
+                            : CHART_SEMANTIC.neutral
                         }
                       />
                     ))}
@@ -255,8 +248,8 @@ function ChurnByPanel() {
                   <tr className="border-b bg-muted/20 text-left text-muted-foreground">
                     <th className="px-3 py-2 font-medium">Group</th>
                     <th className="px-3 py-2 text-right font-medium">Count</th>
-                    <th className="px-3 py-2 text-right font-medium">Churned</th>
-                    <th className="px-3 py-2 text-right font-medium">Churn rate</th>
+                    <th className="px-3 py-2 text-right font-medium">Default</th>
+                    <th className="px-3 py-2 text-right font-medium">Default rate</th>
                     <th className="px-3 py-2 text-right font-medium">Lift vs base</th>
                   </tr>
                 </thead>
@@ -266,15 +259,15 @@ function ChurnByPanel() {
                       <td className="px-3 py-1.5 font-medium">{row.group}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{formatInt(row.count)}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">
-                        {formatInt(row.attrited)}
+                        {formatInt(row.defaults)}
                       </td>
                       <td className="px-3 py-1.5 text-right tabular-nums">
-                        {formatPct(row.churnRate)}
+                        {formatPct(row.defaultRate)}
                       </td>
                       <td className="px-3 py-1.5 text-right font-medium tabular-nums">
-                        {overallChurnRate > 0
-                          ? `${(row.churnRate / overallChurnRate).toFixed(2)}x`
-                          : "Not available"}
+                        {overallDefaultRate > 0
+                          ? formatMultiplier(row.defaultRate / overallDefaultRate)
+                          : "n/a"}
                       </td>
                     </tr>
                   ))}
@@ -284,7 +277,7 @@ function ChurnByPanel() {
           </>
         ) : data ? (
           <p className="text-sm text-muted-foreground">
-            No customer groups with observations are available for this dimension.
+            No client groups with observations are available for this dimension.
           </p>
         ) : null}
       </CardContent>

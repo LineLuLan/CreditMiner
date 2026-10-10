@@ -1,41 +1,42 @@
 #!/usr/bin/env bash
-# =============================================================================
-# CreditMiner — one-shot setup (Linux/macOS)
-# Usage:  ./scripts/setup.sh
-# =============================================================================
+# Prepare the CreditMiner development environment on Linux or macOS.
 set -euo pipefail
 
-echo "==> Checking prerequisites..."
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RAW="$ROOT/backend/data/raw/default_credit_card_clients.csv"
+
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
-    echo "MISSING: $1 — install it before continuing."
+    echo "MISSING: $1 is required." >&2
     exit 1
   fi
   echo "  OK  $1"
 }
-require java
-require mvn
-require node
-require pnpm
-require git
-require docker
 
-echo
-echo "==> Starting Postgres via docker compose..."
-docker compose up -d postgres
+echo "==> Checking prerequisites"
+for command in java mvn node corepack docker; do
+  require "$command"
+done
 
-echo
-echo "==> Building backend (mvn compile, no tests)..."
-( cd backend && mvn -q clean compile -DskipTests )
+echo "==> Starting local PostgreSQL for the dev profile"
+(cd "$ROOT" && docker compose up -d postgres)
 
-echo
-echo "==> Installing frontend dependencies..."
-( cd web && [[ -f .env.local ]] || cp .env.local.example .env.local && pnpm install --silent )
+echo "==> Installing frontend dependencies"
+(
+  cd "$ROOT/web"
+  if [[ ! -f .env.local ]]; then
+    cp .env.local.example .env.local
+    echo "  Created web/.env.local from the example."
+  fi
+  corepack pnpm install --frozen-lockfile
+)
 
-echo
-echo "==> Setup complete."
-echo "    Next steps:"
-echo "      1. Place BankChurners.csv at backend/data/raw/"
-echo "      2. Run training:  ./scripts/train.sh"
-echo "      3. Start backend: cd backend && mvn spring-boot:run"
-echo "      4. Start frontend: cd web && pnpm dev"
+if [[ ! -f "$RAW" ]]; then
+  echo "MISSING DATASET: $RAW" >&2
+fi
+
+echo "Setup complete."
+echo "  Artifacts: ./scripts/train.sh"
+echo "  Dev API:   SPRING_PROFILES_ACTIVE=dev SERVER_PORT=8080 mvn -f backend/pom.xml spring-boot:run"
+echo "  Demo API:  SPRING_PROFILES_ACTIVE=demo SERVER_PORT=8091 mvn -f backend/pom.xml spring-boot:run"
+echo "  Web:       cd web && corepack pnpm dev  # http://localhost:3000"

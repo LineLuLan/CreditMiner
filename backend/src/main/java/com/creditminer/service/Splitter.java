@@ -9,9 +9,7 @@ import java.util.Random;
 /**
  * Stratified train/test splitter (BE-50).
  *
- * <p>Stratification preserves the {@code Attrition_Flag} class ratio in both
- * splits. This matters because the dataset is imbalanced (~84:16) — random
- * splitting could leave too few Attrited rows in the test set.</p>
+ * <p>Stratification preserves the {@code Default} class ratio in both splits.</p>
  */
 @Slf4j
 @Service

@@ -13,7 +13,7 @@ import java.io.File;
 
 /**
  * Single in-memory copy of the EDA dataset, shared by every EDA endpoint
- * (distribution / correlation / churn-by).
+ * (distribution / correlation / default rate by dimension).
  *
  * <p>Source preference (most enriched first): enriched.arff → clean.arff →
  * phase1_raw.arff → raw CSV. Cached forever once loaded; call {@link #invalidate()}
@@ -92,7 +92,7 @@ public class EdaDataCache {
 
     private static void ensureClassIndex(Instances data) {
         if (data.classIndex() >= 0) return;
-        Attribute classAttr = data.attribute("Attrition_Flag");
+        Attribute classAttr = data.attribute("Default");
         if (classAttr != null) {
             data.setClassIndex(classAttr.index());
         }

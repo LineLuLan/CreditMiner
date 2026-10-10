@@ -56,7 +56,7 @@ export function PrCurveChart({
           <Legend wrapperStyle={CHART_LEGEND_STYLE} />
           <ReferenceLine
             y={prevalence}
-            stroke={CHART_SEMANTIC.warning}
+            stroke={CHART_SEMANTIC.baseline}
             strokeDasharray="5 4"
             label={{
               value: `Prevalence ${formatPct(prevalence)}`,
@@ -73,6 +73,7 @@ export function PrCurveChart({
               dataKey="precision"
               name={`${variant.algo} (${variant.variant})`}
               stroke={CHART_COLORS[index % CHART_COLORS.length]}
+              fill={CHART_COLORS[index % CHART_COLORS.length]}
               strokeWidth={2}
               dot={false}
               isAnimationActive={false}

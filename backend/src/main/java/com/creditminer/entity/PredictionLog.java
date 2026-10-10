@@ -38,8 +38,8 @@ public class PredictionLog {
     @Column(name = "predicted_label", length = 20)
     private String predictedLabel;
 
-    @Column(name = "churn_prob", precision = 6, scale = 4)
-    private BigDecimal churnProb;
+    @Column(name = "default_prob", precision = 6, scale = 4)
+    private BigDecimal defaultProb;
 
     @Column(name = "cluster_id")
     private Integer clusterId;

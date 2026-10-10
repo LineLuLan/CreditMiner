@@ -51,7 +51,7 @@ export function ElbowChart({
           />
           <ReferenceLine
             x={bestK}
-            stroke={CHART_SEMANTIC.warning}
+            stroke={CHART_SEMANTIC.baseline}
             strokeDasharray="5 4"
             label={{ value: `Chosen k=${bestK}`, position: "top", fill: "hsl(var(--foreground))" }}
           />
@@ -60,6 +60,7 @@ export function ElbowChart({
             dataKey={metric}
             name={label}
             stroke={CHART_SEMANTIC.primary}
+            fill={CHART_SEMANTIC.primary}
             strokeWidth={2.5}
             dot={{ r: 3 }}
             isAnimationActive={false}

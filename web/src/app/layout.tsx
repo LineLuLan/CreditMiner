@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CreditMiner - Credit Card Customer Behavior Mining",
+  title: "CreditMiner - Credit Default Mining",
   description:
-    "Interactive dashboard for credit card churn prediction, customer segmentation, and risk analysis.",
+    "Interactive dashboard for credit default prediction, client segmentation, and payment-risk analysis.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

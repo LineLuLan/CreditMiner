@@ -1,86 +1,79 @@
 "use client";
 
-import { useEffect } from "react";
-import type { EdaChurnGroup, InsightVisual, MiningReport, Rule } from "@/types/api.types";
+import type { EdaDefaultGroup, InsightVisual, MiningReport, Rule } from "@/types/api.types";
 import { ClassificationSection } from "./ClassificationSection";
+import { AlgorithmCards } from "./AlgorithmCards";
 import { ClusteringSection } from "./ClusteringSection";
+import { ConclusionsSection } from "./ConclusionsSection";
 import { DataPreparationSection, DataUnderstandingSection } from "./DataSections";
 import { EvaluationSection } from "./EvaluationSection";
 import { ExecutiveSummary } from "./ExecutiveSummary";
+import { IntroductionSection } from "./IntroductionSection";
 import { Appendices, InsightsSection, LimitationsSection } from "./InsightsAndAppendices";
-import { CaptionRegistry, ReportSection, ReportToc } from "./ReportPrimitives";
+import { CaptionRegistry, ReportSection, usePrintExpandedDetails } from "./ReportPrimitives";
+import { ReportToc } from "./ReportToc";
+import { ReferencesSection } from "./ReferencesSection";
 import { AnomalySection, RulesSection } from "./RulesAndAnomalySections";
-
-/**
- * Browsers do not print the body of a closed <details>, and CSS cannot force it open.
- * Open every print-marked <details> before printing and restore the screen state after.
- */
-function usePrintExpandedDetails() {
-  useEffect(() => {
-    const selector = "details.report-detail-print, details.report-evidence-notes";
-    let opened: HTMLDetailsElement[] = [];
-    const before = () => {
-      opened = Array.from(document.querySelectorAll<HTMLDetailsElement>(selector)).filter((d) => !d.open);
-      opened.forEach((d) => (d.open = true));
-    };
-    const after = () => {
-      opened.forEach((d) => (d.open = false));
-      opened = [];
-    };
-    window.addEventListener("beforeprint", before);
-    window.addEventListener("afterprint", after);
-    return () => {
-      window.removeEventListener("beforeprint", before);
-      window.removeEventListener("afterprint", after);
-    };
-  }, []);
-}
+import { RunCommandsAppendix } from "./RunCommandsAppendix";
+import { SequenceSection } from "./SequenceSection";
 
 export function MiningReportDocument({
   report,
-  churnRules,
-  retentionRules,
-  churnBy,
-  churnDimension,
+  defaultRules,
+  nonDefaultRules,
+  defaultBy,
+  defaultDimension,
   insightVisuals,
 }: {
   report: MiningReport;
-  churnRules?: Rule[];
-  retentionRules?: Rule[];
-  churnBy?: EdaChurnGroup[];
-  churnDimension: string;
+  defaultRules?: Rule[];
+  nonDefaultRules?: Rule[];
+  defaultBy?: EdaDefaultGroup[];
+  defaultDimension: string;
   insightVisuals?: InsightVisual[];
 }) {
   usePrintExpandedDetails();
   return (
     <CaptionRegistry>
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
         <ReportToc />
         <main className="report-document min-w-0 space-y-10">
+          <IntroductionSection report={report} />
           <ExecutiveSummary report={report} />
           <DataUnderstandingSection
             report={report}
-            churnBy={churnBy}
-            churnDimension={churnDimension}
+            defaultBy={defaultBy}
+            defaultDimension={defaultDimension}
           />
           <DataPreparationSection report={report} />
           <ReportSection
             id="section-5"
             title="5 Modelling"
-            takeaway="Classification, segments, rules, and anomalies show different parts of churn risk."
+            takeaway="Classification, segments, rules, anomalies, and sequences show different parts of default risk."
           >
+            <AlgorithmCards report={report} />
+            <div className="section-divider" />
             <ClassificationSection report={report} />
             <div className="section-divider" />
             <ClusteringSection report={report} />
             <div className="section-divider" />
-            <RulesSection report={report} churnRules={churnRules} retentionRules={retentionRules} />
+            <RulesSection
+              report={report}
+              defaultRules={defaultRules}
+              nonDefaultRules={nonDefaultRules}
+            />
             <div className="section-divider" />
             <AnomalySection report={report} />
+            <div className="section-divider" />
+            <SequenceSection value={report.sequences} />
           </ReportSection>
-          <EvaluationSection report={report} />
+          <EvaluationSection report={report} compactRuntime />
           <InsightsSection report={report} visuals={insightVisuals} />
           <LimitationsSection report={report} />
+          <ConclusionsSection report={report} />
+          <ReferencesSection />
           <Appendices report={report} />
+          <RunCommandsAppendix collapsed />
         </main>
       </div>
     </CaptionRegistry>

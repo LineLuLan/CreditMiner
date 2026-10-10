@@ -4,15 +4,15 @@ import { cn } from "@/lib/utils";
 
 interface KPICardProps {
   label: string;
-  value: string | number;
-  hint?: string;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
   trend?: "up" | "down" | "flat";
   className?: string;
 }
 
 const TREND_META = {
   up: { Icon: ArrowUpRight, className: "text-success" },
-  down: { Icon: ArrowDownRight, className: "text-destructive" },
+  down: { Icon: ArrowDownRight, className: "text-danger" },
   flat: { Icon: ArrowRight, className: "text-muted-foreground" },
 } as const;
 
