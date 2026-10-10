@@ -1,91 +1,51 @@
 package com.creditminer.dto.request;
 
-import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
-/**
- * Body of {@code POST /api/predict}.
- *
- * <p>Mirrors the {@code PredictRequest} TypeScript interface in
- * {@code docs/BE_Handoff.md §4} and {@code web/src/lib/schemas.ts}.</p>
- *
- * <p>Validation is enforced via Bean Validation. Failures yield
- * {@code 400 VALIDATION_ERROR}.</p>
- */
+/** Raw UCI client attributes accepted by {@code POST /api/predict}. */
 @Data
 public class PredictRequest {
+    @NotNull @DecimalMin(value = "1")
+    private BigDecimal limitBal;
+
+    @NotBlank @Pattern(regexp = "Male|Female")
+    private String sex;
+
+    @NotBlank @Pattern(regexp = "Graduate|University|HighSchool|Other")
+    private String education;
+
+    @NotBlank @Pattern(regexp = "Married|Single|Other")
+    private String marriage;
 
     @NotNull @Min(18) @Max(100)
-    private Integer customerAge;
+    private Integer age;
 
-    @NotBlank @Pattern(regexp = "M|F")
-    private String gender;
+    @NotNull @Min(-2) @Max(9) private Integer pay1;
+    @NotNull @Min(-2) @Max(9) private Integer pay2;
+    @NotNull @Min(-2) @Max(9) private Integer pay3;
+    @NotNull @Min(-2) @Max(9) private Integer pay4;
+    @NotNull @Min(-2) @Max(9) private Integer pay5;
+    @NotNull @Min(-2) @Max(9) private Integer pay6;
 
-    @NotNull @Min(0) @Max(10)
-    private Integer dependentCount;
+    @NotNull private BigDecimal billAmt1;
+    @NotNull private BigDecimal billAmt2;
+    @NotNull private BigDecimal billAmt3;
+    @NotNull private BigDecimal billAmt4;
+    @NotNull private BigDecimal billAmt5;
+    @NotNull private BigDecimal billAmt6;
 
-    @NotBlank
-    private String educationLevel;
-
-    @NotBlank
-    private String maritalStatus;
-
-    @NotBlank
-    private String incomeCategory;
-
-    @NotBlank @Pattern(regexp = "Blue|Silver|Gold|Platinum")
-    private String cardCategory;
-
-    @NotNull @Min(0)
-    private Integer monthsOnBook;
-
-    @NotNull @Min(1) @Max(10)
-    private Integer totalRelationshipCount;
-
-    @NotNull @Min(0) @Max(12)
-    private Integer monthsInactive12Mon;
-
-    @NotNull @Min(0) @Max(20)
-    private Integer contactsCount12Mon;
-
-    @NotNull @PositiveOrZero
-    private BigDecimal creditLimit;
-
-    @NotNull @PositiveOrZero
-    private BigDecimal totalRevolvingBal;
-
-    @NotNull @PositiveOrZero
-    private BigDecimal totalTransAmt;
-
-    @NotNull @Min(0)
-    private Integer totalTransCt;
-
-    @NotNull
-    @DecimalMin(value = "0.0", inclusive = true)
-    @DecimalMax(value = "1.0", inclusive = true)
-    private BigDecimal avgUtilizationRatio;
-
-    /**
-     * Quarter-over-quarter transaction amount ratio (Q4/Q1). Optional — when null,
-     * {@link com.creditminer.service.PredictInputBuilder} substitutes 1.0
-     * ("no change") so existing FE clients keep working.
-     */
-    @PositiveOrZero
-    private BigDecimal totalAmtChngQ4Q1;
-
-    /**
-     * Quarter-over-quarter transaction count ratio (Q4/Q1). Same fallback as
-     * {@link #totalAmtChngQ4Q1}.
-     */
-    @PositiveOrZero
-    private BigDecimal totalCtChngQ4Q1;
+    @NotNull @DecimalMin("0") private BigDecimal payAmt1;
+    @NotNull @DecimalMin("0") private BigDecimal payAmt2;
+    @NotNull @DecimalMin("0") private BigDecimal payAmt3;
+    @NotNull @DecimalMin("0") private BigDecimal payAmt4;
+    @NotNull @DecimalMin("0") private BigDecimal payAmt5;
+    @NotNull @DecimalMin("0") private BigDecimal payAmt6;
 }

@@ -1,9 +1,10 @@
 package com.creditminer.service;
 
-import com.creditminer.dto.response.ChurnGroupResponse;
 import com.creditminer.dto.response.CorrelationResponse;
+import com.creditminer.dto.response.DefaultGroupResponse;
 import com.creditminer.dto.response.DistributionResponse;
 import com.creditminer.dto.response.PcaPointResponse;
+import com.creditminer.dto.response.PcaMetaResponse;
 import com.creditminer.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,49 +19,72 @@ import weka.core.Instances;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
-/**
- * EDA endpoints (Phase 4) — distribution, correlation, churn-by.
- * All computations are read-only over the cached {@link EdaDataCache} Instances.
- */
+/** Read-only exploratory analysis over the cached UCI dataset. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EdaService {
-
-    private static final int MIN_BINS = 5;
-    private static final int MAX_BINS = 50;
     private static final int DEFAULT_BINS = 20;
-
-    /** Whitelisted dim values for {@code /api/eda/churn-by} (BE_Handoff §3.4 + Phase 3 tier). */
-    private static final Set<String> CHURN_BY_DIMS = Set.of(
-            "Income_Category", "Card_Category", "Customer_Tier",
-            "Gender", "Education_Level", "Marital_Status"
-    );
-
-    /** Skip ID-like cols when computing the correlation matrix. */
-    private static final Set<String> CORRELATION_SKIP = Set.of("CLIENTNUM");
+    private static final List<String> DEFAULT_BY_DIMS = List.of(
+            "SEX", "EDUCATION", "MARRIAGE", "PAY_1", "PAY_2", "PAY_3",
+            "PAY_4", "PAY_5", "PAY_6", "MONTHS_DELAYED", "RISK_TIER", "AGE");
+    private static final Set<String> INTEGER_DIMS = Set.of(
+            "PAY_1", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6", "MONTHS_DELAYED");
 
     private final EdaDataCache dataCache;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Value("${creditminer.data.phase6-pca-json:data/processed/phase6_pca_2d.json}")
     private String pcaJsonPath;
 
     private volatile CorrelationResponse cachedCorrelation;
     private volatile List<PcaPointResponse> cachedPca;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private volatile PcaMetaResponse cachedPcaMeta;
 
-    // -------------------- pca-2d (Phase 6 sidecar) --------------------
+    public PcaMetaResponse pcaMeta() {
+        PcaMetaResponse local = cachedPcaMeta;
+        if (local != null) return local;
+        synchronized (this) {
+            if (cachedPcaMeta == null) cachedPcaMeta = computePcaMeta(pca2d());
+            return cachedPcaMeta;
+        }
+    }
 
-    /**
-     * Loads first-2-PC scatter coordinates from
-     * {@code data/processed/phase6_pca_2d.json}, cached after first call.
-     * Re-run {@code Phase6Pipeline} to refresh — invalidate via {@link #invalidatePca()}.
+    /* Intent: describe only the exported projection, never imply original-space variance.
+     * Status: cached with points. Next: original eigenvalues if exported in a future phase.
+     * Blocker: original eigenvalues absent. Confidence: percentile and variance unit tests.
      */
+    static PcaMetaResponse computePcaMeta(List<PcaPointResponse> points) {
+        var builder = PcaMetaResponse.builder().pointCount(points.size())
+                .explainedVarianceScope("Variance share of the two exported components, not of the original feature space");
+        if (points.isEmpty()) return builder.explainedVariance(List.of(0.0, 0.0)).build();
+        double[] x = points.stream().mapToDouble(PcaPointResponse::getX).sorted().toArray();
+        double[] y = points.stream().mapToDouble(PcaPointResponse::getY).sorted().toArray();
+        if (Arrays.stream(x).anyMatch(v -> !Double.isFinite(v))
+                || Arrays.stream(y).anyMatch(v -> !Double.isFinite(v))) {
+            throw unavailable("PCA artifact contains non-finite coordinates");
+        }
+        double mx = Arrays.stream(x).average().orElse(0);
+        double my = Arrays.stream(y).average().orElse(0);
+        double vx = Arrays.stream(x).map(v -> (v - mx) * (v - mx)).sum();
+        double vy = Arrays.stream(y).map(v -> (v - my) * (v - my)).sum();
+        double total = vx + vy;
+        var bounds = PcaMetaResponse.ZoomBounds.builder()
+                .xMin(percentile(x, .01)).xMax(percentile(x, .99))
+                .yMin(percentile(y, .01)).yMax(percentile(y, .99)).build();
+        long outside = points.stream().filter(p -> p.getX() < bounds.getXMin() || p.getX() > bounds.getXMax()
+                || p.getY() < bounds.getYMin() || p.getY() > bounds.getYMax()).count();
+        return builder.explainedVariance(total == 0 ? List.of(0.0, 0.0) : List.of(vx / total, vy / total))
+                .zoomBounds(bounds).outsideCount(outside).build();
+    }
+
     public List<PcaPointResponse> pca2d() {
         List<PcaPointResponse> local = cachedPca;
         if (local != null) return local;
@@ -72,254 +96,307 @@ public class EdaService {
 
     public synchronized void invalidatePca() {
         cachedPca = null;
+        cachedPcaMeta = null;
     }
 
     private List<PcaPointResponse> loadPca() {
-        File f = new File(pcaJsonPath);
-        if (!f.exists()) {
-            throw new BusinessException("REPORT_NOT_GENERATED", HttpStatus.SERVICE_UNAVAILABLE,
-                    "PCA-2D file missing at " + pcaJsonPath + ". Run Phase 6 to generate.");
+        File file = new File(pcaJsonPath);
+        if (!file.exists()) {
+            throw unavailable("PCA file missing at " + pcaJsonPath + ". Run Phase 6 first.");
         }
         try {
-            JsonNode root = mapper.readTree(f);
-            JsonNode points = root.get("points");
-            if (points == null || !points.isArray()) {
-                throw new BusinessException("REPORT_NOT_GENERATED", HttpStatus.SERVICE_UNAVAILABLE,
-                        "PCA file " + pcaJsonPath + " has no 'points' array");
+            JsonNode points = mapper.readTree(file).path("points");
+            if (!points.isArray()) throw unavailable("PCA artifact has no points array");
+            List<PcaPointResponse> result = new ArrayList<>(points.size());
+            for (JsonNode point : points) {
+                result.add(new PcaPointResponse(point.path("clientId").asLong(),
+                        point.path("clusterId").asInt(), point.path("x").asDouble(),
+                        point.path("y").asDouble()));
             }
-            List<PcaPointResponse> out = new ArrayList<>(points.size());
-            for (JsonNode p : points) {
-                out.add(new PcaPointResponse(
-                        p.get("clientNum").asLong(),
-                        p.get("clusterId").asInt(),
-                        p.get("x").asDouble(),
-                        p.get("y").asDouble()));
-            }
-            log.info("EDA pca-2d loaded: {} points from {}", out.size(), pcaJsonPath);
-            return out;
-        } catch (BusinessException be) {
-            throw be;
+            return result;
+        } catch (BusinessException ex) {
+            throw ex;
         } catch (Exception ex) {
-            log.error("Failed to load PCA-2D file", ex);
-            throw new BusinessException("REPORT_NOT_GENERATED", HttpStatus.SERVICE_UNAVAILABLE,
-                    "Failed to read PCA file: " + ex.getMessage());
+            throw unavailable("Failed to read PCA artifact: " + ex.getMessage());
         }
     }
 
-    // -------------------- distribution --------------------
+    public DistributionResponse distribution(String column, Integer bins) {
+        return distribution(column, bins, null);
+    }
 
-    public DistributionResponse distribution(String colName, Integer bins) {
+    public DistributionResponse distribution(String column, Integer bins, String split) {
         Instances data = dataCache.get();
-        Attribute attr = requireAttribute(data, colName);
-        int b = clamp(bins == null ? DEFAULT_BINS : bins, MIN_BINS, MAX_BINS);
-
-        if (attr.isNumeric()) {
-            return numericHistogram(data, attr, b);
+        Attribute value = requireAttribute(data, column);
+        Attribute splitAttribute = null;
+        if (split != null) {
+            if (!"Default".equals(split)) {
+                throw invalid("split must be Default, got '" + split + "'");
+            }
+            splitAttribute = requireAttribute(data, split);
         }
-        if (attr.isNominal()) {
-            return nominalCounts(data, attr);
+        if (value.isNumeric()) {
+            int binCount = Math.max(5, Math.min(50, bins == null ? DEFAULT_BINS : bins));
+            return numericDistribution(data, value, splitAttribute, binCount);
         }
-        throw new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST,
-                "Column '" + colName + "' is neither numeric nor nominal");
+        if (value.isNominal()) return nominalDistribution(data, value, splitAttribute);
+        throw invalid("Column '" + column + "' is neither numeric nor nominal");
     }
 
-    private DistributionResponse numericHistogram(Instances data, Attribute attr, int bins) {
-        double[] vals = data.attributeToDoubleArray(attr.index());
-        double min = Double.POSITIVE_INFINITY, max = Double.NEGATIVE_INFINITY;
-        int present = 0;
-        for (double v : vals) {
-            if (Double.isNaN(v)) continue;
-            if (v < min) min = v;
-            if (v > max) max = v;
-            present++;
+    private DistributionResponse numericDistribution(
+            Instances data, Attribute value, Attribute split, int bins) {
+        double[] values = data.attributeToDoubleArray(value.index());
+        double[] present = Arrays.stream(values).filter(Double::isFinite).sorted().toArray();
+        if (present.length == 0) {
+            return DistributionResponse.builder().column(value.name()).type("numeric")
+                    .binEdges(List.of()).counts(List.of()).stats(stats(present))
+                    .series(splitNumeric(data, value, split, List.of())).build();
         }
-        if (present == 0) {
-            return DistributionResponse.builder()
-                    .column(attr.name()).type("numeric")
-                    .binEdges(List.of()).counts(List.of()).build();
-        }
-
-        List<Double> edges = new ArrayList<>(bins + 1);
-        if (max == min) {
-            // Degenerate single-value column — emit one tiny bin.
+        double min = present[0];
+        double max = present[present.length - 1];
+        List<Double> edges = new ArrayList<>();
+        if (min == max) {
             edges.add(min);
             edges.add(min + 1e-9);
         } else {
             double step = (max - min) / bins;
-            for (int i = 0; i <= bins; i++) {
-                edges.add(round(min + i * step, 6));
+            for (int i = 0; i <= bins; i++) edges.add(round(min + i * step, 6));
+        }
+        int[] counts = new int[edges.size() - 1];
+        for (double item : present) counts[histogramIndex(item, edges)]++;
+        return DistributionResponse.builder().column(value.name()).type("numeric")
+                .binEdges(edges).counts(toList(counts)).stats(stats(present))
+                .series(splitNumeric(data, value, split, edges)).build();
+    }
+
+    private DistributionResponse nominalDistribution(
+            Instances data, Attribute value, Attribute split) {
+        int[] counts = data.attributeStats(value.index()).nominalCounts;
+        List<String> categories = new ArrayList<>();
+        for (int i = 0; i < value.numValues(); i++) categories.add(value.value(i));
+        return DistributionResponse.builder().column(value.name()).type("nominal")
+                .categories(categories).counts(toList(counts)).stats(null)
+                .series(splitNominal(data, value, split)).build();
+    }
+
+    private List<DistributionResponse.Series> splitNumeric(
+            Instances data, Attribute value, Attribute split, List<Double> edges) {
+        if (split == null) return null;
+        List<DistributionResponse.Series> result = new ArrayList<>();
+        for (int splitIndex = 0; splitIndex < split.numValues(); splitIndex++) {
+            int[] counts = new int[Math.max(0, edges.size() - 1)];
+            List<Double> selected = new ArrayList<>();
+            for (Instance row : data) {
+                if (row.isMissing(split) || row.isMissing(value)
+                        || (int) row.value(split) != splitIndex) continue;
+                double item = row.value(value);
+                selected.add(item);
+                if (counts.length > 0) counts[histogramIndex(item, edges)]++;
             }
+            double[] selectedArray = selected.stream().mapToDouble(Double::doubleValue).toArray();
+            result.add(DistributionResponse.Series.builder().label(split.value(splitIndex))
+                    .counts(toList(counts)).stats(stats(selectedArray)).build());
         }
-        int realBins = edges.size() - 1;
-        int[] counts = new int[realBins];
-        for (double v : vals) {
-            if (Double.isNaN(v)) continue;
-            int idx = (int) Math.floor((v - min) / Math.max(1e-12, max - min) * realBins);
-            if (idx < 0) idx = 0;
-            if (idx >= realBins) idx = realBins - 1;
-            counts[idx]++;
-        }
-        List<Integer> countsList = new ArrayList<>(realBins);
-        for (int c : counts) countsList.add(c);
-        return DistributionResponse.builder()
-                .column(attr.name())
-                .type("numeric")
-                .binEdges(edges)
-                .counts(countsList)
-                .build();
+        return result;
     }
 
-    private DistributionResponse nominalCounts(Instances data, Attribute attr) {
-        int[] counts = data.attributeStats(attr.index()).nominalCounts;
-        List<String> categories = new ArrayList<>(attr.numValues());
-        List<Integer> countsList = new ArrayList<>(attr.numValues());
-        for (int i = 0; i < attr.numValues(); i++) {
-            categories.add(attr.value(i));
-            countsList.add(counts[i]);
+    private List<DistributionResponse.Series> splitNominal(
+            Instances data, Attribute value, Attribute split) {
+        if (split == null) return null;
+        List<DistributionResponse.Series> result = new ArrayList<>();
+        for (int splitIndex = 0; splitIndex < split.numValues(); splitIndex++) {
+            int[] counts = new int[value.numValues()];
+            for (Instance row : data) {
+                if (!row.isMissing(split) && !row.isMissing(value)
+                        && (int) row.value(split) == splitIndex) counts[(int) row.value(value)]++;
+            }
+            result.add(DistributionResponse.Series.builder().label(split.value(splitIndex))
+                    .counts(toList(counts)).stats(null).build());
         }
-        return DistributionResponse.builder()
-                .column(attr.name())
-                .type("nominal")
-                .categories(categories)
-                .counts(countsList)
-                .build();
+        return result;
     }
-
-    // -------------------- correlation --------------------
 
     public CorrelationResponse correlation() {
         CorrelationResponse local = cachedCorrelation;
         if (local != null) return local;
         synchronized (this) {
-            if (cachedCorrelation == null) {
-                cachedCorrelation = computeCorrelation();
-            }
+            if (cachedCorrelation == null) cachedCorrelation = computeCorrelation();
             return cachedCorrelation;
         }
     }
 
     private CorrelationResponse computeCorrelation() {
         Instances data = dataCache.get();
-        List<Integer> idx = new ArrayList<>();
-        List<String> names = new ArrayList<>();
+        List<Attribute> attributes = new ArrayList<>();
         for (int i = 0; i < data.numAttributes(); i++) {
-            Attribute a = data.attribute(i);
-            if (!a.isNumeric()) continue;
-            if (CORRELATION_SKIP.contains(a.name())) continue;
-            idx.add(i);
-            names.add(a.name());
+            Attribute attribute = data.attribute(i);
+            if (attribute.isNumeric() && !"ID".equals(attribute.name())) attributes.add(attribute);
         }
-        int n = idx.size();
-        double[][] cols = new double[n][];
-        double[] means = new double[n];
-        double[] stds = new double[n];
-        for (int j = 0; j < n; j++) {
-            cols[j] = data.attributeToDoubleArray(idx.get(j));
-            double[] ms = meanStd(cols[j]);
-            means[j] = ms[0];
-            stds[j] = ms[1];
-        }
-        double[][] m = new double[n][n];
-        for (int j = 0; j < n; j++) {
-            m[j][j] = 1.0;
-            for (int k = j + 1; k < n; k++) {
-                m[j][k] = pearson(cols[j], cols[k], means[j], means[k], stds[j], stds[k]);
-                m[k][j] = m[j][k];
+        double[][] matrix = new double[attributes.size()][attributes.size()];
+        for (int i = 0; i < attributes.size(); i++) {
+            for (int j = i; j < attributes.size(); j++) {
+                double value = i == j ? 1 : pearson(data, attributes.get(i), attributes.get(j));
+                matrix[i][j] = value;
+                matrix[j][i] = value;
             }
         }
-        log.info("Correlation matrix computed for {} numeric columns", n);
-        return CorrelationResponse.builder().columns(names).matrix(m).build();
+        return CorrelationResponse.builder()
+                .columns(attributes.stream().map(Attribute::name).toList()).matrix(matrix).build();
     }
 
-    // -------------------- churn-by --------------------
-
-    public List<ChurnGroupResponse> churnBy(String dim) {
-        if (!CHURN_BY_DIMS.contains(dim)) {
-            throw new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST,
-                    "dim must be one of " + CHURN_BY_DIMS + ", got '" + dim + "'");
+    public List<DefaultGroupResponse> defaultBy(String dimension) {
+        if (!DEFAULT_BY_DIMS.contains(dimension)) {
+            throw invalid("dim must be one of " + DEFAULT_BY_DIMS + ", got '" + dimension + "'");
         }
         Instances data = dataCache.get();
-        Attribute dimAttr = requireAttribute(data, dim);
-        if (!dimAttr.isNominal()) {
-            throw new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST,
-                    "dim '" + dim + "' is not a nominal attribute");
+        Attribute dim = requireAttribute(data, dimension);
+        boolean age = "AGE".equals(dimension);
+        boolean integer = INTEGER_DIMS.contains(dimension);
+        if ((age || integer) ? !dim.isNumeric() : !dim.isNominal()) {
+            throw invalid("dim '" + dimension + "' has an unexpected attribute type");
         }
-        Attribute classAttr = data.attribute("Attrition_Flag");
-        if (classAttr == null) {
-            throw new BusinessException("INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Attrition_Flag column missing — cannot compute churn rate");
+        Attribute target = requireAttribute(data, "Default");
+        int yes = target.indexOfValue("Yes");
+        if (yes < 0) throw unavailable("Default class has no Yes level");
+        Map<String, int[]> groups = age ? ageGroups()
+                : integer ? numericGroups(data, dim) : nominalGroups(dim);
+        for (Instance row : data) {
+            if (row.isMissing(dim)) continue;
+            String key = age ? ageBand(row.value(dim))
+                    : integer ? Long.toString(integerValue(row.value(dim), dimension))
+                    : dim.value((int) row.value(dim));
+            int[] counts = groups.computeIfAbsent(key, ignored -> new int[2]);
+            counts[0]++;
+            if (!row.isMissing(target) && (int) row.value(target) == yes) counts[1]++;
         }
-        int attritedIdx = classAttr.indexOfValue("Attrited Customer");
-        if (attritedIdx < 0) {
-            throw new BusinessException("INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Attrition_Flag missing 'Attrited Customer' level");
-        }
+        List<DefaultGroupResponse> result = new ArrayList<>();
+        groups.forEach((group, counts) -> result.add(DefaultGroupResponse.builder()
+                .group(group).count(counts[0]).defaultCount(counts[1])
+                .defaultRate(counts[0] == 0 ? 0 : round((double) counts[1] / counts[0], 4))
+                .build()));
+        return result;
+    }
 
-        Map<String, int[]> agg = new LinkedHashMap<>();
-        for (int i = 0; i < dimAttr.numValues(); i++) {
-            agg.put(dimAttr.value(i), new int[2]);
-        }
-        for (int i = 0; i < data.numInstances(); i++) {
-            Instance inst = data.instance(i);
-            if (inst.isMissing(dimAttr)) continue;
-            String key = dimAttr.value((int) inst.value(dimAttr));
-            int[] cnt = agg.computeIfAbsent(key, k -> new int[2]);
-            cnt[0]++;
-            if (!inst.isMissing(classAttr) && (int) inst.value(classAttr) == attritedIdx) {
-                cnt[1]++;
+    private static Map<String, int[]> nominalGroups(Attribute dimension) {
+        Map<String, int[]> result = new LinkedHashMap<>();
+        for (int i = 0; i < dimension.numValues(); i++) result.put(dimension.value(i), new int[2]);
+        return result;
+    }
+
+    private static Map<String, int[]> numericGroups(Instances data, Attribute dimension) {
+        Map<Long, int[]> sorted = new TreeMap<>();
+        for (Instance row : data) {
+            if (!row.isMissing(dimension)) {
+                sorted.computeIfAbsent(integerValue(row.value(dimension), dimension.name()), ignored -> new int[2]);
             }
         }
-        List<ChurnGroupResponse> out = new ArrayList<>(agg.size());
-        agg.forEach((group, c) -> out.add(ChurnGroupResponse.builder()
-                .group(group)
-                .count(c[0])
-                .attritedCount(c[1])
-                .churnRate(c[0] == 0 ? 0.0 : round((double) c[1] / c[0], 4))
-                .build()));
-        return out;
+        Map<String, int[]> result = new LinkedHashMap<>();
+        sorted.forEach((value, counts) -> result.put(Long.toString(value), counts));
+        return result;
     }
 
-    // -------------------- helpers --------------------
+    private static Map<String, int[]> ageGroups() {
+        Map<String, int[]> result = new LinkedHashMap<>();
+        for (String label : List.of("<30", "30-39", "40-49", "50-59", "60+")) {
+            result.put(label, new int[2]);
+        }
+        return result;
+    }
+
+    private static String ageBand(double age) {
+        if (age < 30) return "<30";
+        if (age < 40) return "30-39";
+        if (age < 50) return "40-49";
+        if (age < 60) return "50-59";
+        return "60+";
+    }
+
+    private static long integerValue(double value, String dimension) {
+        if (!Double.isFinite(value) || value != Math.rint(value)) {
+            throw new BusinessException("INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR,
+                    "dim '" + dimension + "' contains a non-integer value");
+        }
+        return (long) value;
+    }
+
+    private static double pearson(Instances data, Attribute left, Attribute right) {
+        double sumLeft = 0, sumRight = 0;
+        int count = 0;
+        for (Instance row : data) {
+            if (row.isMissing(left) || row.isMissing(right)) continue;
+            sumLeft += row.value(left);
+            sumRight += row.value(right);
+            count++;
+        }
+        if (count < 2) return 0;
+        double meanLeft = sumLeft / count;
+        double meanRight = sumRight / count;
+        double covariance = 0, leftSquares = 0, rightSquares = 0;
+        for (Instance row : data) {
+            if (row.isMissing(left) || row.isMissing(right)) continue;
+            double x = row.value(left) - meanLeft;
+            double y = row.value(right) - meanRight;
+            covariance += x * y;
+            leftSquares += x * x;
+            rightSquares += y * y;
+        }
+        double denominator = Math.sqrt(leftSquares * rightSquares);
+        return denominator == 0 ? 0 : round(covariance / denominator, 4);
+    }
+
+    private static DistributionResponse.SummaryStats stats(double[] values) {
+        double[] sorted = Arrays.stream(values).filter(Double::isFinite).sorted().toArray();
+        if (sorted.length == 0) {
+            return DistributionResponse.SummaryStats.builder().count(0).mean(0).std(0)
+                    .min(0).q1(0).median(0).q3(0).max(0).build();
+        }
+        double mean = Arrays.stream(sorted).average().orElse(0);
+        double squares = Arrays.stream(sorted).map(v -> (v - mean) * (v - mean)).sum();
+        double std = sorted.length < 2 ? 0 : Math.sqrt(squares / (sorted.length - 1));
+        return DistributionResponse.SummaryStats.builder().count(sorted.length)
+                .mean(round(mean, 4)).std(round(std, 4)).min(sorted[0])
+                .q1(round(percentile(sorted, .25), 4)).median(round(percentile(sorted, .5), 4))
+                .q3(round(percentile(sorted, .75), 4)).max(sorted[sorted.length - 1]).build();
+    }
+
+    private static double percentile(double[] sorted, double percentile) {
+        double position = percentile * (sorted.length - 1);
+        int lower = (int) Math.floor(position);
+        int upper = (int) Math.ceil(position);
+        return lower == upper ? sorted[lower]
+                : sorted[lower] + (position - lower) * (sorted[upper] - sorted[lower]);
+    }
+
+    private static int histogramIndex(double value, List<Double> edges) {
+        int bins = edges.size() - 1;
+        int index = (int) Math.floor((value - edges.get(0))
+                / Math.max(1e-12, edges.get(edges.size() - 1) - edges.get(0)) * bins);
+        return Math.max(0, Math.min(index, bins - 1));
+    }
+
+    private static List<Integer> toList(int[] values) {
+        List<Integer> result = new ArrayList<>(values.length);
+        for (int value : values) result.add(value);
+        return result;
+    }
 
     private static Attribute requireAttribute(Instances data, String name) {
-        Attribute a = data.attribute(name);
-        if (a == null) {
-            throw new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST,
-                    "Unknown column '" + name + "'");
-        }
-        return a;
+        Attribute attribute = data.attribute(name);
+        if (attribute == null) throw invalid("Unknown column '" + name + "'");
+        return attribute;
     }
 
-    private static int clamp(int v, int lo, int hi) {
-        return v < lo ? lo : Math.min(v, hi);
+    private static BusinessException invalid(String message) {
+        return new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST, message);
     }
 
-    private static double[] meanStd(double[] xs) {
-        double s = 0; int n = 0;
-        for (double x : xs) if (!Double.isNaN(x)) { s += x; n++; }
-        if (n == 0) return new double[] { 0, 0 };
-        double mean = s / n;
-        double ss = 0;
-        for (double x : xs) if (!Double.isNaN(x)) ss += (x - mean) * (x - mean);
-        double std = n < 2 ? 0 : Math.sqrt(ss / (n - 1));
-        return new double[] { mean, std };
+    private static BusinessException unavailable(String message) {
+        return new BusinessException("REPORT_NOT_GENERATED", HttpStatus.SERVICE_UNAVAILABLE, message);
     }
 
-    private static double pearson(double[] a, double[] b, double ma, double mb, double sa, double sb) {
-        if (sa == 0 || sb == 0) return 0.0;
-        double cov = 0; int n = 0;
-        for (int i = 0; i < a.length; i++) {
-            if (Double.isNaN(a[i]) || Double.isNaN(b[i])) continue;
-            cov += (a[i] - ma) * (b[i] - mb);
-            n++;
-        }
-        if (n < 2) return 0.0;
-        return round(cov / ((n - 1) * sa * sb), 4);
-    }
-
-    private static double round(double v, int decimals) {
-        if (Double.isNaN(v) || Double.isInfinite(v)) return v;
-        double f = Math.pow(10, decimals);
-        return Math.round(v * f) / f;
+    private static double round(double value, int decimals) {
+        if (!Double.isFinite(value)) return 0;
+        double factor = Math.pow(10, decimals);
+        return Math.round(value * factor) / factor;
     }
 }

@@ -42,7 +42,7 @@ public class ModelConfig {
     @Value("${creditminer.models.clusterer-normalizer:models/kmeans-normalizer.model}")
     private String clustererNormalizerPath;
 
-    @Value("${creditminer.models.clusterer-input-header:models/kmeans-input-header.model}")
+    @Value("${creditminer.models.kmeans-input-header:models/kmeans-input-header.model}")
     private String clustererInputHeaderPath;
 
     @Value("${creditminer.models.rules-json}")

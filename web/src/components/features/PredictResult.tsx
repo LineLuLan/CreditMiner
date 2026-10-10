@@ -2,48 +2,66 @@
 
 import * as React from "react";
 import { Sparkles, Target, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { cn, formatPct, severity } from "@/lib/utils";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { formatPct1 } from "@/lib/format";
+import { EDA_FIELD_LABELS } from "@/lib/constants";
 import type { PredictResponse } from "@/types/api.types";
 
-export function PredictResult({ data }: { data: PredictResponse }) {
-  const sev = severity(data.churnProb);
+export function PredictResult({
+  data,
+  previousDefaultProb,
+  resultRef,
+}: {
+  data: PredictResponse;
+  previousDefaultProb: number | null;
+  resultRef: React.Ref<HTMLDivElement>;
+}) {
+  const sev = data.riskTier === "High" ? "high" : data.riskTier === "Medium" ? "medium" : "low";
 
   return (
-    <div className="space-y-4" data-testid="predict-result">
+    <div
+      ref={resultRef}
+      className="min-w-0 scroll-mt-4 space-y-4 break-words outline-none"
+      data-testid="predict-result"
+      tabIndex={-1}
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <Card className="overflow-hidden border-primary/20 shadow-md">
         <CardHeader className="bg-muted/40">
           <CardTitle className="flex items-center gap-2 text-base">
             <Target className="h-4 w-4 text-primary" aria-hidden />
-            Churn probability
+            Default probability
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid items-center gap-6 py-8 md:grid-cols-[auto_1fr]">
-          <SemicircleGauge value={data.churnProb} severity={sev} />
-          <div className="flex flex-col items-center gap-3 md:items-start">
+        <CardContent className="grid min-w-0 items-center gap-3 py-5">
+          <SemicircleGauge value={data.defaultProb} severity={sev} />
+          <div className="flex min-w-0 flex-col items-center gap-3">
             <LabelBadge label={data.label} />
+            {previousDefaultProb !== null ? (
+              <p className="text-sm font-medium tabular-nums text-foreground">
+                was {formatPct1(previousDefaultProb)} -&gt; now{" "}
+                {formatPct1(data.defaultProb)}
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
               <span>
-                Risk score{" "}
-                <span className="font-semibold tabular-nums text-foreground">
-                  {data.riskScore.toFixed(2)}
-                </span>
+                Risk tier <span className="font-semibold text-foreground">{data.riskTier}</span>
               </span>
               <span>
-                Model{" "}
-                <span className="font-semibold text-foreground">{data.modelUsed}</span>
+                Model <span className="font-semibold text-foreground">{data.modelUsed}</span>
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Threshold 0.5 separates Existing (&lt; 0.5) from Attrited (≥ 0.5).
+              Scores below 0.5 predict No. Scores at or above 0.5 predict Yes.
             </p>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card className="border-primary/30 shadow-sm md:col-span-3">
+      <div className="grid min-w-0 gap-4">
+        <Card className="border-primary/30 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" aria-hidden />
@@ -55,7 +73,7 @@ export function PredictResult({ data }: { data: PredictResponse }) {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -66,19 +84,16 @@ export function PredictResult({ data }: { data: PredictResponse }) {
             {data.cluster >= 0 ? (
               <>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold tabular-nums">{data.cluster}</span>
                   <span className="text-sm font-medium text-muted-foreground">
                     {data.clusterName}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Customers in this segment show similar transaction and risk behaviour.
+                  Clients in this segment show similar payment and risk behaviour.
                 </p>
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Cluster lookup unavailable.
-              </p>
+              <p className="text-xs text-muted-foreground">Cluster lookup unavailable.</p>
             )}
           </CardContent>
         </Card>
@@ -86,19 +101,18 @@ export function PredictResult({ data }: { data: PredictResponse }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Top contributing features
-            <span className="ml-2 text-xs font-normal text-muted-foreground">
-              (Random Forest importance)
-            </span>
-          </CardTitle>
+          <CardTitle className="text-base">Top model drivers</CardTitle>
+          <CardDescription>
+            {data.importanceMethod ?? "Model-level feature importance (method unavailable)"}
+            <span className="mt-1 block">Drivers are model-level importances, not per-client explanations.</span>
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.topFeatures.map((f, idx) => (
             <FeatureBar
               key={f.name}
               rank={idx + 1}
-              name={f.name}
+              name={EDA_FIELD_LABELS[f.name] ?? f.name.replaceAll("_", " ")}
               value={f.contribution}
               max={maxContribution(data.topFeatures)}
             />
@@ -110,27 +124,22 @@ export function PredictResult({ data }: { data: PredictResponse }) {
 }
 
 function maxContribution(features: PredictResponse["topFeatures"]): number {
-  return features.reduce((m, f) => Math.max(m, f.contribution), 0) || 1;
+  return features.reduce((m, f) => Math.max(m, Math.abs(f.contribution)), 0) || 1;
 }
 
 function LabelBadge({ label }: { label: string }) {
-  const isAttrited = label === "Attrited";
+  const predictsDefault = label === "Yes";
   return (
     <div
       className={cn(
         "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium",
-        isAttrited
-          ? "border-destructive/40 bg-destructive/10 text-destructive"
+        predictsDefault
+          ? "border-danger/40 bg-danger/10 text-danger"
           : "border-success/40 bg-success/10 text-success",
       )}
     >
-      <span
-        className={cn(
-          "h-2 w-2 rounded-full",
-          isAttrited ? "bg-destructive" : "bg-success",
-        )}
-      />
-      Predicted label: <span className="font-bold">{label}</span>
+      <span className={cn("h-2 w-2 rounded-full", predictsDefault ? "bg-danger" : "bg-success")} />
+      Default next month: <span className="font-bold">{label}</span>
     </div>
   );
 }
@@ -142,7 +151,7 @@ function SemicircleGauge({
   value: number;
   severity: "low" | "medium" | "high";
 }) {
-  const pct = Math.round(value * 100);
+  const pct = value * 100;
   const [animatedPct, setAnimatedPct] = React.useState(0);
 
   React.useEffect(() => {
@@ -155,7 +164,7 @@ function SemicircleGauge({
   const dash = (animatedPct / 100) * circumference;
   const strokeColor =
     severity === "high"
-      ? "hsl(var(--destructive))"
+      ? "hsl(var(--danger))"
       : severity === "medium"
         ? "hsl(var(--warning))"
         : "hsl(var(--success))";
@@ -166,14 +175,14 @@ function SemicircleGauge({
     <div
       className="mx-auto flex flex-col items-center"
       role="img"
-      aria-label={`Churn probability ${pct}%`}
+      aria-label={`Default probability ${formatPct1(value)}`}
     >
-      <svg viewBox="0 0 200 130" className="h-[150px] w-[220px]" aria-hidden>
+      <svg viewBox="0 0 200 130" className="h-[150px] w-[220px] max-w-full" aria-hidden>
         <defs>
           <linearGradient id="gauge-bg" x1="0" x2="1">
             <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity="0.2" />
             <stop offset="50%" stopColor="hsl(var(--warning))" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="hsl(var(--danger))" stopOpacity="0.25" />
           </linearGradient>
         </defs>
         <path
@@ -190,7 +199,7 @@ function SemicircleGauge({
           fill="none"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${circumference}`}
-          style={{ transition: "stroke-dasharray 700ms ease-out" }}
+          className="motion-safe:transition-[stroke-dasharray] motion-safe:duration-700"
         />
         <line
           x1="100"
@@ -212,22 +221,10 @@ function SemicircleGauge({
         >
           50%
         </text>
-        <text
-          x="20"
-          y="120"
-          textAnchor="start"
-          className="fill-muted-foreground"
-          fontSize="9"
-        >
+        <text x="20" y="120" textAnchor="start" className="fill-muted-foreground" fontSize="9">
           0
         </text>
-        <text
-          x="180"
-          y="120"
-          textAnchor="end"
-          className="fill-muted-foreground"
-          fontSize="9"
-        >
+        <text x="180" y="120" textAnchor="end" className="fill-muted-foreground" fontSize="9">
           100
         </text>
         <text
@@ -239,7 +236,7 @@ function SemicircleGauge({
           fontWeight="700"
           style={{ fontVariantNumeric: "tabular-nums" }}
         >
-          {pct}%
+          {formatPct1(value)}
         </text>
       </svg>
       <span className="eyebrow -mt-2">{severityCopy}</span>
@@ -258,7 +255,7 @@ function FeatureBar({
   value: number;
   max: number;
 }) {
-  const pct = Math.max(2, Math.round((value / max) * 100));
+  const pct = Math.max(2, Math.round((Math.abs(value) / max) * 100));
   const [width, setWidth] = React.useState(0);
   React.useEffect(() => {
     const raf = requestAnimationFrame(() => setWidth(pct));
@@ -266,19 +263,19 @@ function FeatureBar({
   }, [pct]);
   return (
     <div className="space-y-1">
-      <div className="flex items-baseline justify-between text-xs">
-        <span className="flex items-center gap-2 font-medium">
+      <div className="flex min-w-0 items-baseline justify-between gap-2 text-xs">
+        <span className="flex min-w-0 items-center gap-2 font-medium">
           <span className="grid h-5 w-5 place-items-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
             {rank}
           </span>
           {name}
         </span>
-        <span className="tabular-nums text-muted-foreground">{formatPct(value, 2)}</span>
+        <span className="tabular-nums text-muted-foreground">{formatPct1(value)}</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-primary"
-          style={{ width: `${width}%`, transition: "width 600ms ease-out" }}
+          className="h-full rounded-full bg-chart-neutral motion-safe:transition-[width] motion-safe:duration-500"
+          style={{ width: `${width}%` }}
         />
       </div>
     </div>

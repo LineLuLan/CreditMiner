@@ -10,20 +10,11 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * JPA access for {@link Customer}.
- *
- * <p>Heavy filtering uses Specification or {@code @Query} — not Querydsl —
- * to keep dep count low.</p>
- */
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
-
-    Page<Customer> findByAttritionFlag(String attritionFlag, Pageable pageable);
-
+    Page<Customer> findByDefaultFlag(String defaultFlag, Pageable pageable);
     Page<Customer> findByClusterId(Integer clusterId, Pageable pageable);
-
-    long countByAttritionFlag(String attritionFlag);
+    long countByDefaultFlag(String defaultFlag);
 
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.isOutlier = true")
     long countOutliers();
@@ -31,19 +22,19 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.isAnomaly = true")
     long countAnomalies();
 
-    @Query("SELECT AVG(c.riskScore) FROM Customer c")
-    Double avgRiskScore();
+    @Query("SELECT AVG(c.payRatio) FROM Customer c")
+    Double avgPayRatio();
 
-    @Query("SELECT AVG(c.avgUtilizationRatio) FROM Customer c")
+    @Query("SELECT AVG(c.avgUtilization) FROM Customer c")
     Double avgUtilization();
 
-    @Query("SELECT c.customerTier, COUNT(c) FROM Customer c GROUP BY c.customerTier")
-    List<Object[]> tierBreakdown();
+    @Query("SELECT c.riskTier, COUNT(c) FROM Customer c GROUP BY c.riskTier")
+    List<Object[]> riskTierBreakdown();
 
     @Query(value = """
             SELECT * FROM customers
             WHERE is_anomaly = true
-            ORDER BY risk_score DESC
+            ORDER BY centroid_distance DESC NULLS LAST, client_id ASC
             LIMIT :limit
             """, nativeQuery = true)
     List<Customer> findTopAnomalies(@Param("limit") int limit);

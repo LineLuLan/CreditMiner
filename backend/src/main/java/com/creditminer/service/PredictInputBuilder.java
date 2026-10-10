@@ -10,21 +10,12 @@ import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.filters.Filter;
+import weka.filters.unsupervised.attribute.Remove;
 
 import java.io.File;
-import java.util.Arrays;
 
-/**
- * Builds a Weka {@link Instance} from a {@link PredictRequest} that exactly
- * matches the schema the RandomForest classifier was trained on (Phase 5):
- * 26 attributes (enriched.arff minus CLIENTNUM).
- *
- * <p>The instance template is loaded once at startup from {@code enriched.arff}.
- * Phase 3 derived features (Utilization_Score, Spending_Intensity, Engagement_Score,
- * Customer_Value_Score, Risk_Score, Customer_Tier) are computed at predict time
- * using the same formulas as {@link FeatureEngineer}, with z-score means/stds
- * cached from training data.</p>
- */
+/** Builds prediction rows with exactly the same raw and derived attributes used for training. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -34,55 +25,35 @@ public class PredictInputBuilder {
     private String enrichedArffPath;
 
     private final DataLoader dataLoader;
-
     private Instances template;
-    private double[] amtMeanStd;
-    private double[] limMeanStd;
-    private double[] tenMeanStd;
-    private double[] inactMeanStd;
-    private double tierQ1;
-    private double tierQ2;
-    private double tierQ3;
 
     @PostConstruct
     public void init() {
         try {
-            File f = new File(enrichedArffPath);
-            if (!f.exists()) {
-                log.warn("Predict template missing at {} — /predict will throw MODEL_NOT_LOADED", enrichedArffPath);
+            File file = new File(enrichedArffPath);
+            if (!file.exists()) {
+                log.warn("Prediction template missing at {}; inference is unavailable", enrichedArffPath);
                 return;
             }
             Instances full = dataLoader.loadArff(enrichedArffPath);
-            // Drop CLIENTNUM to match Phase 5 training schema
-            int clientIdx = full.attribute("CLIENTNUM") == null ? -1 : full.attribute("CLIENTNUM").index();
-            if (clientIdx >= 0) {
-                weka.filters.unsupervised.attribute.Remove rm = new weka.filters.unsupervised.attribute.Remove();
-                rm.setAttributeIndicesArray(new int[] { clientIdx });
-                rm.setInputFormat(full);
-                full = weka.filters.Filter.useFilter(full, rm);
+            Attribute id = full.attribute("ID");
+            if (id != null) {
+                Remove remove = new Remove();
+                remove.setAttributeIndicesArray(new int[] {id.index()});
+                remove.setInputFormat(full);
+                full = Filter.useFilter(full, remove);
             }
-            Attribute classAttr = full.attribute("Attrition_Flag");
-            if (classAttr != null) full.setClassIndex(classAttr.index());
-            this.template = new Instances(full, 0); // empty copy with same structure
-
-            // Precompute z-score stats on the full enriched dataset for Customer_Value_Score formula
-            this.amtMeanStd = meanStd(full, "Total_Trans_Amt");
-            this.limMeanStd = meanStd(full, "Credit_Limit");
-            this.tenMeanStd = meanStd(full, "Months_on_book");
-            this.inactMeanStd = meanStd(full, "Months_Inactive_12_mon");
-
-            // Tier quartile cutoffs from Customer_Value_Score
-            double[] cvs = Arrays.stream(full.attributeToDoubleArray(full.attribute("Customer_Value_Score").index()))
-                    .filter(v -> !Double.isNaN(v))
-                    .sorted()
-                    .toArray();
-            this.tierQ1 = percentile(cvs, 0.25);
-            this.tierQ2 = percentile(cvs, 0.50);
-            this.tierQ3 = percentile(cvs, 0.75);
-            log.info("PredictInputBuilder ready: template {} attrs, tier cutoffs Q1={} Q2={} Q3={}",
-                    template.numAttributes(), round(tierQ1), round(tierQ2), round(tierQ3));
-        } catch (Exception e) {
-            log.error("Failed to initialize PredictInputBuilder", e);
+            Attribute target = full.attribute("Default");
+            if (target == null) {
+                throw new IllegalStateException("Default class attribute is missing");
+            }
+            full.setClassIndex(target.index());
+            template = new Instances(full, 0);
+            template.setClassIndex(target.index());
+            log.info("PredictInputBuilder ready with {} attributes", template.numAttributes());
+        } catch (Exception ex) {
+            template = null;
+            log.error("Failed to initialize PredictInputBuilder", ex);
         }
     }
 
@@ -90,133 +61,110 @@ public class PredictInputBuilder {
         return template != null;
     }
 
-    /** Build a fully-populated {@link Instance} matching the training schema. */
-    public Instance build(PredictRequest req) {
-        if (!isReady()) throw new IllegalStateException("PredictInputBuilder not initialized");
-        Instance inst = new DenseInstance(template.numAttributes());
-        inst.setDataset(template);
-
-        setNominal(inst, "Attrition_Flag", null); // class — let model predict
-        setNumeric(inst, "Customer_Age", req.getCustomerAge());
-        setNominal(inst, "Gender", req.getGender());
-        setNumeric(inst, "Dependent_count", req.getDependentCount());
-        setNominal(inst, "Education_Level", req.getEducationLevel());
-        setNominal(inst, "Marital_Status", req.getMaritalStatus());
-        setNominal(inst, "Income_Category", req.getIncomeCategory());
-        setNominal(inst, "Card_Category", req.getCardCategory());
-        setNumeric(inst, "Months_on_book", req.getMonthsOnBook());
-        setNumeric(inst, "Total_Relationship_Count", req.getTotalRelationshipCount());
-        setNumeric(inst, "Months_Inactive_12_mon", req.getMonthsInactive12Mon());
-        setNumeric(inst, "Contacts_Count_12_mon", req.getContactsCount12Mon());
-        double creditLimit = req.getCreditLimit().doubleValue();
-        double revolvingBal = req.getTotalRevolvingBal().doubleValue();
-        double transAmt = req.getTotalTransAmt().doubleValue();
-        int transCt = req.getTotalTransCt();
-        double avgUtil = req.getAvgUtilizationRatio().doubleValue();
-        double monthsBook = req.getMonthsOnBook();
-        double inactive = req.getMonthsInactive12Mon();
-        setNumeric(inst, "Credit_Limit", creditLimit);
-        setNumeric(inst, "Total_Revolving_Bal", revolvingBal);
-        setNumeric(inst, "Avg_Open_To_Buy", creditLimit - revolvingBal);
-        // Quarterly change ratios — optional in the request. Fall back to 1.0 ("no change")
-        // when the FE client doesn't supply them so older callers keep working.
-        double amtChng = req.getTotalAmtChngQ4Q1() != null
-                ? req.getTotalAmtChngQ4Q1().doubleValue() : 1.0;
-        double ctChng = req.getTotalCtChngQ4Q1() != null
-                ? req.getTotalCtChngQ4Q1().doubleValue() : 1.0;
-        setNumeric(inst, "Total_Amt_Chng_Q4_Q1", amtChng);
-        setNumeric(inst, "Total_Trans_Amt", transAmt);
-        setNumeric(inst, "Total_Trans_Ct", transCt);
-        setNumeric(inst, "Total_Ct_Chng_Q4_Q1", ctChng);
-        setNumeric(inst, "Avg_Utilization_Ratio", avgUtil);
-
-        // Phase 3 derived features
-        double utilizationScore = creditLimit == 0 ? 0 : revolvingBal / creditLimit;
-        double spendingIntensity = transCt == 0 ? 0 : transAmt / transCt;
-        double engagementScore = monthsBook == 0 ? 0 : transCt / monthsBook;
-        double customerValueScore = 0.4 * z(transAmt, amtMeanStd)
-                + 0.3 * z(creditLimit, limMeanStd)
-                + 0.2 * z(monthsBook, tenMeanStd)
-                - 0.1 * z(inactive, inactMeanStd);
-        double riskScore = 0.4 * utilizationScore
-                + 0.3 * (inactive / 12.0)
-                + 0.3 * (1.0 - clamp01(engagementScore / 5.0));
-        String tier = customerValueScore < tierQ1 ? "Bronze"
-                : customerValueScore < tierQ2 ? "Silver"
-                : customerValueScore < tierQ3 ? "Gold"
-                : "Platinum";
-
-        setNumeric(inst, "Utilization_Score", utilizationScore);
-        setNumeric(inst, "Spending_Intensity", spendingIntensity);
-        setNumeric(inst, "Engagement_Score", engagementScore);
-        setNumeric(inst, "Customer_Value_Score", customerValueScore);
-        setNumeric(inst, "Risk_Score", riskScore);
-        setNominal(inst, "Customer_Tier", tier);
-
-        return inst;
-    }
-
-    /** Computed Risk_Score, exposed to fill the API response without re-deriving. */
-    public double computeRiskScore(PredictRequest req) {
-        return ((Number) build(req).value(template.attribute("Risk_Score").index())).doubleValue();
-    }
-
-    // -------------------- helpers --------------------
-
-    private void setNumeric(Instance inst, String name, Number v) {
-        Attribute a = template.attribute(name);
-        if (a == null) return;
-        if (v == null) inst.setMissing(a);
-        else inst.setValue(a, v.doubleValue());
-    }
-
-    private void setNominal(Instance inst, String name, String v) {
-        Attribute a = template.attribute(name);
-        if (a == null) return;
-        if (v == null) {
-            inst.setMissing(a);
-            return;
+    public Instance build(PredictRequest request) {
+        if (!isReady()) {
+            throw new IllegalStateException("PredictInputBuilder not initialized");
         }
-        int idx = a.indexOfValue(v);
-        if (idx < 0) {
-            log.warn("Unknown nominal value '{}' for attribute '{}' — using missing", v, name);
-            inst.setMissing(a);
-        } else {
-            inst.setValue(a, idx);
+        Instance row = new DenseInstance(template.numAttributes());
+        row.setDataset(template);
+        setMissing(row, "Default");
+        setNumeric(row, "LIMIT_BAL", request.getLimitBal());
+        setNominal(row, "SEX", request.getSex());
+        setNominal(row, "EDUCATION", request.getEducation());
+        setNominal(row, "MARRIAGE", request.getMarriage());
+        setNumeric(row, "AGE", request.getAge());
+
+        int[] payStatus = payStatus(request);
+        double[] bills = bills(request);
+        double[] payments = payments(request);
+        for (int month = 0; month < 6; month++) {
+            setNumeric(row, "PAY_" + (month + 1), payStatus[month]);
+            setNumeric(row, "BILL_AMT" + (month + 1), bills[month]);
+            setNumeric(row, "PAY_AMT" + (month + 1), payments[month]);
         }
+
+        EngineeredFeatures features = engineer(request);
+        setNumeric(row, "UTILIZATION_1", features.utilization1());
+        setNumeric(row, "AVG_UTILIZATION", features.avgUtilization());
+        setNumeric(row, "PAY_RATIO", features.payRatio());
+        setNumeric(row, "MONTHS_DELAYED", features.monthsDelayed());
+        setNumeric(row, "MAX_DELAY", features.maxDelay());
+        setNumeric(row, "BILL_TREND", features.billTrend());
+        setNominal(row, "RISK_TIER", features.riskTier());
+        return row;
     }
 
-    private static double[] meanStd(Instances data, String name) {
-        Attribute a = data.attribute(name);
-        if (a == null) return new double[] { 0, 0 };
-        double[] vals = data.attributeToDoubleArray(a.index());
-        double s = 0; int n = 0;
-        for (double v : vals) if (!Double.isNaN(v)) { s += v; n++; }
-        if (n == 0) return new double[] { 0, 0 };
-        double mean = s / n;
-        double ss = 0;
-        for (double v : vals) if (!Double.isNaN(v)) ss += (v - mean) * (v - mean);
-        double std = n < 2 ? 0 : Math.sqrt(ss / (n - 1));
-        return new double[] { mean, std };
+    /** Pure feature calculation shared by inference and focused unit tests. */
+    public EngineeredFeatures engineer(PredictRequest request) {
+        double limit = request.getLimitBal().doubleValue();
+        double[] bills = bills(request);
+        double[] payments = payments(request);
+        int[] status = payStatus(request);
+
+        double utilization1 = clip(bills[0] / limit, -1, 5);
+        double utilizationSum = 0;
+        double positiveBills = 0;
+        double paymentSum = 0;
+        int monthsDelayed = 0;
+        int maxDelay = Integer.MIN_VALUE;
+        for (int i = 0; i < 6; i++) {
+            utilizationSum += bills[i] / limit;
+            positiveBills += Math.max(0, bills[i]);
+            paymentSum += payments[i];
+            if (status[i] >= 1) monthsDelayed++;
+            maxDelay = Math.max(maxDelay, status[i]);
+        }
+        double avgUtilization = clip(utilizationSum / 6.0, -1, 5);
+        double payRatio = clip(paymentSum / Math.max(1, positiveBills), 0, 5);
+        double billTrend = clip((bills[0] - bills[5]) / limit, -5, 5);
+        String riskTier = maxDelay >= 2 || monthsDelayed >= 2 || avgUtilization >= 1.0
+                ? "High"
+                : monthsDelayed == 0 && avgUtilization < 0.5 ? "Low" : "Medium";
+        return new EngineeredFeatures(utilization1, avgUtilization, payRatio,
+                monthsDelayed, maxDelay, billTrend, riskTier);
     }
 
-    private static double z(double v, double[] meanStd) {
-        if (meanStd[1] == 0) return 0;
-        return (v - meanStd[0]) / meanStd[1];
+    public record EngineeredFeatures(double utilization1, double avgUtilization, double payRatio,
+                                     int monthsDelayed, int maxDelay, double billTrend,
+                                     String riskTier) {}
+
+    private void setNumeric(Instance row, String name, Number value) {
+        Attribute attribute = template.attribute(name);
+        if (attribute == null) throw new IllegalStateException("Training attribute missing: " + name);
+        row.setValue(attribute, value.doubleValue());
     }
 
-    private static double percentile(double[] sorted, double p) {
-        if (sorted.length == 0) return Double.NaN;
-        double pos = p * (sorted.length - 1);
-        int lo = (int) Math.floor(pos);
-        int hi = (int) Math.ceil(pos);
-        return lo == hi ? sorted[lo] : sorted[lo] + (pos - lo) * (sorted[hi] - sorted[lo]);
+    private void setNominal(Instance row, String name, String value) {
+        Attribute attribute = template.attribute(name);
+        if (attribute == null) throw new IllegalStateException("Training attribute missing: " + name);
+        int index = attribute.indexOfValue(value);
+        if (index < 0) throw new IllegalArgumentException("Unsupported " + name + " value: " + value);
+        row.setValue(attribute, index);
     }
 
-    private static double clamp01(double v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
+    private void setMissing(Instance row, String name) {
+        Attribute attribute = template.attribute(name);
+        if (attribute == null) throw new IllegalStateException("Training attribute missing: " + name);
+        row.setMissing(attribute);
+    }
 
-    private static double round(double v) {
-        if (Double.isNaN(v) || Double.isInfinite(v)) return v;
-        return Math.round(v * 10000.0) / 10000.0;
+    private static int[] payStatus(PredictRequest r) {
+        return new int[] {r.getPay1(), r.getPay2(), r.getPay3(), r.getPay4(), r.getPay5(), r.getPay6()};
+    }
+
+    private static double[] bills(PredictRequest r) {
+        return new double[] {r.getBillAmt1().doubleValue(), r.getBillAmt2().doubleValue(),
+                r.getBillAmt3().doubleValue(), r.getBillAmt4().doubleValue(),
+                r.getBillAmt5().doubleValue(), r.getBillAmt6().doubleValue()};
+    }
+
+    private static double[] payments(PredictRequest r) {
+        return new double[] {r.getPayAmt1().doubleValue(), r.getPayAmt2().doubleValue(),
+                r.getPayAmt3().doubleValue(), r.getPayAmt4().doubleValue(),
+                r.getPayAmt5().doubleValue(), r.getPayAmt6().doubleValue()};
+    }
+
+    private static double clip(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 }

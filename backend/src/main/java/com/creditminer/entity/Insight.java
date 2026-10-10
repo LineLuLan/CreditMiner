@@ -36,7 +36,7 @@ public class Insight {
     @Column(name = "recommendation", columnDefinition = "TEXT")
     private String recommendation;
 
-    /** {@code "churn"}, {@code "cluster"}, {@code "risk"}, or {@code "opportunity"}. */
+    /** Insight grouping such as {@code "default"}, {@code "cluster"}, or {@code "risk"}. */
     @Column(name = "category", length = 30)
     private String category;
 

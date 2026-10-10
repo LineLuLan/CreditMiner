@@ -29,9 +29,13 @@ import java.util.Random;
 @RequiredArgsConstructor
 public class ClusteringService {
 
+    public static final List<String> CLUSTER_FEATURES = List.of(
+            "UTILIZATION_1", "AVG_UTILIZATION", "PAY_RATIO", "MONTHS_DELAYED",
+            "MAX_DELAY", "BILL_TREND", "LIMIT_BAL", "AGE");
+
     private static final int DEFAULT_MAX_ITERATIONS = 500;
     private static final long DEFAULT_SEED = 42L;
-    /** Cap silhouette pairwise computation for performance (n²). */
+    /** Cap both sides of silhouette pairwise computation for predictable runtime. */
     private static final int SILHOUETTE_SAMPLE = 1000;
 
     private final ModelConfig modelConfig;
@@ -83,10 +87,10 @@ public class ClusteringService {
     }
 
     /**
-     * Predict-time cluster assignment from a full enriched instance (26 attrs).
+     * Predict-time cluster assignment from a full enriched instance.
      *
-     * <p>The clusterer was trained on a 19-attr subset (numeric only, after dropping
-     * CLIENTNUM + Attrition_Flag + 7 nominals) that was min-max normalized. To assign
+     * <p>The clusterer was trained on the explicit credit-behaviour feature set and
+     * min-max normalized. To assign
      * a new point we must reproduce that pipeline:</p>
      * <ol>
      *   <li>Build a fresh 19-attr {@link Instance} matching the saved input header,
@@ -137,32 +141,28 @@ public class ClusteringService {
         return modelConfig.getClusterer().clusterInstance(normalized);
     }
 
-    /**
-     * Build per-cluster summaries: size, original-unit centroid, avgRisk,
-     * churnRate, description. Centroids are computed from the ORIGINAL
-     * (un-normalized) {@code originalData} keyed by the same row order as
-     * {@code assignments} to preserve interpretability.
-     */
+    /** Build interpretable cluster summaries from original-unit feature values. */
     public List<ClusterResponse> summarize(Instances originalData, int[] assignments, int k) {
         List<List<Integer>> rowsPerCluster = new ArrayList<>();
         for (int i = 0; i < k; i++) rowsPerCluster.add(new ArrayList<>());
         for (int i = 0; i < assignments.length; i++) rowsPerCluster.get(assignments[i]).add(i);
 
-        Attribute risk = originalData.attribute("Risk_Score");
-        Attribute attr = originalData.attribute("Attrition_Flag");
-        int attritedIdx = attr == null ? -1 : attr.indexOfValue("Attrited Customer");
+        Attribute risk = originalData.attribute("RISK_TIER");
+        Attribute target = originalData.attribute("Default");
+        int yesIndex = target == null ? -1 : target.indexOfValue("Yes");
 
         List<ClusterResponse> out = new ArrayList<>(k);
         for (int c = 0; c < k; c++) {
             List<Integer> rows = rowsPerCluster.get(c);
             Map<String, Double> centroid = new LinkedHashMap<>();
-            for (int j = 0; j < originalData.numAttributes(); j++) {
-                Attribute a = originalData.attribute(j);
-                if (!a.isNumeric()) continue;
-                if ("CLIENTNUM".equals(a.name())) continue;
+            for (String feature : CLUSTER_FEATURES) {
+                Attribute a = originalData.attribute(feature);
+                if (a == null || !a.isNumeric()) {
+                    throw new IllegalArgumentException("Missing numeric cluster feature: " + feature);
+                }
                 double sum = 0; int cnt = 0;
                 for (int row : rows) {
-                    double v = originalData.instance(row).value(j);
+                    double v = originalData.instance(row).value(a);
                     if (!Double.isNaN(v)) { sum += v; cnt++; }
                 }
                 centroid.put(a.name(), cnt == 0 ? 0.0 : round(sum / cnt));
@@ -172,66 +172,91 @@ public class ClusteringService {
             if (risk != null) {
                 double s = 0; int n = 0;
                 for (int row : rows) {
-                    double v = originalData.instance(row).value(risk);
-                    if (!Double.isNaN(v)) { s += v; n++; }
+                    Instance instance = originalData.instance(row);
+                    if (!instance.isMissing(risk)) {
+                        String tier = instance.stringValue(risk);
+                        s += "High".equals(tier) ? 1.0 : "Medium".equals(tier) ? 0.5 : 0.0;
+                        n++;
+                    }
                 }
                 avgRisk = n == 0 ? 0 : round(s / n);
             }
-            double churnRate = 0;
-            if (attr != null && attritedIdx >= 0) {
-                int churned = 0;
+            double defaultRate = 0;
+            if (target != null && yesIndex >= 0) {
+                int defaults = 0;
                 for (int row : rows) {
                     Instance inst = originalData.instance(row);
-                    if (!inst.isMissing(attr) && (int) inst.value(attr) == attritedIdx) churned++;
+                    if (!inst.isMissing(target) && (int) inst.value(target) == yesIndex) defaults++;
                 }
-                churnRate = rows.isEmpty() ? 0 : round((double) churned / rows.size());
+                defaultRate = rows.isEmpty() ? 0 : round((double) defaults / rows.size());
             }
 
             out.add(ClusterResponse.builder()
                     .clusterId(c)
-                    .personaName("Cluster " + c)  // manual rename in seeder
+                    .personaName(personaName(centroid, defaultRate))
                     .size(rows.size())
                     .centroid(centroid)
                     .avgRisk(avgRisk)
-                    .churnRate(churnRate)
-                    .description(describeCluster(centroid, avgRisk, churnRate))
+                    .defaultRate(defaultRate)
+                    .description(describeCluster(centroid, avgRisk, defaultRate))
                     .build());
         }
         return out;
     }
 
-    /** Heuristic auto-description used until the analyst writes proper personas. */
-    private static String describeCluster(Map<String, Double> centroid, double avgRisk, double churnRate) {
-        Double util = centroid.get("Avg_Utilization_Ratio");
-        Double trans = centroid.get("Total_Trans_Amt");
-        Double credit = centroid.get("Credit_Limit");
-        StringBuilder sb = new StringBuilder();
-        if (credit != null) sb.append(credit > 12000 ? "high credit" : credit > 6000 ? "mid credit" : "low credit");
-        if (util != null) sb.append(util > 0.5 ? ", high utilization" : util > 0.2 ? ", mid utilization" : ", low utilization");
-        if (trans != null) sb.append(trans > 8000 ? ", heavy spender" : trans > 3000 ? ", mid spender" : ", light spender");
-        sb.append(String.format(", avgRisk=%.2f, churn=%.2f", avgRisk, churnRate));
-        return sb.toString();
+    private static String personaName(Map<String, Double> centroid, double defaultRate) {
+        String risk = defaultRate >= 0.30 ? "High-Default"
+                : defaultRate >= 0.18 ? "Elevated-Default" : "Lower-Default";
+        double delayed = centroid.getOrDefault("MONTHS_DELAYED", 0.0);
+        double utilization = centroid.getOrDefault("AVG_UTILIZATION", 0.0);
+        String behaviour = delayed >= 3.0 ? "Persistent Delayers"
+                : delayed >= 1.0 ? "Occasional Delayers"
+                : utilization >= 0.8 ? "High Utilization" : "Current Payers";
+        return risk + " " + behaviour;
+    }
+
+    /** Description is derived from the cluster's observed centroids and target rate. */
+    private static String describeCluster(
+            Map<String, Double> centroid, double avgRisk, double defaultRate) {
+        return String.format(
+                "avg utilization %.2f, pay ratio %.2f, %.2f months delayed, max delay %.2f, "
+                        + "limit %.0f, average ordinal risk %.2f, default rate %.2f",
+                centroid.getOrDefault("AVG_UTILIZATION", 0.0),
+                centroid.getOrDefault("PAY_RATIO", 0.0),
+                centroid.getOrDefault("MONTHS_DELAYED", 0.0),
+                centroid.getOrDefault("MAX_DELAY", 0.0),
+                centroid.getOrDefault("LIMIT_BAL", 0.0),
+                avgRisk,
+                defaultRate);
     }
 
     /**
-     * Sampled silhouette: pick {@code sampleSize} random points; compute
-     * each one's silhouette using ALL points as reference. O(sampleSize × n).
+     * Sampled silhouette: choose rows without replacement and compare within that
+     * representative subset. This bounds each candidate at O(sampleSize squared).
      */
     private static double sampledSilhouette(Instances data, int[] assignments, int k, int sampleSize) {
         if (data.numInstances() < 2 || k < 2) return 0.0;
         int n = data.numInstances();
         int sample = Math.min(sampleSize, n);
         Random rng = new Random(DEFAULT_SEED);
-        int[] sampleIdx = new int[sample];
-        for (int i = 0; i < sample; i++) sampleIdx[i] = rng.nextInt(n);
+        int[] population = new int[n];
+        for (int i = 0; i < n; i++) population[i] = i;
+        for (int i = 0; i < sample; i++) {
+            int swap = i + rng.nextInt(n - i);
+            int selected = population[swap];
+            population[swap] = population[i];
+            population[i] = selected;
+        }
 
         double total = 0;
         int counted = 0;
-        for (int idx : sampleIdx) {
+        for (int samplePosition = 0; samplePosition < sample; samplePosition++) {
+            int idx = population[samplePosition];
             int own = assignments[idx];
             double[] dSum = new double[k];
             int[] dCount = new int[k];
-            for (int j = 0; j < n; j++) {
+            for (int referencePosition = 0; referencePosition < sample; referencePosition++) {
+                int j = population[referencePosition];
                 if (j == idx) continue;
                 double dist = euclidean(data.instance(idx), data.instance(j));
                 dSum[assignments[j]] += dist;

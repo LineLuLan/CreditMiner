@@ -30,6 +30,7 @@ import java.io.File;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,7 +38,7 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Phase 5/8 — train and serve classifiers.
+ * Phase 5/8 - train and serve classifiers.
  *
  * <p>Training methods used by {@link com.creditminer.pipeline.Phase5Pipeline}.
  * {@link #predict(PredictRequest)} is the {@code POST /api/predict} backend.</p>
@@ -60,38 +61,25 @@ public class ClassificationService {
     private String featureImportancePath;
 
     private List<Map.Entry<String, Double>> cachedTopFeatures;
+    private String importanceMethod = "unavailable";
 
     // ===== TRAIN =====
 
     public Classifier build(Algo algo) {
-        try {
-            switch (algo) {
-                case J48: {
-                    J48 c = new J48();
-                    c.setOptions(new String[] { "-C", "0.25", "-M", "2" });
-                    return c;
-                }
-                case RandomForest: {
-                    RandomForest c = new RandomForest();
-                    c.setNumIterations(100);
-                    c.setSeed(42);
-                    c.setComputeAttributeImportance(true);
-                    return c;
-                }
-                case NaiveBayes:
-                    return new NaiveBayes();
-                case Logistic:
-                    return new Logistic();
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to build classifier " + algo, e);
-        }
-        throw new IllegalArgumentException("Unknown algo: " + algo);
+        return build(algo, 42);
+    }
+
+    public Classifier build(Algo algo, int seed) {
+        return new ModelFactory().base(toAlgorithm(algo), seed);
     }
 
     public Evaluation crossValidate(Classifier clf, Instances train, int folds) throws Exception {
+        return crossValidate(clf, train, folds, 42);
+    }
+
+    public Evaluation crossValidate(Classifier clf, Instances train, int folds, int seed) throws Exception {
         Evaluation cv = new Evaluation(train);
-        cv.crossValidateModel(clf, train, folds, new Random(42));
+        cv.crossValidateModel(clf, train, folds, new Random(seed));
         return cv;
     }
 
@@ -107,33 +95,33 @@ public class ClassificationService {
         smote.setRandomSeed(42);
         smote.setInputFormat(train);
         Instances out = Filter.useFilter(train, smote);
-        log.info("SMOTE applied: train {} → {} rows", train.numInstances(), out.numInstances());
+        log.info("SMOTE applied: train {} -> {} rows", train.numInstances(), out.numInstances());
         return out;
     }
 
     public CostSensitiveClassifier costSensitive(Classifier base) {
-        try {
-            CostSensitiveClassifier cs = new CostSensitiveClassifier();
-            cs.setClassifier(base);
-            CostMatrix cm = new CostMatrix(2);
-            cm.setCell(0, 0, 0.0);
-            cm.setCell(0, 1, 1.0);
-            cm.setCell(1, 0, 5.0);
-            cm.setCell(1, 1, 0.0);
-            cs.setCostMatrix(cm);
-            cs.setMinimizeExpectedCost(false);
-            return cs;
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to build CostSensitiveClassifier", e);
-        }
+        return costSensitive(base, 42);
+    }
+
+    public CostSensitiveClassifier costSensitive(Classifier base, int seed) {
+        return new ModelFactory().costSensitive(base, seed);
+    }
+
+    private static ModelFactory.Algorithm toAlgorithm(Algo algo) {
+        return switch (algo) {
+            case J48 -> ModelFactory.Algorithm.DECISIONTREE;
+            case RandomForest -> ModelFactory.Algorithm.RANDOMFOREST;
+            case NaiveBayes -> ModelFactory.Algorithm.NAIVEBAYES;
+            case Logistic -> ModelFactory.Algorithm.LOGISTIC;
+        };
     }
 
     public static Map<String, Double> headline(Evaluation eval, int positiveClassIdx) {
         Map<String, Double> m = new LinkedHashMap<>();
         m.put("accuracy", round(eval.pctCorrect() / 100.0));
-        m.put("precision_attrited", round(eval.precision(positiveClassIdx)));
-        m.put("recall_attrited", round(eval.recall(positiveClassIdx)));
-        m.put("f1_attrited", round(eval.fMeasure(positiveClassIdx)));
+        m.put("precision_default", round(eval.precision(positiveClassIdx)));
+        m.put("recall_default", round(eval.recall(positiveClassIdx)));
+        m.put("f1_default", round(eval.fMeasure(positiveClassIdx)));
         m.put("roc_auc", round(eval.areaUnderROC(positiveClassIdx)));
         m.put("pr_auc", round(eval.areaUnderPRC(positiveClassIdx)));
         return m;
@@ -154,9 +142,9 @@ public class ClassificationService {
         try {
             Instance inst = inputBuilder.build(request);
             double[] probs = rf.distributionForInstance(inst);
-            int positiveIdx = inst.classAttribute().indexOfValue("Attrited Customer");
-            double churnProb = positiveIdx >= 0 ? probs[positiveIdx] : 0;
-            String label = churnProb >= 0.5 ? "Attrited" : "Existing";
+            int positiveIdx = inst.classAttribute().indexOfValue("Yes");
+            double defaultProbability = positiveIdx >= 0 ? probs[positiveIdx] : 0;
+            String label = defaultProbability >= 0.5 ? "Yes" : "No";
 
             int clusterId = -1;
             String clusterName = "Unknown";
@@ -172,17 +160,18 @@ public class ClassificationService {
                 log.warn("Cluster assignment failed: {}", clusterEx.getMessage());
             }
 
-            double riskScore = inputBuilder.computeRiskScore(request);
+            PredictInputBuilder.EngineeredFeatures features = inputBuilder.engineer(request);
 
             PredictResponse response = PredictResponse.builder()
-                    .churnProb(roundDouble(churnProb))
+                    .defaultProb(roundDouble(defaultProbability))
                     .label(label)
-                    .riskScore(roundDouble(riskScore))
+                    .riskTier(features.riskTier())
                     .cluster(clusterId)
                     .clusterName(clusterName)
                     .topFeatures(buildTopFeatures())
-                    .recommendation(buildRecommendation(churnProb, clusterName))
-                    .modelUsed("RandomForest_v1")
+                    .importanceMethod(importanceMethod)
+                    .recommendation(buildRecommendation(defaultProbability, features.riskTier()))
+                    .modelUsed(modelStem(modelConfig.getClassifierPath()))
                     .build();
 
             try {
@@ -204,7 +193,7 @@ public class ClassificationService {
                 .ts(OffsetDateTime.now())
                 .inputJson(objectMapper.writeValueAsString(request))
                 .predictedLabel(response.getLabel())
-                .churnProb(BigDecimal.valueOf(response.getChurnProb()).setScale(4, RoundingMode.HALF_UP))
+                .defaultProb(BigDecimal.valueOf(response.getDefaultProb()).setScale(4, RoundingMode.HALF_UP))
                 .clusterId(response.getCluster() < 0 ? null : response.getCluster())
                 .modelUsed(response.getModelUsed())
                 .build();
@@ -233,15 +222,21 @@ public class ClassificationService {
         try {
             File f = new File(featureImportancePath);
             if (!f.exists()) {
-                log.warn("Feature importance JSON missing at {} — top features will be empty", featureImportancePath);
+                log.warn("Feature importance JSON missing at {} - top features will be empty", featureImportancePath);
                 return List.of();
             }
-            var node = objectMapper.readTree(f).get("ranking");
+            var document = objectMapper.readTree(f);
+            var node = document.get("ranking");
             if (node == null || !node.isArray()) return List.of();
             List<Map.Entry<String, Double>> out = new ArrayList<>();
             for (var n : node) {
                 out.add(Map.entry(n.get("name").asText(), n.get("importance").asDouble()));
             }
+            out.sort(Map.Entry.<String, Double>comparingByValue().reversed());
+            // Global ranking, not a local attribution to this prediction. Preserve legacy files.
+            importanceMethod = "PermutationImportance".equals(document.path("metric").asText())
+                    ? "permutation importance, holdout AUC drop"
+                    : "legacy feature importance, " + document.path("metric").asText("unspecified method");
             return out;
         } catch (Exception e) {
             log.warn("Failed to load feature importance: {}", e.getMessage());
@@ -249,28 +244,29 @@ public class ClassificationService {
         }
     }
 
-    /** Rule-based recommendation derived from churn probability + cluster. */
-    private static String buildRecommendation(double churnProb, String clusterName) {
-        if (churnProb >= 0.7) {
-            return "High churn risk — escalate to retention team within 48h. Consider credit-limit increase or fee waiver.";
+    /** Rule-based recommendation derived from predicted default probability and the deterministic tier. */
+    private static String buildRecommendation(double defaultProbability, String riskTier) {
+        if (defaultProbability >= 0.7) {
+            return "High default risk - prioritize manual credit review and payment-plan outreach.";
         }
-        if (churnProb >= 0.4) {
-            return "Elevated churn risk — add to monitoring watchlist. Trigger an engagement campaign at next inactivity flag.";
+        if (defaultProbability >= 0.4) {
+            return "Elevated default risk - add the account to the payment-risk monitoring queue.";
         }
-        if ("At-Risk Mid-Tier".equalsIgnoreCase(clusterName)) {
-            return "Sits in the highest-churn cluster (At-Risk Mid-Tier, 26% historical churn). Proactively offer a transaction-driving incentive (cashback bump or statement credit) and re-evaluate in 30 days.";
+        if ("High".equalsIgnoreCase(riskTier)) {
+            return "Behavioral indicators are high risk despite the lower model score; review recent repayment status.";
         }
-        if ("Premium Loyal".equalsIgnoreCase(clusterName)) {
-            return "Stable Premium Loyal customer — eligible for premium upsell and travel-rewards offer.";
-        }
-        if ("Low-Income Stable".equalsIgnoreCase(clusterName)) {
-            return "Stable low-income customer with healthy engagement — promote tier upgrade with first-year fee waiver.";
-        }
-        return "Stable customer — maintain current relationship; no action needed.";
+        return "Lower default risk - continue routine account monitoring.";
     }
 
     private static double roundDouble(double v) {
         if (Double.isNaN(v) || Double.isInfinite(v)) return v;
         return Math.round(v * 10000.0) / 10000.0;
+    }
+
+    private static String modelStem(String path) {
+        String fileName = Path.of(path).getFileName().toString();
+        return fileName.endsWith(".model")
+                ? fileName.substring(0, fileName.length() - ".model".length())
+                : fileName;
     }
 }

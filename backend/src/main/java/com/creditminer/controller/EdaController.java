@@ -1,10 +1,11 @@
 package com.creditminer.controller;
 
-import com.creditminer.dto.response.ChurnGroupResponse;
 import com.creditminer.dto.response.CorrelationResponse;
+import com.creditminer.dto.response.DefaultGroupResponse;
 import com.creditminer.dto.response.DescribeResponse;
 import com.creditminer.dto.response.DistributionResponse;
 import com.creditminer.dto.response.PcaPointResponse;
+import com.creditminer.dto.response.PcaMetaResponse;
 import com.creditminer.service.DescribeCacheService;
 import com.creditminer.service.EdaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,38 +18,27 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * EDA endpoints.
- *
- * <ul>
- *   <li>{@code GET /api/eda/describe} (Phase 1) — column stats</li>
- *   <li>{@code GET /api/eda/distribution?col=&bins=} (Phase 4)</li>
- *   <li>{@code GET /api/eda/correlation} (Phase 4)</li>
- *   <li>{@code GET /api/eda/churn-by?dim=} (Phase 4)</li>
- * </ul>
- *
- * <p>See {@code docs/BE_Handoff.md §3.2 - §3.4, §3.13}.</p>
- */
 @RestController
 @RequestMapping("/api/eda")
 @RequiredArgsConstructor
-@Tag(name = "EDA", description = "Exploratory data analysis endpoints")
+@Tag(name = "EDA", description = "Exploratory data analysis")
 public class EdaController {
-
     private final DescribeCacheService describeCacheService;
     private final EdaService edaService;
 
     @GetMapping("/describe")
-    @Operation(summary = "Phase 1 describe table — count, missing, mean/std/min/max/median per column")
+    @Operation(summary = "Column summary statistics")
     public DescribeResponse describe() {
         return describeCacheService.get();
     }
 
     @GetMapping("/distribution")
-    @Operation(summary = "Histogram (numeric) or value counts (nominal) for a single column")
-    public DistributionResponse distribution(@RequestParam("col") String col,
-                                             @RequestParam(value = "bins", required = false) Integer bins) {
-        return edaService.distribution(col, bins);
+    @Operation(summary = "Histogram or value counts, optionally split by Default")
+    public DistributionResponse distribution(
+            @RequestParam("col") String column,
+            @RequestParam(value = "bins", required = false) Integer bins,
+            @RequestParam(value = "split", required = false) String split) {
+        return edaService.distribution(column, bins, split);
     }
 
     @GetMapping("/correlation")
@@ -57,15 +47,21 @@ public class EdaController {
         return edaService.correlation();
     }
 
-    @GetMapping("/churn-by")
-    @Operation(summary = "Churn rate grouped by a categorical dimension")
-    public List<ChurnGroupResponse> churnBy(@RequestParam("dim") String dim) {
-        return edaService.churnBy(dim);
+    @GetMapping("/default-by")
+    @Operation(summary = "Default rate grouped by an accepted dimension")
+    public List<DefaultGroupResponse> defaultBy(@RequestParam("dim") String dimension) {
+        return edaService.defaultBy(dimension);
     }
 
     @GetMapping("/pca-2d")
-    @Operation(summary = "First 2 PCs from Phase 6 (10127 customers × {clientNum, clusterId, x, y})")
+    @Operation(summary = "First two principal components from Phase 6")
     public List<PcaPointResponse> pca2d() {
         return edaService.pca2d();
+    }
+
+    @GetMapping("/pca-2d/meta")
+    @Operation(summary = "Exported PCA variance shares and percentile zoom bounds")
+    public PcaMetaResponse pcaMeta() {
+        return edaService.pcaMeta();
     }
 }

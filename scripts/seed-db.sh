@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
-# Seed the database (schema + insights). Linux/macOS.
+# Apply SQL files to an explicitly selected PostgreSQL database.
+# Spring's prod profile can load DATABASE_URL, DB_USER, and DB_PASSWORD from the
+# git-ignored backend/.env file. This script does not read that file or print secrets.
 set -euo pipefail
 
-DB_URL="${DATABASE_URL:-postgresql://creditminer:creditminer@localhost:5432/creditminer_db}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-echo "==> Applying db/schema.sql..."
-psql "$DB_URL" -f db/schema.sql
+if ! command -v psql >/dev/null 2>&1; then
+  echo "MISSING: psql is required." >&2
+  exit 1
+fi
+if [[ -z "${DATABASE_URL:-}" ]]; then
+  echo "DATABASE_URL is not set. Export it in this shell; do not pass a secret on the command line." >&2
+  exit 1
+fi
 
-echo "==> Applying db/seed.sql..."
-psql "$DB_URL" -f db/seed.sql
+echo "==> Applying db/schema.sql"
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT/db/schema.sql"
 
-echo "Done."
+echo "==> Applying db/seed.sql"
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT/db/seed.sql"
+
+echo "Database seed complete."

@@ -6,7 +6,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Combines 3 signals into a single {@code is_anomaly} flag (Phase 6.5):
@@ -25,20 +29,32 @@ public class AnomalyService {
 
     private final CustomerRepository customerRepository;
 
-    /** Top-N anomalous customers by combined risk signal. */
+    /** Top-N anomalous customers by Phase 6 centroid distance. */
     public List<AnomalyResponse> topAnomalies(int limit) {
         return customerRepository.findTopAnomalies(limit).stream()
+                .sorted(Comparator.comparing(
+                                com.creditminer.entity.Customer::getCentroidDistance,
+                                Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(com.creditminer.entity.Customer::getClientId))
                 .map(c -> AnomalyResponse.builder()
-                        .clientNum(c.getClientNum())
+                        .clientId(c.getClientId())
                         .reason(deriveReason(c))
-                        .score(c.getRiskScore() == null ? 0.0 : c.getRiskScore().doubleValue())
+                        .score(scaleDistance(c.getCentroidDistance()))
                         .clusterId(c.getClusterId())
                         .build())
                 .toList();
     }
 
     private String deriveReason(com.creditminer.entity.Customer c) {
-        // TODO: combine c.isOutlier + cluster-distance flag (separate column?)
-        return Boolean.TRUE.equals(c.getIsOutlier()) ? "z-score, cluster-distance" : "cluster-distance";
+        String distanceSignal = c.getCentroidDistance() == null
+                ? "cluster distance unavailable"
+                : String.format(Locale.ROOT, "cluster distance %.4f > strong threshold", c.getCentroidDistance());
+        return Boolean.TRUE.equals(c.getIsOutlier())
+                ? distanceSignal + "; IQR/Z outlier"
+                : distanceSignal;
+    }
+
+    private static BigDecimal scaleDistance(BigDecimal distance) {
+        return distance == null ? null : distance.setScale(4, RoundingMode.HALF_UP);
     }
 }

@@ -4,6 +4,9 @@
 # =============================================================================
 
 spring:
+  # Optional local secrets file (git-ignored): DATABASE_URL, DB_USER, DB_PASSWORD as KEY=VALUE lines.
+  config:
+    import: optional:file:./.env[.properties]
   datasource:
     url: ${DATABASE_URL}
     username: ${DB_USER:}

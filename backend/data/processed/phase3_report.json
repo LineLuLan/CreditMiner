@@ -1,52 +1,65 @@
 {
-  "totalRows" : 10127,
-  "totalColumnsIn" : 21,
-  "totalColumnsOut" : 27,
+  "totalRows" : 29965,
+  "totalColumnsIn" : 25,
+  "totalColumnsOut" : 32,
   "derivedFeatures" : [ {
-    "name" : "Utilization_Score",
+    "name" : "UTILIZATION_1",
     "type" : "numeric",
-    "mean" : 0.2749,
-    "std" : 0.2757,
+    "mean" : 0.4242,
+    "std" : 0.4107,
+    "min" : -0.6199,
+    "max" : 5.0
+  }, {
+    "name" : "AVG_UTILIZATION",
+    "type" : "numeric",
+    "mean" : 0.3735,
+    "std" : 0.3517,
+    "min" : -0.2326,
+    "max" : 5.0
+  }, {
+    "name" : "PAY_RATIO",
+    "type" : "numeric",
+    "mean" : 0.3903,
+    "std" : 0.6504,
     "min" : 0.0,
-    "max" : 0.9988
+    "max" : 5.0
   }, {
-    "name" : "Spending_Intensity",
+    "name" : "MONTHS_DELAYED",
     "type" : "numeric",
-    "mean" : 62.6127,
-    "std" : 26.4042,
-    "min" : 19.1379,
-    "max" : 190.1932
+    "mean" : 0.8343,
+    "std" : 1.5548,
+    "min" : 0.0,
+    "max" : 6.0
   }, {
-    "name" : "Engagement_Score",
+    "name" : "MAX_DELAY",
     "type" : "numeric",
-    "mean" : 1.9231,
-    "std" : 0.912,
-    "min" : 0.1887,
-    "max" : 9.7692
+    "mean" : 0.4391,
+    "std" : 1.3449,
+    "min" : -2.0,
+    "max" : 8.0
   }, {
-    "name" : "Customer_Value_Score",
+    "name" : "BILL_TREND",
     "type" : "numeric",
-    "mean" : 0.0,
-    "std" : 0.5807,
-    "min" : -1.4513,
-    "max" : 2.5883
+    "mean" : 0.1053,
+    "std" : 0.3014,
+    "min" : -1.8273,
+    "max" : 5.0
   }, {
-    "name" : "Risk_Score",
-    "type" : "numeric",
-    "mean" : 0.4142,
-    "std" : 0.1167,
-    "min" : 0.0762,
-    "max" : 0.806
-  }, {
-    "name" : "Customer_Tier",
+    "name" : "RISK_TIER",
     "type" : "nominal",
     "counts" : {
-      "Bronze" : 2532,
-      "Silver" : 2531,
-      "Gold" : 2532,
-      "Platinum" : 2532
+      "Low" : 13406,
+      "Medium" : 7846,
+      "High" : 8713
     }
   } ],
+  "riskTierRule" : "High if MAX_DELAY>=2 or MONTHS_DELAYED>=2 or AVG_UTILIZATION>=1; Low if MONTHS_DELAYED=0 and AVG_UTILIZATION<0.5; otherwise Medium",
+  "clipping" : {
+    "BILL_TREND" : "[-5,5]",
+    "PAY_RATIO" : "[0,5]",
+    "AVG_UTILIZATION" : "[-1,5]",
+    "UTILIZATION_1" : "[-1,5]"
+  },
   "outputArff" : "data/processed/enriched.arff",
-  "generatedAt" : "2026-05-08T15:54:14.250009500Z"
+  "generatedAt" : "2026-09-26T05:28:03.648814100Z"
 }

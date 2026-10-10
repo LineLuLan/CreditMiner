@@ -1,227 +1,333 @@
 {
-  "totalRows" : 10127,
-  "totalColumns" : 21,
-  "classColumn" : "Attrition_Flag",
-  "leakageColumnsDropped" : [ "Naive_Bayes_Classifier_Attrition_Flag_Card_Category_Contacts_Count_12_mon_Dependent_count_Education_Level_Months_Inactive_12_mon_1", "Naive_Bayes_Classifier_Attrition_Flag_Card_Category_Contacts_Count_12_mon_Dependent_count_Education_Level_Months_Inactive_12_mon_2" ],
+  "totalRows" : 30000,
+  "totalColumns" : 25,
+  "classColumn" : "Default",
+  "leakageColumnsDropped" : [ ],
   "columns" : [ {
-    "name" : "CLIENTNUM",
+    "name" : "ID",
     "type" : "numeric",
-    "count" : 10127,
+    "count" : 30000,
     "missing" : 0,
     "missingPct" : 0.0,
-    "mean" : 7.391776063337E8,
-    "std" : 3.69037834502E7,
-    "min" : 7.08082083E8,
-    "max" : 8.28343083E8,
-    "median" : 7.17926358E8
-  }, {
-    "name" : "Attrition_Flag",
-    "type" : "nominal",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "distinctCount" : 2,
-    "topValue" : "Existing Customer",
-    "topCount" : 8500
-  }, {
-    "name" : "Customer_Age",
-    "type" : "numeric",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "mean" : 46.326,
-    "std" : 8.0168,
-    "min" : 26.0,
-    "max" : 73.0,
-    "median" : 46.0
-  }, {
-    "name" : "Gender",
-    "type" : "nominal",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "distinctCount" : 2,
-    "topValue" : "F",
-    "topCount" : 5358
-  }, {
-    "name" : "Dependent_count",
-    "type" : "numeric",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "mean" : 2.3462,
-    "std" : 1.2989,
-    "min" : 0.0,
-    "max" : 5.0,
-    "median" : 2.0
-  }, {
-    "name" : "Education_Level",
-    "type" : "nominal",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "distinctCount" : 7,
-    "topValue" : "Graduate",
-    "topCount" : 3128
-  }, {
-    "name" : "Marital_Status",
-    "type" : "nominal",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "distinctCount" : 4,
-    "topValue" : "Married",
-    "topCount" : 4687
-  }, {
-    "name" : "Income_Category",
-    "type" : "nominal",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "distinctCount" : 6,
-    "topValue" : "Less than $40K",
-    "topCount" : 3561
-  }, {
-    "name" : "Card_Category",
-    "type" : "nominal",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "distinctCount" : 4,
-    "topValue" : "Blue",
-    "topCount" : 9436
-  }, {
-    "name" : "Months_on_book",
-    "type" : "numeric",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "mean" : 35.9284,
-    "std" : 7.9864,
-    "min" : 13.0,
-    "max" : 56.0,
-    "median" : 36.0
-  }, {
-    "name" : "Total_Relationship_Count",
-    "type" : "numeric",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "mean" : 3.8126,
-    "std" : 1.5544,
+    "mean" : 15000.5,
+    "std" : 8660.3984,
     "min" : 1.0,
-    "max" : 6.0,
-    "median" : 4.0
+    "max" : 30000.0,
+    "median" : 15000.5
   }, {
-    "name" : "Months_Inactive_12_mon",
+    "name" : "LIMIT_BAL",
     "type" : "numeric",
-    "count" : 10127,
+    "count" : 30000,
     "missing" : 0,
     "missingPct" : 0.0,
-    "mean" : 2.3412,
-    "std" : 1.0106,
+    "mean" : 167484.3227,
+    "std" : 129747.6616,
+    "min" : 10000.0,
+    "max" : 1000000.0,
+    "median" : 140000.0
+  }, {
+    "name" : "SEX",
+    "type" : "nominal",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 2,
+    "topValue" : "Female",
+    "topCount" : 18112
+  }, {
+    "name" : "EDUCATION",
+    "type" : "nominal",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 4,
+    "topValue" : "University",
+    "topCount" : 14030
+  }, {
+    "name" : "MARRIAGE",
+    "type" : "nominal",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 3,
+    "topValue" : "Single",
+    "topCount" : 15964
+  }, {
+    "name" : "AGE",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 35.4855,
+    "std" : 9.2179,
+    "min" : 21.0,
+    "max" : 79.0,
+    "median" : 34.0
+  }, {
+    "name" : "PAY_1",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : -0.0167,
+    "std" : 1.1238,
+    "min" : -2.0,
+    "max" : 8.0,
+    "median" : 0.0
+  }, {
+    "name" : "PAY_2",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : -0.1338,
+    "std" : 1.1972,
+    "min" : -2.0,
+    "max" : 8.0,
+    "median" : 0.0
+  }, {
+    "name" : "PAY_3",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : -0.1662,
+    "std" : 1.1969,
+    "min" : -2.0,
+    "max" : 8.0,
+    "median" : 0.0
+  }, {
+    "name" : "PAY_4",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : -0.2207,
+    "std" : 1.1691,
+    "min" : -2.0,
+    "max" : 8.0,
+    "median" : 0.0
+  }, {
+    "name" : "PAY_5",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : -0.2662,
+    "std" : 1.1332,
+    "min" : -2.0,
+    "max" : 8.0,
+    "median" : 0.0
+  }, {
+    "name" : "PAY_6",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : -0.2911,
+    "std" : 1.15,
+    "min" : -2.0,
+    "max" : 8.0,
+    "median" : 0.0
+  }, {
+    "name" : "BILL_AMT1",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 51223.3309,
+    "std" : 73635.8606,
+    "min" : -165580.0,
+    "max" : 964511.0,
+    "median" : 22381.5
+  }, {
+    "name" : "BILL_AMT2",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 49179.0752,
+    "std" : 71173.7688,
+    "min" : -69777.0,
+    "max" : 983931.0,
+    "median" : 21200.0
+  }, {
+    "name" : "BILL_AMT3",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 47013.1548,
+    "std" : 69349.3874,
+    "min" : -157264.0,
+    "max" : 1664089.0,
+    "median" : 20088.5
+  }, {
+    "name" : "BILL_AMT4",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 43262.949,
+    "std" : 64332.8561,
+    "min" : -170000.0,
+    "max" : 891586.0,
+    "median" : 19052.0
+  }, {
+    "name" : "BILL_AMT5",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 40311.401,
+    "std" : 60797.1558,
+    "min" : -81334.0,
+    "max" : 927171.0,
+    "median" : 18104.5
+  }, {
+    "name" : "BILL_AMT6",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 38871.7604,
+    "std" : 59554.1075,
+    "min" : -339603.0,
+    "max" : 961664.0,
+    "median" : 17071.0
+  }, {
+    "name" : "PAY_AMT1",
+    "type" : "numeric",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "mean" : 5663.5805,
+    "std" : 16563.2804,
     "min" : 0.0,
-    "max" : 6.0,
-    "median" : 2.0
+    "max" : 873552.0,
+    "median" : 2100.0
   }, {
-    "name" : "Contacts_Count_12_mon",
+    "name" : "PAY_AMT2",
     "type" : "numeric",
-    "count" : 10127,
+    "count" : 30000,
     "missing" : 0,
     "missingPct" : 0.0,
-    "mean" : 2.4553,
-    "std" : 1.1062,
+    "mean" : 5921.1635,
+    "std" : 23040.8704,
     "min" : 0.0,
-    "max" : 6.0,
-    "median" : 2.0
+    "max" : 1684259.0,
+    "median" : 2009.0
   }, {
-    "name" : "Credit_Limit",
+    "name" : "PAY_AMT3",
     "type" : "numeric",
-    "count" : 10127,
+    "count" : 30000,
     "missing" : 0,
     "missingPct" : 0.0,
-    "mean" : 8631.9537,
-    "std" : 9088.7767,
-    "min" : 1438.3,
-    "max" : 34516.0,
-    "median" : 4549.0
-  }, {
-    "name" : "Total_Revolving_Bal",
-    "type" : "numeric",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "mean" : 1162.8141,
-    "std" : 814.9873,
+    "mean" : 5225.6815,
+    "std" : 17606.9615,
     "min" : 0.0,
-    "max" : 2517.0,
-    "median" : 1276.0
+    "max" : 896040.0,
+    "median" : 1800.0
   }, {
-    "name" : "Avg_Open_To_Buy",
+    "name" : "PAY_AMT4",
     "type" : "numeric",
-    "count" : 10127,
+    "count" : 30000,
     "missing" : 0,
     "missingPct" : 0.0,
-    "mean" : 7469.1396,
-    "std" : 9090.6853,
-    "min" : 3.0,
-    "max" : 34516.0,
-    "median" : 3474.0
-  }, {
-    "name" : "Total_Amt_Chng_Q4_Q1",
-    "type" : "numeric",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "mean" : 0.7599,
-    "std" : 0.2192,
+    "mean" : 4826.0769,
+    "std" : 15666.1597,
     "min" : 0.0,
-    "max" : 3.397,
-    "median" : 0.736
+    "max" : 621000.0,
+    "median" : 1500.0
   }, {
-    "name" : "Total_Trans_Amt",
+    "name" : "PAY_AMT5",
     "type" : "numeric",
-    "count" : 10127,
+    "count" : 30000,
     "missing" : 0,
     "missingPct" : 0.0,
-    "mean" : 4404.0863,
-    "std" : 3397.1293,
-    "min" : 510.0,
-    "max" : 18484.0,
-    "median" : 3899.0
-  }, {
-    "name" : "Total_Trans_Ct",
-    "type" : "numeric",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "mean" : 64.8587,
-    "std" : 23.4726,
-    "min" : 10.0,
-    "max" : 139.0,
-    "median" : 67.0
-  }, {
-    "name" : "Total_Ct_Chng_Q4_Q1",
-    "type" : "numeric",
-    "count" : 10127,
-    "missing" : 0,
-    "missingPct" : 0.0,
-    "mean" : 0.7122,
-    "std" : 0.2381,
+    "mean" : 4799.3876,
+    "std" : 15278.3057,
     "min" : 0.0,
-    "max" : 3.714,
-    "median" : 0.702
+    "max" : 426529.0,
+    "median" : 1500.0
   }, {
-    "name" : "Avg_Utilization_Ratio",
+    "name" : "PAY_AMT6",
     "type" : "numeric",
-    "count" : 10127,
+    "count" : 30000,
     "missing" : 0,
     "missingPct" : 0.0,
-    "mean" : 0.2749,
-    "std" : 0.2757,
+    "mean" : 5215.5026,
+    "std" : 17777.4658,
     "min" : 0.0,
-    "max" : 0.999,
-    "median" : 0.176
+    "max" : 528666.0,
+    "median" : 1500.0
+  }, {
+    "name" : "Default",
+    "type" : "nominal",
+    "count" : 30000,
+    "missing" : 0,
+    "missingPct" : 0.0,
+    "distinctCount" : 2,
+    "topValue" : "No",
+    "topCount" : 23364
   } ],
-  "generatedAt" : 1778244590.113132700
+  "generatedAt" : 1790400452.0480919,
+  "schemaTransformations" : {
+    "sourceRows" : 30000,
+    "sourceColumns" : 25,
+    "renamedColumns" : {
+      "default payment next month" : "Default",
+      "PAY_0" : "PAY_1"
+    },
+    "sexMappingCounts" : {
+      "Male" : 11888,
+      "Female" : 18112
+    },
+    "sexSourceCodeCounts" : {
+      "2" : 18112,
+      "1" : 11888
+    },
+    "educationMappingCounts" : {
+      "Graduate" : 10585,
+      "University" : 14030,
+      "HighSchool" : 4917,
+      "Other" : 468
+    },
+    "educationSourceCodeCounts" : {
+      "2" : 14030,
+      "1" : 10585,
+      "3" : 4917,
+      "5" : 280,
+      "4" : 123,
+      "6" : 51,
+      "0" : 14
+    },
+    "marriageMappingCounts" : {
+      "Married" : 13659,
+      "Single" : 15964,
+      "Other" : 377
+    },
+    "marriageSourceCodeCounts" : {
+      "1" : 13659,
+      "2" : 15964,
+      "3" : 323,
+      "0" : 54
+    },
+    "defaultMappingCounts" : {
+      "No" : 23364,
+      "Yes" : 6636
+    },
+    "defaultSourceCodeCounts" : {
+      "1" : 6636,
+      "0" : 23364
+    },
+    "mappingRules" : {
+      "EDUCATION" : "1=Graduate, 2=University, 3=HighSchool, 0/4/5/6=Other",
+      "MARRIAGE" : "1=Married, 2=Single, 0/3=Other",
+      "default payment next month" : "0=No, 1=Yes",
+      "SEX" : "1=Male, 2=Female"
+    },
+    "idRetained" : true
+  },
+  "source" : "UCI Machine Learning Repository dataset 350 (Yeh & Lien, 2009)"
 }

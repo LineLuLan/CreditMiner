@@ -51,6 +51,7 @@ export function ScatterPlot({ data, xLabel, yLabel, height = 360 }: Props) {
             name={`Cluster ${cluster}`}
             data={pts}
             fill={CLUSTER_COLORS[cluster % CLUSTER_COLORS.length]}
+            stroke={CLUSTER_COLORS[cluster % CLUSTER_COLORS.length]}
           />
         ))}
       </ScatterChart>

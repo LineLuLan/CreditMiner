@@ -1,796 +1,330 @@
 <div align="center">
 
-# 💳 CreditMiner
+# CreditMiner
 
-### Customer Behavior Pattern Mining & Risk Analysis System for Credit Card Customers
+CreditMiner is an end-to-end data mining project for credit-card default prediction. It turns the 30,000-client UCI dataset 350 into reproducible Weka models, descriptive evidence, customer segments, association rules, anomaly signals, and six-month GSP repayment patterns, then presents the results through a Spring Boot API and a Next.js dashboard.
 
 [![Java](https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Weka](https://img.shields.io/badge/Weka-3.8.6-3BA889)](https://www.cs.waikato.ac.nz/ml/weka/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?logo=postgresql&logoColor=white)](https://neon.tech/)
-[![License](https://img.shields.io/badge/License-Academic-blue)](#license)
+[![License](https://img.shields.io/badge/Project_License-MIT-blue)](LICENSE)
 
-**[Demo](#-demo) · [Documentation](#-documentation) · [Quick Start](#-quick-start) · [Architecture](#-architecture) · [Technical Report](#-technical-report)**
-
----
-
-> **Course Project · Data Mining**
-> A complete full-stack system from raw CSV to interactive dashboard,
-> implementing the standard 8-phase CRISP-DM methodology with 4 data mining algorithm families.
+**IT160IU Data Mining · UCI dataset 350 · Weka classification and pattern mining**
 
 </div>
 
----
+## Table of contents
 
-## 📋 Table of Contents
+- [What it does](#what-it-does)
+- [Results](#results)
+- [Architecture](#architecture)
+- [Quick start](#quick-start)
+- [Command-line interface](#command-line-interface)
+- [Regenerate the artifacts](#regenerate-the-artifacts)
+- [Web application and API](#web-application-and-api)
+- [Project layout](#project-layout)
+- [Dataset and licenses](#dataset-and-licenses)
+- [Documentation](#documentation)
+- [Team](#team)
+- [License](#license)
 
-- [Introduction](#-introduction)
-- [Key Features](#-key-features)
-- [Demo](#-demo)
-- [Tech Stack](#-tech-stack)
-- [System Architecture](#-architecture)
-- [Project Structure](#-project-structure)
-- [Quick Start](#-quick-start)
-- [Data Mining Pipeline](#-data-mining-pipeline)
-- [API Reference](#-api-reference)
-- [Database Schema](#-database-schema)
-- [Results & Evaluation](#-results--evaluation)
-- [Deployment](#-deployment)
-- [Roadmap](#-roadmap)
-- [Contributing](#-contributing)
-- [Documentation](#-documentation)
-- [Team](#-team)
-- [License](#-license)
+## What it does
 
----
+The project implements the four assignment steps as connected modules. Each step leaves inspectable artifacts for the report and user interface.
 
-## 🎯 Introduction
+| Assignment step | CreditMiner module | Main evidence |
+| --- | --- | --- |
+| Step 1 — understand and prepare the data | `Phase1Report`, `Phase2Report`, `Phase3Report` | Descriptive statistics, cleaned ARFF, outlier flags, and engineered features |
+| Step 2 — build and evaluate predictive models | `Phase5Pipeline` | Seed-42 stratified split, ten Weka variants, 10-fold cross-validation, holdout results, timings, feature importance, and serialized models |
+| Step 3 — discover structures and patterns | `Phase6Pipeline`, `Phase7Pipeline`, `Phase10Pipeline` | K-means clusters, PCA projection, anomalies, Apriori rules, and GSP repayment sequences |
+| Step 4 — explain and deliver the findings | `InsightFactsReport`, Spring API, Next.js dashboard and reports | Traceable facts, interactive views, prediction workflow, STE web report, and print-first paper |
 
-**CreditMiner** is a data mining system designed to address four core questions faced by credit card issuers:
+### Data preparation
 
-| # | Business Question | DM Problem | Algorithms |
-|---|---|---|---|
-| 1 | Which customers are about to leave? | **Classification** | J48, RandomForest, NaiveBayes |
-| 2 | What hidden customer segments exist? | **Clustering** | SimpleKMeans |
-| 3 | Which behaviors signal risk? | **Association Rules** | Apriori |
-| 4 | Which customers behave abnormally? | **Anomaly Detection** | Z-score + IQR + Cluster distance |
+The source file is `backend/data/raw/default_credit_card_clients.csv`. It contains 30,000 clients from the Default of Credit Card Clients dataset by Yeh and Lien (2009).
 
-The system goes beyond predictive models to deliver a **7-page interactive dashboard**, **form-based prediction API**, and **5+ business insights** backed by data evidence.
+Phase 1 maps categorical codes to labels and renames columns. Phase 2 removes 35 duplicate rows, flags 1.5-IQR outliers, and keeps valid negative bill balances. Feature engineering adds:
 
-### 🎓 Academic Context
+- `UTILIZATION_1`
+- `AVG_UTILIZATION`
+- `PAY_RATIO`
+- `MONTHS_DELAYED`
+- `MAX_DELAY`
+- `BILL_TREND`
+- `RISK_TIER`
 
-This project was developed as part of the **Data Mining** course, fully applying the **CRISP-DM** methodology (Cross-Industry Standard Process for Data Mining) across 8 phases: Data Understanding → Preprocessing → Feature Engineering → EDA → Classification → Clustering → Association Rules → Insight Extraction.
+The pipeline uses seed 42 for the stratified 80/20 train and test split.
 
----
+### Classification
 
-## ✨ Key Features
+The classification stage evaluates ten Weka variants:
 
-### 🔬 Data Mining Pipeline
-- **Fully automated** from raw CSV to serialized models
-- **6 derived features** designed to avoid data leakage
-- **3 imbalance handling strategies**: Baseline / SMOTE / Cost-Sensitive
-- **10-fold cross-validation** with `random_seed = 42` for reproducibility
-- **Multi-metric evaluation**: F1, ROC-AUC, PR-AUC (not Accuracy-dependent)
+- J48, RandomForest, NaiveBayes, and Logistic baselines.
+- SMOTE versions of all four algorithms.
+- Cost-sensitive J48 and RandomForest models.
 
-### 📊 Interactive Dashboard
-- **Overview**: Key KPIs (churn rate, avg risk, customer tiers)
-- **EDA Explorer**: Dynamic histogram, boxplot, correlation heatmap
-- **Customer Browser**: 10K customers with server-side filter/sort/pagination
-- **Cluster View**: 2D PCA scatter + persona cards
-- **Rules Explorer**: Rules table + support/confidence/lift scatter
-- **Predict Tool**: 13-field form → churn probability + recommendation
-- **Insights Page**: 5+ insights as Discovery/Evidence/Recommendation
+Selection uses 10-fold cross-validation with the positive class `Default=Yes`. The pipeline also records build time, cross-validation time, holdout prediction time, and prediction time per record.
 
-### 🚀 Production-Ready Architecture
-- **Train offline / Inference online**: Models serialized once, loaded into RAM at startup
-- **REST API**: 12 endpoints documented with OpenAPI
-- **Database-backed**: PostgreSQL/Neon with 5 indexed tables
-- **Type-safe**: Java DTOs ↔ Zod schemas ↔ TypeScript types
-- **Reproducible**: Locked dependency versions, controlled seeds
+### Pattern discovery
 
----
+The unsupervised and descriptive stages add several views of risk:
 
-## 🎬 Demo
+- K-means with `k=2` for customer grouping.
+- PCA for a two-dimensional cluster view.
+- Centroid distance combined with preprocessing flags for anomaly review.
+- Apriori passes for default and non-default association rules.
+- GSP over six-month repayment-status sequences.
+- A fold-local experiment that tests sequence features without leaking holdout information.
 
-### Screenshots
+## Results
 
-> Place screenshots in `docs/screenshots/` and uncomment the lines below once available.
+| Measure | Result |
+| --- | ---: |
+| Source rows | 30,000 |
+| Rows after cleaning | 29,965 |
+| Train / test rows | 23,972 / 5,993 |
+| Default rate | 22.1% |
+| Selected model | RandomForest, cost-sensitive |
+| 10-fold CV F1, `Default=Yes` | 0.5263 |
+| Holdout F1, `Default=Yes` | 0.5333 |
+| Holdout ROC AUC | 0.777 |
+| Frequent GSP patterns at support 0.10 | 2,037 default / 1,729 non-default |
+| Strongest reported default pattern | `<{PARTIAL}{LATE_2}>`: 48.2% vs 14.1% |
 
-```
-📸 docs/screenshots/01-overview.png      → Overview Dashboard
-📸 docs/screenshots/02-eda.png           → EDA Explorer
-📸 docs/screenshots/03-clusters.png      → Cluster Personas
-📸 docs/screenshots/04-rules.png         → Association Rules
-📸 docs/screenshots/05-predict.png       → Churn Prediction Form
-📸 docs/screenshots/06-insights.png      → Business Insights
-```
+These metrics describe the checked-in generated artifacts. Regenerate all artifacts after a source-data or pipeline change.
 
-<!-- ![Overview Dashboard](docs/screenshots/01-overview.png) -->
+## Architecture
 
-### Live Demo
-- 🌐 Frontend: `https://creditminer-demo.vercel.app` *(coming soon)*
-- 🔌 API: `https://creditminer-api.onrender.com/api` *(coming soon)*
-- 📺 Video walkthrough: `docs/demo-video.mp4` (5-7 minutes)
+CreditMiner separates offline model building from online presentation and inference. The local demo uses H2 and seeds it from generated artifacts. Development and production profiles use PostgreSQL.
 
----
-
-## 🛠 Tech Stack
-
-### Backend
-| Technology | Version | Role |
-|---|---|---|
-| ☕ Java | 17 LTS | Primary language |
-| 📦 Maven | 3.9+ | Dependency management |
-| 🧠 Weka | 3.8.6 | Data mining engine |
-| 🌱 Spring Boot | 3.2.x | REST framework |
-| 🗄 Spring Data JPA | 3.2.x | ORM layer |
-| 🐘 PostgreSQL Driver | 42.7+ | DB connector |
-| ✨ Lombok | 1.18+ | Boilerplate reduction |
-
-### Frontend
-| Technology | Version | Role |
-|---|---|---|
-| ⚛️ Next.js | 14 | React framework (App Router) |
-| 🎨 Tailwind CSS | 3.4+ | Utility-first styling |
-| 🧩 shadcn/ui | latest | Component library |
-| 📈 Recharts | 2.12+ | Charts (Bar, Line, Pie, Scatter) |
-| 🔄 TanStack Query | 5.x | Data fetching + caching |
-| 📝 React Hook Form | 7.x | Form state management |
-| ✅ Zod | 3.x | Schema validation |
-| 🎯 Lucide Icons | latest | Icon library |
-
-### Database & Infrastructure
-| Technology | Role |
-|---|---|
-| 🐘 PostgreSQL 15 (Neon) | Primary database (serverless) |
-| ☁️ Vercel | Frontend hosting |
-| 🚂 Render / Railway | Backend hosting |
-| 🐙 GitHub Actions | CI/CD (optional) |
-
----
-
-## 🏗 Architecture
-
-### High-Level Diagram
-
-```
-┌─────────────────┐       ┌──────────────────────┐       ┌────────────────┐
-│   Next.js UI    │ HTTP  │   Spring Boot API    │  JDBC │   PostgreSQL   │
-│  Tailwind +     │◄─────►│   + Weka Inference   │◄─────►│     (Neon)     │
-│  shadcn/ui +    │ JSON  │   Loaded models      │       │                │
-│  Recharts       │       │   in memory          │       │                │
-└─────────────────┘       └──────────────────────┘       └────────────────┘
-                                     ▲
-                                     │ load on startup
-                                     │
-                            ┌────────┴─────────┐
-                            │     models/      │
-                            │   rf.model       │
-                            │   kmeans.model   │
-                            │   rules.json     │
-                            └──────────────────┘
-                                     ▲
-                                     │ written by
-                          ┌──────────┴──────────┐
-                          │  TrainPipeline.java │  ← runs OFFLINE
-                          │   (Java + Weka)     │
-                          └─────────────────────┘
+```mermaid
+flowchart LR
+    Browser[Browser] --> Web[Next.js 14.2\nApp Router]
+    Web -->|JSON over HTTP| API[Spring Boot 3.2.5\n/api]
+    API --> Controllers[Controllers and DTOs]
+    Controllers --> Services[EDA, prediction, mining,\nsequence and report services]
+    Services --> Weka[Weka 3.8.6 models\nand JSON/ARFF artifacts]
+    Services --> H2[(H2 in-memory\ndemo profile)]
+    Services --> Neon[(PostgreSQL / Neon\ndev and prod)]
 ```
 
-### Architectural Philosophy
+The offline pipeline runs from the `backend` directory. Every stage reads the prior artifacts and writes its own evidence.
 
-**🔹 Train Offline / Inference Online**
-- The mining pipeline (`TrainPipeline.java`) runs manually or via cron — output is serialized `.model` files.
-- Spring Boot loads models into RAM once at startup.
-- Each `/predict` request takes only a few milliseconds — no retraining.
-
-**🔹 Clean Separation**
-- The backend has minimal data mining logic — only inference + data serving.
-- The mining pipeline is a separate module that can be re-run independently when new data arrives.
-
-**🔹 Stateless API**
-- All state lives in the database or model files.
-- The backend can scale horizontally (although this academic project deploys a single instance).
-
----
-
-## 📁 Project Structure
-
-```
-creditminer/
-├── 📂 backend/                          # Java + Weka + Spring Boot
-│   ├── pom.xml
-│   ├── data/
-│   │   ├── raw/BankChurners.csv         # Original dataset
-│   │   ├── processed/clean.arff         # After preprocessing
-│   │   └── processed/clean_assoc.arff   # Discretized for Apriori
-│   ├── models/                          # Trained models (gitignored)
-│   │   ├── j48.model
-│   │   ├── rf.model
-│   │   ├── nb.model
-│   │   ├── kmeans.model
-│   │   └── rules.json
-│   ├── src/main/java/com/creditminer/
-│   │   ├── CreditMinerApplication.java
-│   │   ├── config/
-│   │   │   ├── ModelConfig.java         # Load models on startup
-│   │   │   └── CorsConfig.java
-│   │   ├── controller/                  # REST endpoints
-│   │   │   ├── OverviewController.java
-│   │   │   ├── EdaController.java
-│   │   │   ├── CustomerController.java
-│   │   │   ├── ClusterController.java
-│   │   │   ├── RuleController.java
-│   │   │   ├── PredictController.java
-│   │   │   └── InsightController.java
-│   │   ├── service/                     # Business logic
-│   │   │   ├── DataLoader.java
-│   │   │   ├── Preprocessor.java
-│   │   │   ├── FeatureEngineer.java
-│   │   │   ├── ClassificationService.java
-│   │   │   ├── ClusteringService.java
-│   │   │   ├── AssociationService.java
-│   │   │   ├── AnomalyService.java
-│   │   │   ├── InsightService.java
-│   │   │   └── ReportService.java
-│   │   ├── pipeline/
-│   │   │   └── TrainPipeline.java       # main() — runs offline
-│   │   ├── repository/                  # JPA repos
-│   │   ├── entity/                      # JPA entities
-│   │   └── dto/                         # Request/Response DTOs
-│   └── src/main/resources/
-│       ├── application.yml              # Config: DB, model paths
-│       ├── application-dev.yml          # Dev override
-│       ├── application-prod.yml         # Prod override
-│       └── db/migration/                # Flyway scripts (optional)
-│
-├── 📂 web/                              # Next.js 14 App Router
-│   ├── package.json
-│   ├── next.config.mjs
-│   ├── tailwind.config.ts
-│   ├── tsconfig.json
-│   ├── public/
-│   ├── src/
-│   │   ├── app/                         # Pages (App Router)
-│   │   │   ├── layout.tsx               # Root layout
-│   │   │   ├── page.tsx                 # / Overview
-│   │   │   ├── eda/page.tsx
-│   │   │   ├── customers/page.tsx
-│   │   │   ├── clusters/page.tsx
-│   │   │   ├── rules/page.tsx
-│   │   │   ├── predict/page.tsx
-│   │   │   ├── insights/page.tsx
-│   │   │   └── api/                     # Next API routes (proxy if needed)
-│   │   ├── components/
-│   │   │   ├── ui/                      # shadcn/ui primitives
-│   │   │   ├── charts/                  # Recharts wrappers
-│   │   │   ├── layout/                  # Sidebar, Header
-│   │   │   └── features/                # Feature-specific components
-│   │   ├── lib/
-│   │   │   ├── api.ts                   # API client
-│   │   │   ├── schemas.ts               # Zod schemas
-│   │   │   ├── utils.ts
-│   │   │   └── constants.ts
-│   │   ├── hooks/                       # Custom React hooks
-│   │   └── types/                       # TS types
-│   └── .env.local.example
-│
-├── 📂 db/                               # Database scripts
-│   ├── schema.sql                       # DDL — 5 tables
-│   ├── seed.sql                         # Initial insights data
-│   └── migrations/                      # Future migrations
-│
-├── 📂 docs/                             # Documentation
-│   ├── blueprint_vi.md                  # Vietnamese blueprint
-│   ├── blueprint_en.md                  # English blueprint
-│   ├── technical-report.docx            # 30-40 page technical report
-│   ├── slides.pptx                      # 15-20 demo slides
-│   ├── screenshots/                     # Dashboard screenshots
-│   └── api/openapi.yaml                 # API spec (optional)
-│
-├── 📂 scripts/                          # Utility scripts
-│   ├── setup.sh                         # One-shot setup
-│   ├── train.sh                         # Run TrainPipeline
-│   └── seed-db.sh                       # Seed Postgres
-│
-├── .gitignore
-├── docker-compose.yml                   # Local dev: Postgres
-├── LICENSE
-└── README.md                            # This file
+```mermaid
+flowchart LR
+    CSV[default_credit_card_clients.csv\n30,000 rows] --> P1[Phase1Report\nARFF + describe]
+    P1 --> P2[Phase2Report\nclean + outlier flags]
+    P2 --> P3[Phase3Report\nengineered features]
+    P3 --> P5[Phase5Pipeline\n80/20 split + 10 classifier variants]
+    P5 --> P6[Phase6Pipeline\nk=2 + PCA + anomalies]
+    P6 --> P7[Phase7Pipeline\nApriori rules]
+    P7 --> P9[InsightFactsReport\ntraceable findings]
+    P9 --> P10[Phase10Pipeline\nGSP sequences]
+    P10 --> Seed[Phase8Seeder\nPostgreSQL when explicitly run]
+    P10 --> Demo[DemoDataInitializer\nH2 at startup]
 ```
 
----
+See [Architecture.md](Architecture.md) for component boundaries, artifact contracts, profiles, packaging, deployment options, and security notes.
 
-## ⚡ Quick Start
+## Quick start
 
-### System Requirements
+### Prerequisites
 
-| Tool | Minimum Version |
-|---|---|
-| Java JDK | 17 |
-| Maven | 3.9 |
-| Node.js | 20 |
-| PostgreSQL | 15 (or free Neon account) |
-| Git | latest |
+Install Java 17, Maven, Node.js 20 or later, and Corepack. The generated artifacts in `backend/data/processed` and `backend/models` must be present for the complete demo.
 
-### Clone & Setup
+The demo profile does not use PostgreSQL. It creates an H2 database in memory and seeds it from local processed data and model artifacts.
 
-```bash
-git clone https://github.com/<your-username>/creditminer.git
-cd creditminer
-```
+### Windows PowerShell
 
-### Step 1: Database
+Open the first terminal in the repository root:
 
-**Option A — Local PostgreSQL via Docker (recommended for dev):**
-
-```bash
-docker compose up -d postgres
-# DB ready at localhost:5432
-# user: creditminer, password: creditminer, database: creditminer_db
-```
-
-**Option B — Neon (cloud, free tier):**
-
-1. Create an account at [neon.tech](https://neon.tech)
-2. Create a new project, copy the connection string
-3. Save it in `backend/src/main/resources/application-dev.yml`
-
-**Create schema:**
-
-```bash
-psql $DATABASE_URL -f db/schema.sql
-psql $DATABASE_URL -f db/seed.sql
-```
-
-### Step 2: Download the Dataset
-
-```bash
-mkdir -p backend/data/raw
-
-# Download BankChurners.csv from Kaggle
-# https://www.kaggle.com/datasets/sakshigoyal7/credit-card-customers
-# Place the file at backend/data/raw/BankChurners.csv
-```
-
-### Step 3: Train Models (offline)
-
-```bash
-cd backend
-mvn clean compile
-
-# Run the mining pipeline — takes ~2-5 minutes
-mvn exec:java -Dexec.mainClass="com.creditminer.pipeline.TrainPipeline"
-
-# Output:
-# data/processed/clean.arff
-# data/processed/clean_assoc.arff
-# models/j48.model, rf.model, nb.model, kmeans.model
-# models/rules.json
-# (and inserts enriched data into Postgres)
-```
-
-### Step 4: Start the Backend
-
-```bash
-cd backend
+```powershell
+Set-Location backend
+$env:SPRING_PROFILES_ACTIVE = "demo"
+$env:SERVER_PORT = "8091"
 mvn spring-boot:run
-
-# Backend runs at http://localhost:8080
-# Test:
-curl http://localhost:8080/api/overview
 ```
 
-### Step 5: Start the Frontend
+Open a second terminal in the repository root:
+
+```powershell
+Set-Location web
+$env:NEXT_PUBLIC_API_URL = "http://localhost:8091/api"
+corepack pnpm install --frozen-lockfile
+corepack pnpm dev --port 3000
+```
+
+### Bash
+
+Open the first terminal in the repository root:
+
+```bash
+cd backend
+SPRING_PROFILES_ACTIVE=demo SERVER_PORT=8091 mvn spring-boot:run
+```
+
+Open a second terminal in the repository root:
 
 ```bash
 cd web
-cp .env.local.example .env.local
-# Edit .env.local:
-# NEXT_PUBLIC_API_URL=http://localhost:8080/api
-
-npm install
-npm run dev
-
-# Frontend runs at http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:8091/api corepack pnpm install --frozen-lockfile
+NEXT_PUBLIC_API_URL=http://localhost:8091/api corepack pnpm dev --port 3000
 ```
 
-### ✅ Verify
+Open `http://localhost:3000`. The first backend load can take about 60 seconds while the H2 database is seeded. The local API is at `http://localhost:8091/api`, and Swagger UI is at `http://localhost:8091/swagger-ui.html`.
 
-Open browser → `http://localhost:3000` → you should see the dashboard with:
-- 4 KPI cards
-- Churn rate donut chart
-- Risk distribution
-- Customer tier breakdown
+For PostgreSQL development, use profile `dev` on the default backend port 8080. Use the optional, git-ignored `backend/.env` pattern only with configuration that imports it. Never commit credentials.
 
----
+## Command-line interface
 
-## 🔬 Data Mining Pipeline
+The Maven build creates the runnable shaded JAR at `backend/target/creditminer-cli.jar`.
 
-### The 8 Phases
+| Command | Purpose |
+| --- | --- |
+| `preprocess` | Convert the source CSV to cleaned and engineered ARFF files and create the split |
+| `train` | Train selected classifiers and write models plus evaluation files |
+| `predict` | Write row-level predictions from a model and ARFF file |
+| `evaluate` | Write aggregate metrics for a model and labeled ARFF file |
+| `sequence` | Build repayment sequences and run GSP plus the fold-local experiment |
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│  Phase 1  →  Data Understanding                               │
-│  Phase 2  →  Preprocessing (missing, outlier, scaling)        │
-│  Phase 3  →  Feature Engineering (6 derived features)         │
-│  Phase 4  →  EDA (univariate, bivariate, correlation, PCA)    │
-│  Phase 5  →  Classification (J48, RF, NB) + SMOTE comparison  │
-│  Phase 6  →  Clustering (KMeans k=2..8 + Elbow + Silhouette)  │
-│  Phase 7  →  Association Rules (Apriori on discretized data)  │
-│  Phase 8  →  Insight Extraction (Discovery → Evidence → Rec)  │
-└───────────────────────────────────────────────────────────────┘
-```
-
-### 6 Derived Features
-
-| Feature | Formula | Meaning |
-|---|---|---|
-| `Utilization_Score` | `Total_Revolving_Bal / Credit_Limit` | Credit utilization rate |
-| `Spending_Intensity` | `Total_Trans_Amt / Total_Trans_Ct` | Average spend per transaction |
-| `Engagement_Score` | `Total_Trans_Ct / Months_on_book` | Activity normalized by tenure |
-| `Customer_Value_Score` | `0.4·z(TransAmt) + 0.3·z(CreditLim) + 0.2·z(Tenure) − 0.1·z(Inactive)` | Composite value score |
-| `Risk_Score` | `0.4·Util + 0.3·(Inactive/12) + 0.3·(1 − Engagement_norm)` | Composite risk score |
-| `Customer_Tier` | Quartiles of `Customer_Value_Score` | Bronze/Silver/Gold/Platinum |
-
-> ⚠️ Risk_Score and Customer_Value_Score **DO NOT use `Attrition_Flag`** in their formulas → no data leakage.
-
-### Class Imbalance Handling
-
-Dataset has **83.9% Existing** vs **16.1% Attrited** → Accuracy is misleading.
-
-We compare 3 strategies:
-- **Baseline**: no resampling
-- **SMOTE**: oversample minority class on training set only
-- **Cost-Sensitive**: cost matrix `[[0,1],[5,0]]` (FN costs 5× more than FP)
-
-**Primary metrics**: F1 (Attrited class) + ROC-AUC + PR-AUC.
-
----
-
-## 🔌 API Reference
-
-Base URL: `http://localhost:8080/api`
-
-### Overview & EDA
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/overview` | Dashboard KPIs |
-| `GET` | `/eda/distribution?col=Credit_Limit&bins=20` | Distribution of one column |
-| `GET` | `/eda/correlation` | Correlation matrix |
-| `GET` | `/eda/churn-by?dim=Income_Category` | Churn rate by dimension |
-
-### Customers & Clusters
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/customers?page=1&size=20&filter=...` | Paginated list |
-| `GET` | `/customers/{id}` | Single customer detail |
-| `GET` | `/clusters` | Cluster summaries |
-| `GET` | `/clusters/{id}/customers` | Customers in cluster |
-
-### Mining Results
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/rules?minLift=1.2` | Association rules |
-| `GET` | `/anomalies` | Anomalous customers |
-| `GET` | `/insights` | Business insights |
-
-### Prediction
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/predict` | Churn prediction |
-
-**Example request:**
+Build the JAR from the `backend` directory:
 
 ```bash
-curl -X POST http://localhost:8080/api/predict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customerAge": 45,
-    "gender": "M",
-    "dependentCount": 3,
-    "educationLevel": "Graduate",
-    "maritalStatus": "Married",
-    "incomeCategory": "$60K - $80K",
-    "cardCategory": "Blue",
-    "monthsOnBook": 36,
-    "totalRelationshipCount": 5,
-    "monthsInactive12Mon": 2,
-    "contactsCount12Mon": 3,
-    "creditLimit": 12500,
-    "totalRevolvingBal": 800,
-    "totalTransAmt": 4500,
-    "totalTransCt": 45,
-    "avgUtilizationRatio": 0.064
-  }'
+mvn -B package
+java -jar target/creditminer-cli.jar --help
 ```
 
-**Example response:**
+### Relative-path examples
 
-```json
-{
-  "churnProb": 0.124,
-  "label": "Existing",
-  "riskScore": 0.32,
-  "cluster": 1,
-  "clusterName": "Premium Loyal",
-  "topFeatures": [
-    {"name": "Total_Trans_Ct", "contribution": 0.28},
-    {"name": "Avg_Utilization_Ratio", "contribution": 0.19},
-    {"name": "Months_Inactive_12_mon", "contribution": 0.15}
-  ],
-  "recommendation": "Stable customer — eligible for premium upsell"
-}
-```
-
-> 📚 Full API spec: see [`docs/api/openapi.yaml`](docs/api/openapi.yaml)
-
----
-
-## 🗄 Database Schema
-
-5 main tables:
-
-```
-customers       (10,127 rows)  → Raw data + 6 derived features + flags
-clusters        (3-4 rows)      → Pre-computed cluster summaries
-rules           (~30-50 rows)   → Apriori output
-insights        (5+ rows)       → Hand-crafted business insights
-predictions     (log)           → Every prediction call is logged
-```
-
-See full DDL: [`db/schema.sql`](db/schema.sql)
-
----
-
-## 📈 Results & Evaluation
-
-### Model Comparison (to be filled after training)
-
-| Model | Strategy | Accuracy | Precision | Recall | F1 (Attr) | ROC-AUC |
-|---|---|---|---|---|---|---|
-| J48 | Baseline | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-| J48 | SMOTE | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-| RandomForest | Baseline | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-| RandomForest | SMOTE | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-| RandomForest | Cost-Sensitive | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-| NaiveBayes | Baseline | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-
-### Cluster Personas (to be updated after training)
-
-| Cluster | Persona | Size | Avg Risk | Churn Rate |
-|---|---|---|---|---|
-| C1 | Premium Loyal | _TBD_ | _TBD_ | _TBD_ |
-| C2 | High-Risk Spenders | _TBD_ | _TBD_ | _TBD_ |
-| C3 | Dormant | _TBD_ | _TBD_ | _TBD_ |
-
-### Top 5 Association Rules (sample)
-
-```
-{Util=high, Inactive=high}              → Attrited  (sup=0.08, conf=0.78, lift=4.84)
-{Trans_Ct=low, Card=Blue}                → Attrited  (sup=0.05, conf=0.72, lift=4.46)
-{Tier=Platinum, Util=low}                → Existing  (sup=0.12, conf=0.95, lift=1.13)
-...
-```
-
-### Business Insights (5+)
-
-Each insight follows the **Discovery → Evidence → Recommendation** structure — see full details in [`docs/technical-report.docx`](docs/technical-report.docx) or the `/insights` page on the dashboard.
-
----
-
-## 🚀 Deployment
-
-### Production Architecture
-
-```
-Vercel (Frontend)  →  Render (Backend)  →  Neon (Database)
-   Free tier            Free tier             Free tier
-```
-
-### Frontend → Vercel
+Run these examples from the repository root:
 
 ```bash
-cd web
-vercel --prod
+java -jar backend/target/creditminer-cli.jar preprocess --input backend/data/raw/default_credit_card_clients.csv --out backend/data/processed --seed 42 --train-ratio 0.8
+java -jar backend/target/creditminer-cli.jar train --train backend/data/processed/train.arff --test backend/data/processed/test.arff --out backend/models --algo ALL --variant all --folds 10 --seed 42
+java -jar backend/target/creditminer-cli.jar evaluate --model backend/models/RANDOMFOREST_COST.model --test backend/data/processed/test.arff --out backend/data/processed/cli-evaluation.json
+java -jar backend/target/creditminer-cli.jar sequence --input backend/data/processed/enriched.arff --train backend/data/processed/train.arff --test backend/data/processed/test.arff --out backend/data/processed --min-support 0.10 --top 10
 ```
 
-Configure env vars on Vercel dashboard:
-- `NEXT_PUBLIC_API_URL=https://creditminer-api.onrender.com/api`
+### Absolute-path example on Windows
 
-### Backend → Render
+```powershell
+java -jar D:\01_Workspaces\CreditMiner\backend\target\creditminer-cli.jar predict --model D:\01_Workspaces\CreditMiner\backend\models\RANDOMFOREST_COST.model --test D:\01_Workspaces\CreditMiner\backend\data\processed\test.arff --out D:\01_Workspaces\CreditMiner\backend\data\processed\predictions.csv
+```
 
-1. Push code to GitHub
-2. Create a new Web Service on Render
-3. Build command: `cd backend && mvn clean package -DskipTests`
-4. Start command: `java -jar backend/target/creditminer-1.0.0.jar`
-5. Env vars:
-   - `SPRING_PROFILES_ACTIVE=prod`
-   - `DATABASE_URL=<neon-connection-string>`
+The CLI resolves both relative and absolute paths. Quote a path when it contains spaces.
 
-### Database → Neon
+## Regenerate the artifacts
 
-Create a project on [neon.tech](https://neon.tech), copy the connection string.
+Use the helper scripts in `scripts/`, or run each phase explicitly. The commands below use Maven offline mode, so all dependencies must already exist in the local Maven cache. Run them from `backend` in this order:
 
-> 💡 Models need to be uploaded separately (Render persistent disk or S3) since they are large files.
+```bash
+mvn -o -B compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase1Report
+mvn -o -B compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase2Report
+mvn -o -B compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase3Report
+mvn -o -B compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase5Pipeline
+mvn -o -B compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase6Pipeline
+mvn -o -B compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase7Pipeline
+mvn -o -B compile exec:java -Dexec.mainClass=com.creditminer.pipeline.InsightFactsReport
+mvn -o -B compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase10Pipeline
+```
 
----
+For PowerShell, quote each property argument, for example:
 
-## 🗓 Roadmap
+```powershell
+mvn -o -B compile exec:java "-Dexec.mainClass=com.creditminer.pipeline.Phase1Report"
+```
 
-### v1.0 (Course Project) — 8 Weeks
+See [docs/PIPELINE.md](docs/PIPELINE.md) for inputs, outputs, commands, and recorded run times.
 
-- [x] **Week 1**: Repo setup, preliminary EDA
-- [x] **Week 2**: Preprocessing + Feature Engineering
-- [ ] **Week 3**: Classification (3 models, tuning)
-- [ ] **Week 4**: Clustering + Anomaly Detection
-- [ ] **Week 5**: Apriori + Insights
-- [ ] **Week 6**: Spring Boot REST API + DB
-- [ ] **Week 7**: Next.js dashboard (7 pages)
-- [ ] **Week 8**: Deploy + report + slides + video
+## Web application and API
 
-### v2.0 (Future Extensions)
+The Next.js application provides these routes:
 
-- [ ] Add XGBoost, LightGBM comparison (via Weka package)
-- [ ] SHAP values for explainability
-- [ ] Batch prediction (CSV upload → bulk predict)
-- [ ] Automated model retraining pipeline
-- [ ] A/B testing framework for recommendations
-- [ ] Real-time anomaly alerting (WebSocket)
+| Route | Purpose |
+| --- | --- |
+| `/` | Overview and key measures |
+| `/eda` | Descriptive distributions and relationships |
+| `/clusters` | Cluster summaries and PCA projection |
+| `/customers` | Filtered customer browser |
+| `/rules` | Apriori rule evidence |
+| `/insights` | Findings and visual explanations |
+| `/predict` | Interactive default prediction |
+| `/pipeline` | Assignment and artifact traceability |
+| `/sequences` | GSP repayment patterns |
+| `/mining-report` | STE-style web report |
+| `/report/paper` | Print-first academic report and PDF source |
 
----
+The Spring API exposes overview, EDA, customer, cluster, rule, anomaly, insight, prediction, mining-report, and sequence endpoints under `/api`. See [docs/API.md](docs/API.md) for the contract and samples.
 
-## 🤝 Contributing
+## Project layout
 
-This is an academic project, but feedback and contributions are always welcome.
+```text
+CreditMiner/
+├── backend/
+│   ├── data/raw/                 # UCI source CSV
+│   ├── data/processed/           # ARFF, CSV, and JSON evidence
+│   ├── lib/                      # Weka GSP package support
+│   ├── models/                   # Classifier, cluster, and rule artifacts
+│   ├── src/main/java/com/creditminer/
+│   │   ├── cli/                  # Runnable command-line interface
+│   │   ├── pipeline/             # Offline phase entry points
+│   │   ├── sequence/             # Sequence builder and GSP mining
+│   │   ├── controller/           # REST routes
+│   │   ├── service/              # Application and mining services
+│   │   ├── dto/                  # API contracts
+│   │   ├── entity/               # JPA entities
+│   │   ├── repository/           # Data access
+│   │   └── config/               # Profiles, CORS, models, and demo seed
+│   └── pom.xml
+├── web/                          # Next.js dashboard and reports
+├── db/                           # PostgreSQL schema and migrations
+├── docs/                         # API, pipeline, roadmap, and submission guides
+├── scripts/                      # Setup, training, and database helpers
+├── Architecture.md
+├── ProjectBrief.md
+└── README.md
+```
 
-### Workflow
+## Dataset and licenses
 
-1. Fork the repo
-2. Create a branch: `git checkout -b feature/your-feature`
-3. Commit: `git commit -m 'feat: add amazing feature'` (following [Conventional Commits](https://www.conventionalcommits.org/))
-4. Push: `git push origin feature/your-feature`
-5. Open a Pull Request
+| Item | Source and license |
+| --- | --- |
+| Default of Credit Card Clients | UCI Machine Learning Repository dataset 350; Yeh and Lien, 2009; CC BY 4.0 |
+| Weka 3.8.6 | GNU General Public License 3.0 |
+| `generalizedSequentialPatterns` 1.0.1 | GNU General Public License 3.0 |
+| CreditMiner source code | MIT License; see [LICENSE](LICENSE) |
 
-### Code Style
+Preserve the dataset citation and attribution in reports and redistributed data. The project license does not replace the licenses of the dataset or third-party libraries.
 
-- **Java**: Google Java Style Guide
-- **TypeScript**: ESLint + Prettier (config included)
-- **Commits**: Conventional Commits (`feat`, `fix`, `docs`, `refactor`, `test`)
+## Documentation
 
----
+| Document | Purpose |
+| --- | --- |
+| [Architecture.md](Architecture.md) | System, component, data, packaging, profile, and deployment design |
+| [ProjectBrief.md](ProjectBrief.md) | Scope, audience, outcomes, and constraints |
+| [ACTIVE_STATE.md](ACTIVE_STATE.md) | Current delivery state and remaining submission work |
+| [docs/README.md](docs/README.md) | Documentation index |
+| [docs/API.md](docs/API.md) | REST endpoints and sample payloads |
+| [docs/PIPELINE.md](docs/PIPELINE.md) | Offline phases, artifacts, commands, and run times |
+| [docs/Project_Roadmap.md](docs/Project_Roadmap.md) | Course delivery roadmap |
+| [docs/SUBMISSION.md](docs/SUBMISSION.md) | Submission folder and archive procedure |
+| [backend/README.md](backend/README.md) | Backend profiles, API, CLI, and pipeline |
+| [web/README.md](web/README.md) | Frontend routes, configuration, and quality gates |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Team workflow and verification rules |
 
-## 📚 Documentation
+Earlier project documents are retained only in the dated archive linked from the documentation index.
 
-| Document | Description | Link |
-|---|---|---|
-| 📘 Blueprint (VI) | Detailed design in Vietnamese | [`docs/blueprint_vi.md`](docs/blueprint_vi.md) |
-| 📘 Blueprint (EN) | Detailed design in English | [`docs/blueprint_en.md`](docs/blueprint_en.md) |
-| 📄 Technical Report | 30-40 page technical report | [`docs/technical-report.docx`](docs/technical-report.docx) |
-| 🎤 Demo Slides | Presentation slides | [`docs/slides.pptx`](docs/slides.pptx) |
-| 🎬 Demo Video | 5-7 minute walkthrough | [`docs/demo-video.mp4`](docs/demo-video.mp4) |
-| 📡 API Spec | OpenAPI 3.0 specification | [`docs/api/openapi.yaml`](docs/api/openapi.yaml) |
+## Team
 
-### References
+| Role | Member |
+| --- | --- |
+| Team leader | Tran Nam Anh (ITDSIU23030) |
+| Team member(s) | [Full name] ([Student ID]) |
 
-- [Weka Documentation](https://www.cs.waikato.ac.nz/ml/weka/documentation.html)
-- [Credit Card Customers Dataset (Kaggle)](https://www.kaggle.com/datasets/sakshigoyal7/credit-card-customers)
-- [CRISP-DM Methodology](https://www.datascience-pm.com/crisp-dm-2/)
-- [Spring Boot Reference](https://docs.spring.io/spring-boot/docs/current/reference/html/)
-- [Next.js Docs](https://nextjs.org/docs)
+Unknown member details stay as placeholders until the team confirms them.
 
----
+## License
 
-## 👥 Team
-
-| Role | Name | Contact |
-|---|---|---|
-| Lead / Backend & Mining | _Member 1_ | _email_ |
-| Frontend / UX | _Member 2_ | _email_ |
-| Data / Analysis | _Member 3_ | _email_ |
-| Documentation / DevOps | _Member 4_ | _email_ |
-
-**Supervisor**: _Instructor's name_
-**Course**: Data Mining
-**Institution**: _University name_
-**Semester**: _Semester / Year_
-
----
-
-## ❓ FAQ
-
-<details>
-<summary><b>Why train in Java instead of Python?</b></summary>
-
-The course requires using **Weka** — a Java-based data mining toolkit. Weka provides all the algorithms needed (J48, RandomForest, NaiveBayes, SimpleKMeans, Apriori) with both a GUI for rapid exploration and a Java API for application integration. Using Java + Weka also showcases the integration between data mining and software engineering, which is a major learning objective.
-</details>
-
-<details>
-<summary><b>Why not use Accuracy as the primary metric?</b></summary>
-
-The dataset has 83.9% Existing vs 16.1% Attrited customers. A model predicting **everyone as Existing** would achieve 83.9% accuracy yet be completely useless because it fails to detect any churning customer. We therefore use **F1-score on the Attrited class + ROC-AUC + PR-AUC** as primary metrics.
-</details>
-
-<details>
-<summary><b>Does SMOTE affect the test set?</b></summary>
-
-**NO**. SMOTE is applied **only to the training set**. The test set retains its original distribution to ensure fair evaluation. Applying SMOTE to the test set would inflate metrics and lead to production failure.
-</details>
-
-<details>
-<summary><b>Does Risk Score have data leakage?</b></summary>
-
-**NO**. Risk_Score is deliberately designed using only features that **do not include `Attrition_Flag`**: utilization, inactive months, and engagement. This is a critical design decision — if Risk_Score relied on the target, all models would "cheat" and achieve artificially perfect accuracy.
-</details>
-
-<details>
-<summary><b>Can Apriori run directly on the original dataset?</b></summary>
-
-**NO**. Apriori requires **nominal/categorical data**. The original dataset is mostly numerical (Credit_Limit, Total_Trans_Amt, etc.). We must **discretize** numerical features into bins (low/medium/high) before running Apriori. This pipeline is implemented in Phase 7.
-</details>
-
-<details>
-<summary><b>Can I run this without Docker?</b></summary>
-
-**Yes**. Install PostgreSQL locally, or use Neon (free tier, no local DB needed). Docker is just a convenience for fast dev setup.
-</details>
-
-<details>
-<summary><b>How long does the full training pipeline take?</b></summary>
-
-On a mid-range laptop (Intel i5, 16GB RAM):
-- Preprocessing + Feature Engineering: ~10 seconds
-- Train 3 classifiers + tuning: ~1-2 minutes
-- KMeans clustering (k=2..8): ~30 seconds
-- Apriori: ~10 seconds
-- DB seeding: ~30 seconds
-
-**Total**: ~3-5 minutes.
-</details>
-
----
-
-## 🐛 Bug Reports
-
-Found a bug? Please [open an issue](https://github.com/<your-username>/creditminer/issues/new) with:
-- Description of the bug
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment (OS, Java version, Node version)
-
----
-
-## 📜 License
-
-This project was developed for **academic purposes** as part of the Data Mining course.
-
-- **Source code**: MIT License (see [`LICENSE`](LICENSE))
-- **Dataset**: Subject to [Kaggle Dataset License](https://www.kaggle.com/datasets/sakshigoyal7/credit-card-customers)
-- **Report & slides**: © 2025 CreditMiner Team. All rights reserved.
-
----
-
-## 🙏 Acknowledgments
-
-- **Weka Team** — University of Waikato, for the excellent data mining toolkit
-- **Sakshi Goyal** — for the Credit Card Customers dataset on Kaggle
-- **shadcn** — for the beautiful and easy-to-use component library
-- **Anthropic Claude** — for assistance in blueprint design and documentation
-- **Our supervisor** — for the invaluable guidance and feedback throughout this project
-
----
-
-<div align="center">
-
-### ⭐ If this project is helpful, please leave a star on GitHub!
-
-**Made with ☕ by the CreditMiner Team**
-
-[⬆ Back to top](#-creditminer)
-
-</div>
+CreditMiner source code is available under the [MIT License](LICENSE). Dataset and Weka components retain their own licenses and attribution requirements.

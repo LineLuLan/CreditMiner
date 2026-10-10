@@ -6,13 +6,13 @@ import lombok.Data;
 @Data
 @Builder
 public class CustomerSummaryResponse {
-    private long clientNum;
-    private String attritionFlag;
-    private Integer customerAge;
-    private String gender;
-    private String cardCategory;
-    private String customerTier;
-    private Double riskScore;
+    private long clientId;
+    private String defaultFlag;
+    private Integer age;
+    private String sex;
+    private String education;
+    private String riskTier;
+    private Double payRatio;
     private Integer clusterId;
     private Boolean isOutlier;
     private Boolean isAnomaly;

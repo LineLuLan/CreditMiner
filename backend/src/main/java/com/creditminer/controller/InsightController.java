@@ -4,6 +4,7 @@ import com.creditminer.dto.response.AnomalyResponse;
 import com.creditminer.dto.response.InsightResponse;
 import com.creditminer.service.AnomalyService;
 import com.creditminer.service.InsightService;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +29,15 @@ public class InsightController {
         return category == null ? insightService.findAll() : insightService.findByCategory(category);
     }
 
+    @GetMapping("/api/insights/visuals")
+    @Operation(summary = "Static chart data for business insights")
+    public JsonNode visuals() {
+        return insightService.visuals();
+    }
+
     @GetMapping("/api/anomalies")
     @Operation(summary = "Top anomalous customers")
     public List<AnomalyResponse> anomalies(@RequestParam(value = "limit", defaultValue = "50") int limit) {
-        return anomalyService.topAnomalies(Math.min(500, Math.max(1, limit)));
+        return anomalyService.topAnomalies(Math.min(1000, Math.max(1, limit)));
     }
 }

@@ -2,361 +2,152 @@
 
 import Link from "next/link";
 import {
+  AlertCircle,
   BarChart3,
-  Brain,
-  CheckCircle2,
+  Boxes,
   Database,
-  FileText,
+  Filter,
   GitBranch,
-  Network,
-  Search,
-  ShieldAlert,
-  Sparkles,
-  Target,
+  SlidersHorizontal,
+  type LucideIcon,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-const crispDmPhases = [
-  {
-    phase: "1",
-    title: "Business understanding",
-    body: "Define the mining question: which customers may churn, why, and which retention actions should be prioritized.",
-    evidence: "Shown in Overview and Mining Report.",
-    href: "/",
-    icon: Target,
-  },
-  {
-    phase: "2",
-    title: "Data understanding",
-    body: "Inspect rows, features, missing values, churn balance, distributions, and churn-by dimensions.",
-    evidence: "EDA page and Mining Report dataset/class balance.",
-    href: "/eda",
-    icon: Search,
-  },
-  {
-    phase: "3",
-    title: "Data preparation",
-    body: "Remove leakage columns, clean data, detect outliers, and create engineered features used by models.",
-    evidence: "Training artifacts under backend/data/processed.",
-    href: "/mining-report",
-    icon: Database,
-  },
-  {
-    phase: "4",
-    title: "Modeling",
-    body: "Train classification, clustering, anomaly, PCA, and Apriori association-rule models.",
-    evidence: "Classification, Clusters, Rules, and Anomaly sections.",
-    href: "/mining-report",
-    icon: Brain,
-  },
-  {
-    phase: "5",
-    title: "Evaluation",
-    body: "Compare model metrics, feature importance, silhouette scores, anomaly rate, and rule support/confidence/lift.",
-    evidence: "Mining Report summarizes the evaluation evidence.",
-    href: "/mining-report",
-    icon: CheckCircle2,
-  },
-  {
-    phase: "6",
-    title: "Deployment",
-    body: "Backend exposes trained artifacts through read-only APIs; frontend renders them as dashboards and prediction tools.",
-    evidence: "Predict page and all dashboard pages consume backend APIs.",
-    href: "/predict",
-    icon: Sparkles,
-  },
-] as const;
-
-const projectPhases = [
-  {
-    phase: "Phase 1",
-    name: "Data understanding",
-    artifacts: "phase1_raw.arff, phase1_describe.json",
-    backend: "Phase1Report",
-    frontend: "EDA describe, Mining Report dataset profile",
-    href: "/eda",
-  },
-  {
-    phase: "Phase 2",
-    name: "Preprocessing",
-    artifacts: "clean.arff, phase2_report.json, phase2_outliers.json",
-    backend: "Phase2Report",
-    frontend: "Anomaly review and report health",
-    href: "/mining-report",
-  },
-  {
-    phase: "Phase 3",
-    name: "Feature engineering",
-    artifacts: "enriched.arff, phase3_report.json",
-    backend: "Phase3Report",
-    frontend: "Predict inputs, model evidence, feature signals",
-    href: "/predict",
-  },
-  {
-    phase: "Phase 4",
-    name: "EDA service",
-    artifacts: "distribution, correlation, churn-by API views",
-    backend: "EdaController, EdaService",
-    frontend: "EDA page",
-    href: "/eda",
-  },
-  {
-    phase: "Phase 5",
-    name: "Classification",
-    artifacts: "models/*.model, phase5_comparison.csv, phase5_feature_importance.json",
-    backend: "Phase5Pipeline, ClassificationService",
-    frontend: "Mining Report classification, Predict page",
-    href: "/predict",
-  },
-  {
-    phase: "Phase 6",
-    name: "Clustering and anomaly",
-    artifacts: "phase6_clusters.json, phase6_anomalies.json, phase6_pca_2d.json, kmeans*.model",
-    backend: "Phase6Pipeline, ClusteringService, AnomalyService",
-    frontend: "Clusters page, PCA scatter, Mining Report anomaly",
-    href: "/clusters",
-  },
-  {
-    phase: "Phase 7",
-    name: "Association rules",
-    artifacts: "clean_assoc.arff, models/rules.json",
-    backend: "Phase7Pipeline, AssociationService",
-    frontend: "Rules page, Mining Report rule evidence",
-    href: "/rules",
-  },
-  {
-    phase: "Phase 8",
-    name: "Serving and dashboard aggregation",
-    artifacts: "DB rows when seeded, artifact fallback when DB rows are unavailable",
-    backend: "MiningReportService, DemoDataInitializer, API controllers",
-    frontend: "Mining Report, Insights, Customers, Predict",
-    href: "/mining-report",
-  },
-] as const;
-
-const frontendOutputs = [
-  {
-    title: "Consolidated train result",
-    route: "/mining-report",
-    body: "Shows classification metrics, feature importance, clusters, anomalies, association rules, and actionable insights from backend artifacts.",
-    icon: FileText,
-  },
-  {
-    title: "EDA result",
-    route: "/eda",
-    body: "Shows describe/distribution/correlation/churn-by outputs backed by dataset processing and EDA services.",
-    icon: BarChart3,
-  },
-  {
-    title: "Cluster result",
-    route: "/clusters",
-    body: "Shows k=3 personas, PCA-2D scatter, centroid evidence, and cluster customers.",
-    icon: Network,
-  },
-  {
-    title: "Rule mining result",
-    route: "/rules",
-    body: "Shows Apriori rules from models/rules.json with support, confidence, lift, and category filters.",
-    icon: GitBranch,
-  },
-  {
-    title: "Prediction result",
-    route: "/predict",
-    body: "Uses the trained classifier model to score a customer form and return churn probability/risk.",
-    icon: Sparkles,
-  },
-  {
-    title: "Business interpretation",
-    route: "/insights",
-    body: "Shows explanation and recommended actions derived from model, segment, rule, and anomaly evidence.",
-    icon: ShieldAlert,
-  },
-] as const;
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataChip } from "@/components/ui/data-chip";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useMiningReport } from "@/hooks/useMiningReport";
+import { formatInt, formatPct } from "@/lib/format";
+import type { MiningReport } from "@/types/api.types";
 
 export default function PipelinePage() {
+  const { data, isLoading, error } = useMiningReport();
+
   return (
-    <div>
-      <Header title="Mining Pipeline" />
-      <div className="space-y-4 p-4 sm:p-6">
-        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <Card className="border-primary/30 bg-primary/5">
-            <CardHeader className="pb-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="gap-1.5">
-                  <GitBranch className="h-3.5 w-3.5" />
-                  CRISP-DM map
-                </Badge>
-                <Badge variant="secondary">artifact-only train completed</Badge>
-              </div>
-              <CardTitle className="text-2xl">
-                Where data mining phases appear in CreditMiner
-              </CardTitle>
-              <CardDescription className="max-w-3xl text-sm leading-6">
-                This page maps the general data-mining lifecycle to this project, then shows where
-                backend training artifacts are visible in the frontend dashboards.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-3">
-              <StatusTile
-                label="Backend artifacts"
-                value="Generated"
-                body="Stored under backend/data/processed and backend/models."
-              />
-              <StatusTile
-                label="Frontend display"
-                value="Available"
-                body="Rendered through backend APIs, especially /api/mining-report."
-              />
-              <StatusTile
-                label="Main proof page"
-                value="Mining Report"
-                body="The cleanest single screen for teacher review."
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Answer</CardTitle>
-              <CardDescription>Has backend training result shown on FE?</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6">
-              <p>
-                <strong>Yes.</strong> The trained backend artifacts are already surfaced on the
-                frontend. The clearest page is{" "}
-                <Link href="/mining-report" className="font-semibold text-primary hover:underline">
-                  Mining Report
-                </Link>
-                .
-              </p>
-              <p className="text-muted-foreground">
-                FE does not read model files directly. Backend reads artifacts from{" "}
-                <span className="font-mono text-foreground">backend/data/processed</span> and{" "}
-                <span className="font-mono text-foreground">backend/models</span>, exposes APIs,
-                then FE renders the results.
-              </p>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {crispDmPhases.map((phase) => (
-            <PhaseCard key={phase.phase} phase={phase} />
-          ))}
-        </section>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Project phase implementation</CardTitle>
-            <CardDescription>
-              Concrete backend phase outputs and where each output is visible in FE.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full min-w-[860px] text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/20 text-left text-muted-foreground">
-                    <th className="px-3 py-2 font-medium">Phase</th>
-                    <th className="px-3 py-2 font-medium">Backend output</th>
-                    <th className="px-3 py-2 font-medium">Artifacts</th>
-                    <th className="px-3 py-2 font-medium">Shown on FE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projectPhases.map((phase) => (
-                    <tr key={phase.phase} className="border-b last:border-b-0">
-                      <td className="px-3 py-3 align-top">
-                        <p className="font-semibold">{phase.phase}</p>
-                        <p className="text-xs text-muted-foreground">{phase.name}</p>
-                      </td>
-                      <td className="px-3 py-3 align-top text-muted-foreground">{phase.backend}</td>
-                      <td className="px-3 py-3 align-top">
-                        <span className="font-mono text-xs leading-5">{phase.artifacts}</span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <Link
-                          href={phase.href}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {phase.frontend}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {frontendOutputs.map((output) => (
-            <FrontendOutputCard key={output.route} output={output} />
-          ))}
-        </section>
+    <div className="methodology-page flex min-w-0 flex-col">
+      <Header title="Methodology" />
+      <div className="min-w-0 flex-1 space-y-5 p-4 xl:p-5">
+        {isLoading ? <><Skeleton className="h-48" /><Skeleton className="h-[520px]" /></> : error ? (
+          <Card className="border-danger/50"><CardContent className="flex gap-2 p-5 text-sm text-danger"><AlertCircle className="h-4 w-4" aria-hidden />{(error as { message?: string }).message ?? "Methodology unavailable"}</CardContent></Card>
+        ) : data ? <Methodology report={data} /> : null}
       </div>
     </div>
   );
 }
 
-function StatusTile({ label, value, body }: { label: string; value: string; body: string }) {
+function Methodology({ report }: { report: MiningReport }) {
+  const method = report.methodology;
+  const evaluation = report.classification.evaluation;
+  const preprocessing = method?.preprocessing;
+  const featureEngineering = method?.featureEngineering;
+  const clustering = method?.clustering;
+  const associationRules = method?.associationRules;
+  const variants = evaluation?.variants ?? [];
+  const bestModel = evaluation?.bestVariant?.algo ?? report.classification.bestModel;
+  const bestVariant = evaluation?.bestVariant?.variant ?? report.classification.bestVariant;
+  const bestVariantLabel = bestVariant === "cost" ? "cost-sensitive" : bestVariant;
+  const phases: PhaseProps[] = [
+    {
+      number: 1,
+      icon: Database,
+      title: "Load and profile",
+      sentence: "Load UCI dataset 350 and profile all client and payment fields.",
+      chips: [["Rows", formatInt(report.dataset.totalRows)], ["Columns", formatInt(report.dataset.totalColumns)]],
+    },
+    {
+      number: 2,
+      icon: SlidersHorizontal,
+      title: "Clean data",
+      sentence: "Phase 1 maps category codes. Phase 2 removes duplicates and flags IQR and Z-score outliers.",
+      chips: [["Rows out", value(preprocessing?.rowsOut)], ["Duplicates", value(preprocessing?.duplicatesDropped)]],
+    },
+    {
+      number: 3,
+      icon: Boxes,
+      title: "Engineer features",
+      sentence: "Create utilization, pay ratio, delay, bill-trend, and risk-tier features.",
+      chips: [["Derived", value(featureEngineering?.derivedFeatures?.length)], ["Target", "Default"]],
+    },
+    {
+      number: 5,
+      icon: BarChart3,
+      title: "Classify",
+      sentence: "Evaluate ten Weka model variants with cross-validation and holdout data.",
+      chips: [["Variants", formatInt(variants.length)], ["Best", `${bestModel} (${bestVariantLabel})`]],
+    },
+    {
+      number: 6,
+      icon: GitBranch,
+      title: "Cluster and detect anomalies",
+      sentence: "Run K-means with k=2 and rank anomalies by centroid distance.",
+      chips: [["Chosen k", value(clustering?.bestK ?? report.clustering.bestK)], ["Clusters", formatInt(report.clustering.totalClusters)]],
+    },
+    {
+      number: 7,
+      icon: Filter,
+      title: "Mine association rules",
+      sentence: "Run Apriori passes for default and non-default client outcomes.",
+      chips: [["Default support", formatSupport(associationRules?.defaultPass?.finalSupport)], ["Non-default support", formatSupport(associationRules?.nonDefaultPass?.minSupport)]],
+    },
+    {
+      number: 10,
+      icon: GitBranch,
+      title: "Mine repayment sequences",
+      sentence: "Run GSP to find repayment sequences that separate default outcomes.",
+      chips: [["Method", "GSP"], ["Months", "April-September 2005"]],
+    },
+  ];
+
   return (
-    <div className="rounded-lg border bg-background/60 p-3">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 text-lg font-semibold">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{body}</p>
-    </div>
+    <>
+      <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card">
+        <CardContent className="space-y-3 p-5">
+          <Badge variant="outline" className="bg-muted">Data mining pipeline</Badge>
+          <h1 className="text-2xl font-bold tracking-tight">From UCI data to a default decision</h1>
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            UCI Machine Learning Repository, dataset 350 (Yeh &amp; Lien, 2009), 30,000 clients, Taiwan, April-September 2005.
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {phases.map((phase, index) => <Phase key={phase.number} {...phase} step={index + 1} />)}
+      </div>
+
+      <details className="rounded-lg border bg-card">
+        <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-sm font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Model hyperparameters</summary>
+        <div className="overflow-x-auto border-t">
+          <table className="w-full min-w-[36rem] text-sm">
+            <thead><tr className="border-b bg-muted/30 text-left text-muted-foreground"><th className="px-4 py-2 font-medium">Model</th><th className="px-4 py-2 font-medium">Variant</th><th className="px-4 py-2 font-medium">Parameters</th></tr></thead>
+            <tbody>{variants.map((row, index) => <tr key={`${row.algo ?? "model"}-${row.variant ?? index}`} className="border-b last:border-0"><td className="px-4 py-2 font-medium">{row.algo ?? "Model"}</td><td className="px-4 py-2">{row.variant ?? "Variant"}</td><td className="px-4 py-2 text-muted-foreground">{row.hyperparameters?.summary ?? row.hyperparameters?.options ?? "Not available"}</td></tr>)}</tbody>
+          </table>
+        </div>
+      </details>
+    </>
   );
 }
 
-function PhaseCard({ phase }: { phase: (typeof crispDmPhases)[number] }) {
-  const Icon = phase.icon;
+interface PhaseProps {
+  number: number;
+  icon: LucideIcon;
+  title: string;
+  sentence: string;
+  chips: Array<[string, string]>;
+}
+
+function Phase({ number, step, icon: Icon, title, sentence, chips }: PhaseProps & { step: number }) {
   return (
-    <Card>
-      <CardContent className="space-y-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="rounded-md bg-primary/10 p-2 text-primary">
-              <Icon className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase text-muted-foreground">
-                CRISP-DM phase {phase.phase}
-              </p>
-              <p className="font-semibold">{phase.title}</p>
-            </div>
-          </div>
-        </div>
-        <p className="text-sm leading-6 text-muted-foreground">{phase.body}</p>
-        <Link href={phase.href} className="text-sm font-medium text-primary hover:underline">
-          {phase.evidence}
-        </Link>
-      </CardContent>
+    <Card className="min-w-0 break-inside-avoid">
+      <CardHeader className="pb-3"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><Icon className="h-5 w-5" aria-hidden /></span><div className="min-w-0"><div className="mb-1 flex flex-wrap items-center gap-2"><span className="text-xs font-medium text-muted-foreground">Step {formatInt(step)}</span><Badge variant="outline" className="text-[10px]">Phase {formatInt(number)}</Badge></div><CardTitle className="text-base">{title}</CardTitle></div></div></CardHeader>
+      <CardContent className="space-y-4"><p className="text-sm">{sentence}</p><div className="flex flex-wrap gap-2">{chips.map(([label, chipValue]) => <DataChip key={`${label}-${chipValue}`} label={label} value={chipValue} />)}</div><Link href="/mining-report" className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">View evidence</Link></CardContent>
     </Card>
   );
 }
 
-function FrontendOutputCard({ output }: { output: (typeof frontendOutputs)[number] }) {
-  const Icon = output.icon;
-  return (
-    <Card>
-      <CardContent className="space-y-3 p-4">
-        <div className="flex items-center gap-2">
-          <div className="rounded-md bg-primary/10 p-2 text-primary">
-            <Icon className="h-4 w-4" />
-          </div>
-          <div>
-            <p className="font-semibold">{output.title}</p>
-            <Link href={output.route} className="text-xs text-primary hover:underline">
-              {output.route}
-            </Link>
-          </div>
-        </div>
-        <p className="text-sm leading-6 text-muted-foreground">{output.body}</p>
-      </CardContent>
-    </Card>
-  );
+function value(input: string | number | null | undefined): string {
+  return typeof input === "number" ? formatInt(input) : input ?? "n/a";
+}
+
+function formatSupport(input: number | null | undefined): string {
+  return input == null ? "n/a" : formatPct(input);
 }

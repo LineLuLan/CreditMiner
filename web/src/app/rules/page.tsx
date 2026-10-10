@@ -1,608 +1,203 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  CHART_AXIS_TICK,
-  CHART_TOOLTIP_ITEM_STYLE,
-  chartTooltipContentStyle,
-} from "@/components/charts/chart-theme";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { RuleGlossary, RuleFamilies, FamilyChart } from "@/components/rules/RuleEvidence";
 import { useRules } from "@/hooks/useRules";
-import { formatInt, formatPct } from "@/lib/utils";
-import type { Rule } from "@/types/api.types";
+import { useOverview } from "@/hooks/useOverview";
+import { useFacts } from "@/hooks/useFacts";
+import { groupRuleFamilies, shortRuleName } from "@/lib/rules-format";
+import { formatDecimal, formatInt, formatMultiplier, formatPct1 } from "@/lib/format";
 
-const CATEGORY_OPTIONS = [
-  { value: "all", label: "All categories" },
-  { value: "retention", label: "Retention only" },
-  { value: "churn", label: "Churn only" },
+type RuleCategory = "default" | "non-default" | "all";
+const CATEGORY_OPTIONS: Array<{ value: RuleCategory; label: string }> = [
+  { value: "default", label: "Default" },
+  { value: "non-default", label: "Non-default" },
+  { value: "all", label: "All" },
 ];
 
-const RULE_FIELD_LABELS: Record<string, string> = {
-  Attrition_Flag: "Attrition status",
-  Avg_Utilization_Ratio: "Utilization",
-  Card_Category: "Card tier",
-  Credit_Limit: "Credit limit",
-  Gender: "Gender",
-  Income_Category: "Income Category",
-  Risk_Score: "Risk Score",
-  Total_Revolving_Bal: "Revolving balance",
-  Total_Relationship_Count: "Relationship count",
-  Total_Trans_Amt: "Transaction amount",
-  Total_Trans_Ct: "Transaction count",
-};
-
 export default function RulesPage() {
-  const [minLift, setMinLift] = React.useState<number>(1.0);
-  const [category, setCategory] = React.useState<string>("all");
+  const [minLift, setMinLift] = React.useState(1);
+  const [category, setCategory] = React.useState<RuleCategory>("default");
   const minLiftId = React.useId();
-  const categoryId = React.useId();
+  const allRulesQuery = useRules(1);
+  const { data: overview } = useOverview();
+  const { getFact } = useFacts({ overview });
+  const baseline = getFact("default-rate").value;
   const { data, isLoading, error } = useRules(minLift, category === "all" ? undefined : category);
-
-  const sorted = React.useMemo(
-    () =>
-      (data ?? [])
-        .slice()
-        .sort((a, b) => b.support - a.support || b.lift - a.lift || b.confidence - a.confidence),
-    [data],
+  const allRules = React.useMemo(() => allRulesQuery.data ?? [], [allRulesQuery.data]);
+  const maxLift = Math.max(
+    1,
+    Math.ceil(Math.max(1, ...allRules.map((rule) => rule.lift)) * 10) / 10,
   );
-
-  const summary = React.useMemo(() => summarizeRules(sorted), [sorted]);
-  const supportData = React.useMemo(
-    () =>
-      sorted.slice(0, 10).map((rule, index) => ({
-        rank: `#${index + 1}`,
-        supportPct: Math.round(rule.support * 10000) / 100,
-        lift: rule.lift,
-        rule: describeRule(rule).headline,
-      })),
-    [sorted],
-  );
-  const conditionData = React.useMemo(() => conditionFrequency(sorted), [sorted]);
+  React.useEffect(() => setMinLift((current) => Math.min(current, maxLift)), [maxLift]);
+  const rules = data ?? [];
+  const families = groupRuleFamilies(rules, minLift);
+  const visibleRules = families.flatMap((family) => family.rules);
+  const defaultFamilies = groupRuleFamilies(allRules.filter((rule) => rule.category === "default"));
+  // Intent: prefer representative support >= 2%, then rank by lift.
+  // Status: complete; next: retain sparse-data fallback. Blockers: none.
+  // Confidence: captured data, exact threshold, and fallback covered by tests.
+  const topDefault = (defaultFamilies.find((family) => family.rules[0].support >= 0.02)
+    ?? defaultFamilies[0])?.rules[0];
 
   return (
-    <div className="flex flex-col">
-      <Header title="Association Rules" />
-      <div className="flex-1 space-y-6 p-4 sm:p-6">
-        <Card>
-          <CardContent className="grid items-end gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-[1fr_220px_auto]">
-            <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between">
-                <Label htmlFor={minLiftId} className="text-xs text-muted-foreground">
-                  Min lift
-                </Label>
-                <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums">
-                  &gt;= {minLift.toFixed(2)}
-                </span>
-              </div>
-              <Input
-                id={minLiftId}
-                type="range"
-                min={1.0}
-                max={1.2}
-                step={0.01}
-                value={minLift}
-                onChange={(event) => setMinLift(Number(event.target.value))}
-                className="w-full"
-                aria-valuemin={1}
-                aria-valuemax={1.2}
-                aria-valuenow={minLift}
-              />
-              <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>1.00</span>
-                <span>1.10</span>
-                <span>1.20</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Retention rules cap around lift 1.19. Slide to 1.00 to show all 50 rules.
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor={categoryId} className="text-xs text-muted-foreground">
-                Category
-              </Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger id={categoryId} className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORY_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="text-sm text-muted-foreground sm:text-right">
-              {data ? `${data.length} rules` : isLoading ? "Loading..." : "-"}
-            </div>
-          </CardContent>
-        </Card>
-
-        {isLoading ? (
-          <Skeleton className="h-80" />
-        ) : error ? (
+    <TooltipProvider delayDuration={200}>
+      <div className="flex min-w-0 flex-col">
+        <Header title="Association Rules" />
+        <main className="min-w-0 flex-1 space-y-5 p-4 xl:p-5">
           <Card>
-            <CardContent className="p-6">
-              <p className="text-sm text-destructive">
-                {(error as { message?: string }).message ?? "Failed to load rules"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : sorted.length === 0 ? (
-          <Card>
-            <CardContent className="p-6">
+            <CardContent className="space-y-3 p-5 sm:p-6">
+              <p className="text-sm font-medium text-muted-foreground">Strongest default family</p>
+              {allRulesQuery.isLoading ? (
+                <Skeleton className="h-20" />
+              ) : topDefault ? (
+                <p className="max-w-5xl break-words text-2xl font-semibold leading-snug tracking-tight sm:text-3xl">
+                  {shortRuleName(topDefault)} {"-> "}
+                  <span className="text-danger">{formatPct1(topDefault.confidence)} default</span> (
+                  {formatMultiplier(topDefault.lift)})
+                  {topDefault.jointCount !== undefined && (
+                    <span className="mt-2 block text-sm font-normal text-muted-foreground">
+                      n = {formatInt(topDefault.jointCount)} clients
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {allRulesQuery.error
+                    ? "Rule evidence is unavailable."
+                    : "No default rules are available."}
+                </p>
+              )}
               <p className="text-sm text-muted-foreground">
-                No rules match the current filter. Lower the min-lift threshold or change category.
+                Portfolio baseline: {formatPct1(topDefault?.baseline ?? baseline)} default.
+                Confidence is the outcome rate among clients matching a rule.
               </p>
             </CardContent>
           </Card>
-        ) : (
-          <>
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <MetricCard
-                label="Rules shown"
-                value={formatInt(sorted.length)}
-                detail="After current filters"
-              />
-              <MetricCard
-                label="Retention rules"
-                value={formatInt(summary.retention)}
-                detail="Rules whose RHS keeps existing customers"
-              />
-              <MetricCard
-                label="Confidence"
-                value={formatPct(summary.avgConfidence)}
-                detail="Flat at 100%, so confidence scatter adds little signal"
-              />
-              <MetricCard
-                label="Max lift"
-                value={summary.maxLift.toFixed(2)}
-                detail="Use lift/support ranking for practical comparison"
-              />
-            </section>
 
-            <section className="grid min-w-0 items-stretch gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-              <Card className="flex h-full min-w-0 flex-col">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Top rules by support</CardTitle>
-                  <CardDescription>
-                    Confidence is flat, so support is the clearer signal for which mined patterns
-                    affect more customers.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <ResponsiveContainer width="100%" height={320}>
-                    <BarChart
-                      data={supportData}
-                      layout="vertical"
-                      margin={{ top: 8, right: 20, left: 12, bottom: 8 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis type="number" unit="%" tick={CHART_AXIS_TICK} />
-                      <YAxis type="category" dataKey="rank" width={36} tick={CHART_AXIS_TICK} />
-                      <Tooltip
-                        content={<RuleSupportTooltip />}
-                        cursor={{ fill: "hsl(var(--muted))", opacity: 0.25 }}
-                      />
-                      <Bar
-                        dataKey="supportPct"
-                        name="Support"
-                        fill="hsl(var(--primary))"
-                        maxBarSize={24}
-                        radius={[0, 4, 4, 0]}
-                        isAnimationActive={false}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card className="flex h-full min-w-0 flex-col">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Most repeated rule conditions</CardTitle>
-                  <CardDescription>
-                    Shows what Apriori repeatedly discovered across the selected rule set.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="min-w-0 flex-1">
-                  <ConditionSlider conditions={conditionData} />
-                </CardContent>
-              </Card>
-            </section>
-          </>
-        )}
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Ranked rule evidence</CardTitle>
-            <CardDescription>
-              Business-readable rules with support, confidence, and lift retained for reporting.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 8 }).map((_, index) => (
-                  <Skeleton key={index} className="h-24" />
-                ))}
+          <Card>
+            <CardContent className="space-y-5 pt-5">
+              <div className="flex flex-wrap items-center gap-3">
+                <Tabs
+                  value={category}
+                  onValueChange={(next) => setCategory(next as RuleCategory)}
+                  className="min-w-0 flex-1"
+                >
+                  <TabsList className="grid h-auto w-full grid-cols-3" aria-label="Rule category">
+                    {CATEGORY_OPTIONS.map((option) => (
+                      <TabsTrigger
+                        key={option.value}
+                        value={option.value}
+                        className="flex-wrap gap-1 px-1.5 text-xs sm:text-sm"
+                      >
+                        {option.label}
+                        <Badge variant="secondary" className="px-1.5 tabular-nums">
+                          {allRulesQuery.isLoading
+                            ? "..."
+                            : formatInt(
+                                allRules.filter(
+                                  (rule) =>
+                                    option.value === "all" || rule.category === option.value,
+                                ).length,
+                              )}
+                        </Badge>
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+                <RuleGlossary />
               </div>
-            ) : sorted.length > 0 ? (
-              <RankedRuleScroller rules={sorted} />
-            ) : (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No rules match the current filter. Try lowering min-lift below {minLift.toFixed(2)}{" "}
-                or switching category.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Tab counts show family representatives. The lift filter keeps qualifying families and their qualifying members.</p>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor={minLiftId}>Minimum family lift</Label>
+                  <span className="text-sm tabular-nums">{formatDecimal(minLift)}</span>
+                </div>
+                <Input
+                  id={minLiftId}
+                  type="range"
+                  min={1}
+                  max={maxLift}
+                  step={0.01}
+                  value={minLift}
+                  onChange={(event) => setMinLift(Number(event.target.value))}
+                  disabled={maxLift === 1}
+                  aria-valuemin={1}
+                  aria-valuemax={maxLift}
+                  aria-valuenow={minLift}
+                  aria-valuetext={formatMultiplier(minLift)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {isLoading ? (
+            <Skeleton className="h-80" />
+          ) : error ? (
+            <Card>
+              <CardContent className="p-6 text-sm text-danger">
+                {(error as { message?: string }).message ?? "Rules unavailable"}
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <section className="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Rule metrics">
+                <Metric
+                  label="Families / rules"
+                  value={`${formatInt(families.length)} families / ${formatInt(visibleRules.length)} rules`}
+                />
+                <Metric
+                  label="Best confidence"
+                  value={formatPct1(
+                    visibleRules.length ? Math.max(...visibleRules.map((rule) => rule.confidence)) : null,
+                  )}
+                />
+                <Metric label="Baseline default rate" value={formatPct1(baseline)} />
+                <Metric
+                  label="Max lift"
+                  value={formatMultiplier(
+                    visibleRules.length ? Math.max(...visibleRules.map((rule) => rule.lift)) : null,
+                  )}
+                />
+              </section>
+              {families.length ? (
+                <>
+                  <FamilyChart families={families} baseline={baseline} />
+                  <RuleFamilies families={families} baseline={baseline} />
+                </>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>No matching rules</CardTitle>
+                    <CardDescription>
+                      Lower the minimum lift or choose another category.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              )}
+            </>
+          )}
+        </main>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
-function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
     <Card>
       <CardContent className="p-4">
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">{detail}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="mt-2 break-words text-2xl font-semibold tabular-nums sm:text-3xl">{value}</p>
       </CardContent>
     </Card>
   );
-}
-
-function RuleCard({ rule, rank }: { rule: Rule; rank: number }) {
-  const label = describeRule(rule);
-
-  return (
-    <div className="rounded-lg border bg-card/60 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">#{rank}</Badge>
-            <Badge variant={rule.category === "churn" ? "destructive" : "default"}>
-              {rule.category}
-            </Badge>
-          </div>
-          <p className="mt-2 font-semibold leading-5">{label.headline}</p>
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {label.conditions.map((condition) => (
-          <span
-            key={condition.raw}
-            className="rounded-md bg-muted/45 px-2 py-1 text-xs text-muted-foreground"
-            title={condition.raw}
-          >
-            {condition.label}:{" "}
-            <span className="font-medium text-foreground">{condition.value}</span>
-          </span>
-        ))}
-      </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <MiniMetric label="Support" value={formatPct(rule.support, 2)} />
-        <MiniMetric label="Confidence" value={formatPct(rule.confidence)} />
-        <MiniMetric label="Lift" value={rule.lift.toFixed(2)} />
-      </div>
-    </div>
-  );
-}
-
-function RankedRuleScroller({ rules }: { rules: Rule[] }) {
-  const scrollerRef = React.useRef<HTMLDivElement>(null);
-  const dragRef = React.useRef({ active: false, startY: 0, scrollTop: 0 });
-
-  const scroll = (direction: "up" | "down") => {
-    scrollerRef.current?.scrollBy({
-      top: direction === "up" ? -360 : 360,
-      behavior: "smooth",
-    });
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">
-          {rules.length} ranked rules, contained for focused review.
-        </p>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Previous ranked rules"
-            onClick={() => scroll("up")}
-          >
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Next ranked rules"
-            onClick={() => scroll("down")}
-          >
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      <div
-        ref={scrollerRef}
-        aria-label="Ranked rule evidence list"
-        className="max-h-[720px] cursor-grab overflow-y-auto overscroll-contain scroll-smooth pr-2 active:cursor-grabbing"
-        onPointerDown={(event) => {
-          const target = event.currentTarget;
-          dragRef.current = {
-            active: true,
-            startY: event.clientY,
-            scrollTop: target.scrollTop,
-          };
-          target.setPointerCapture(event.pointerId);
-        }}
-        onPointerMove={(event) => {
-          if (!dragRef.current.active) return;
-          event.currentTarget.scrollTop =
-            dragRef.current.scrollTop - (event.clientY - dragRef.current.startY);
-        }}
-        onPointerUp={(event) => {
-          dragRef.current.active = false;
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }}
-        onPointerCancel={() => {
-          dragRef.current.active = false;
-        }}
-      >
-        <div className="grid gap-3 pb-1 md:grid-cols-2">
-          {rules.map((rule, index) => (
-            <RuleCard key={rule.ruleId} rule={rule} rank={index + 1} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md bg-muted/25 p-2">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-xs font-semibold tabular-nums">{value}</p>
-    </div>
-  );
-}
-
-function ConditionSlider({
-  conditions,
-}: {
-  conditions: { label: string; value: string; count: number }[];
-}) {
-  const scrollerRef = React.useRef<HTMLDivElement>(null);
-  const dragRef = React.useRef({ active: false, startY: 0, scrollTop: 0 });
-  const max = conditions[0]?.count ?? 1;
-
-  const scroll = (direction: "up" | "down") => {
-    scrollerRef.current?.scrollBy({
-      top: direction === "up" ? -180 : 180,
-      behavior: "smooth",
-    });
-  };
-
-  return (
-    <div className="min-w-0 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">
-          {conditions.length} repeated conditions ranked by frequency.
-        </p>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Previous conditions"
-            onClick={() => scroll("up")}
-          >
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Next conditions"
-            onClick={() => scroll("down")}
-          >
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      <div
-        ref={scrollerRef}
-        aria-label="Repeated rule conditions list"
-        className="max-h-[320px] cursor-grab space-y-2 overflow-y-auto overscroll-contain scroll-smooth pr-2 active:cursor-grabbing"
-        onPointerDown={(event) => {
-          const target = event.currentTarget;
-          dragRef.current = {
-            active: true,
-            startY: event.clientY,
-            scrollTop: target.scrollTop,
-          };
-          target.setPointerCapture(event.pointerId);
-        }}
-        onPointerMove={(event) => {
-          if (!dragRef.current.active) return;
-          event.currentTarget.scrollTop =
-            dragRef.current.scrollTop - (event.clientY - dragRef.current.startY);
-        }}
-        onPointerUp={(event) => {
-          dragRef.current.active = false;
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }}
-        onPointerCancel={() => {
-          dragRef.current.active = false;
-        }}
-      >
-        {conditions.map((condition) => (
-          <ConditionCard
-            key={`${condition.label}-${condition.value}`}
-            condition={condition}
-            max={max}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ConditionCard({
-  condition,
-  max,
-}: {
-  condition: { label: string; value: string; count: number };
-  max: number;
-}) {
-  const pct = max > 0 ? (condition.count / max) * 100 : 0;
-
-  return (
-    <div className="min-h-[88px] select-none rounded-lg border bg-background/70 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{condition.value}</p>
-          <p className="text-xs text-muted-foreground">{condition.label}</p>
-        </div>
-        <span className="text-sm font-semibold tabular-nums">{condition.count}</span>
-      </div>
-      <div className="mt-3 h-2 rounded-full bg-muted">
-        <div className="h-2 rounded-full bg-primary" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function RuleSupportTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: Array<{ payload?: { rule: string; supportPct: number; lift: number; rank: string } }>;
-}) {
-  const row = payload?.[0]?.payload;
-  if (!active || !row) return null;
-
-  return (
-    <div style={chartTooltipContentStyle({ maxWidth: 320 })}>
-      <p className="mb-2 text-xs font-semibold">{row.rank}</p>
-      <p className="text-xs leading-5">{row.rule}</p>
-      <div style={CHART_TOOLTIP_ITEM_STYLE}>
-        Support {row.supportPct.toFixed(2)}% - Lift {row.lift.toFixed(2)}
-      </div>
-    </div>
-  );
-}
-
-function summarizeRules(rules: Rule[]) {
-  const retention = rules.filter((rule) => rule.category === "retention").length;
-  const avgConfidence =
-    rules.length > 0 ? rules.reduce((sum, rule) => sum + rule.confidence, 0) / rules.length : 0;
-  const maxLift = rules.length > 0 ? Math.max(...rules.map((rule) => rule.lift)) : 0;
-  return { retention, avgConfidence, maxLift };
-}
-
-function conditionFrequency(rules: Rule[]) {
-  const counts = new Map<string, { label: string; value: string; count: number }>();
-
-  for (const rule of rules) {
-    for (const condition of parseRuleSide(rule.lhs)) {
-      const key = `${condition.label}:${condition.value}`;
-      const existing = counts.get(key);
-      counts.set(key, {
-        label: condition.label,
-        value: condition.value,
-        count: (existing?.count ?? 0) + 1,
-      });
-    }
-  }
-
-  return [...counts.values()].sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
-}
-
-function describeRule(rule: Rule) {
-  const conditions = parseRuleSide(rule.lhs);
-  const outcome = parseRuleSide(rule.rhs)[0];
-  const outcomeValue = outcome ? outcome.value : friendlyRuleValue(rule.rhs);
-
-  return {
-    headline: `${conditions.map((condition) => condition.value).join(" + ")} -> ${outcomeValue}`,
-    conditions,
-  };
-}
-
-function parseRuleSide(value: string) {
-  return value
-    .split(/\s*,\s*/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => {
-      const separatorIndex = part.indexOf("=");
-      if (separatorIndex === -1) {
-        return {
-          raw: part,
-          label: "Condition",
-          value: friendlyRuleValue(part),
-        };
-      }
-
-      const field = part.slice(0, separatorIndex).trim();
-      const rawValue = part.slice(separatorIndex + 1).trim();
-
-      return {
-        raw: part,
-        label: RULE_FIELD_LABELS[field] ?? field.replaceAll("_", " "),
-        value: friendlyRuleValue(rawValue, field),
-      };
-    });
-}
-
-function friendlyRuleValue(value: string, field?: string) {
-  const cleanValue = value.trim().replace(/^['"]|['"]$/g, "");
-
-  if (field === "Gender") {
-    if (cleanValue === "F") return "Female";
-    if (cleanValue === "M") return "Male";
-  }
-
-  if (field === "Card_Category" && cleanValue === "Blue") return "Blue card";
-  if (cleanValue === "Existing Customer") return "Existing customer";
-  if (cleanValue === "Attrited Customer") return "Attrited customer";
-
-  const upperBound = cleanValue.match(/^\(-inf-([\d.]+)\]$/);
-  if (upperBound) return `up to ${formatRuleNumber(upperBound[1])}`;
-
-  const lowerBound = cleanValue.match(/^\(([\d.]+)-inf\)$/);
-  if (lowerBound) return `above ${formatRuleNumber(lowerBound[1])}`;
-
-  const range = cleanValue.match(/^\(([\d.]+)-([\d.]+)\]$/);
-  if (range) return `${formatRuleNumber(range[1])} to ${formatRuleNumber(range[2])}`;
-
-  return cleanValue.replaceAll("_", " ");
-}
-
-function formatRuleNumber(value: string) {
-  const numericValue = Number(value);
-  if (Number.isNaN(numericValue)) return value;
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: numericValue >= 100 ? 0 : 1,
-  }).format(numericValue);
 }

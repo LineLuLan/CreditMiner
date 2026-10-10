@@ -3,8 +3,6 @@ package com.creditminer.pipeline;
 import com.creditminer.dto.response.ClusterResponse;
 import com.creditminer.service.ClusteringService;
 import com.creditminer.service.ClusteringService.ElbowResult;
-import com.creditminer.service.DataLoader;
-import com.creditminer.service.Preprocessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +15,8 @@ import weka.filters.unsupervised.attribute.PrincipalComponents;
 import weka.filters.unsupervised.attribute.Remove;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -37,15 +37,15 @@ import java.util.Set;
  * <p>Pipeline:
  * <ol>
  *   <li>Load enriched.arff (Phase 3 output, 27 cols)</li>
- *   <li>Drop {@code Attrition_Flag}, {@code CLIENTNUM} + all nominals → numeric-only matrix</li>
+ *   <li>Select the eight documented credit-behaviour features.</li>
  *   <li>Min-max normalize (KMeans needs scaled features)</li>
  *   <li>Sweep k=2..8, record WCSS + sampled silhouette → pick best k by silhouette</li>
  *   <li>Train final {@link SimpleKMeans} (seed 42, 500 iter), save {@code models/kmeans.model}</li>
  *   <li>Compute centroid distance per row → flag anomaly when {@code distance > μ+3σ}</li>
  *   <li>Combine with {@code phase2_outliers.json} → {@code phase6_anomalies.json}</li>
  *   <li>Apply {@link PrincipalComponents} on the same normalized matrix; export first 2 PCs
- *       per CLIENTNUM to {@code phase6_pca_2d.json} (BE-43)</li>
- *   <li>Persist per-cluster summaries (centroid in original units, avgRisk, churnRate) to
+ *       per client ID to {@code phase6_pca_2d.json} (BE-43)</li>
+ *   <li>Persist per-cluster summaries (centroid in original units and default rate) to
  *       {@code phase6_clusters.json}</li>
  * </ol>
  * </p>
@@ -58,7 +58,7 @@ public class Phase6Pipeline {
     private static final String MODEL_PATH = "models/kmeans.model";
     /** Fitted Normalize filter — same min/max bounds the clusterer was trained on. */
     private static final String NORMALIZER_PATH = "models/kmeans-normalizer.model";
-    /** Empty Instances header (19 attrs) describing the clusterer's input shape. */
+    /** Empty Instances header describing the clusterer's exact input shape. */
     private static final String INPUT_HEADER_PATH = "models/kmeans-input-header.model";
     private static final String CLUSTERS_JSON = "data/processed/phase6_clusters.json";
     private static final String ANOMALIES_JSON = "data/processed/phase6_anomalies.json";
@@ -68,30 +68,25 @@ public class Phase6Pipeline {
     private static final int K_MIN = 2;
     private static final int K_MAX = 8;
 
-    /** Nominal columns dropped before clustering (KMeans requires numeric). */
-    private static final List<String> NOMINAL_DROP = List.of(
-            "Attrition_Flag", "Gender", "Education_Level", "Marital_Status",
-            "Income_Category", "Card_Category", "Customer_Tier"
-    );
-
     public static void main(String[] args) throws Exception {
         String inputArff = args.length > 0 ? args[0] : DEFAULT_INPUT;
         String phase2Outliers = args.length > 1 ? args[1] : DEFAULT_PHASE2_OUTLIERS;
 
         log.info("=== Phase 6 — Clustering & Anomaly + PCA-2D ===");
 
-        DataLoader loader = new DataLoader();
-        Instances raw = loader.loadArff(inputArff);
-        Attribute classAttr = raw.attribute("Attrition_Flag");
+        Instances raw;
+        try (var reader = Files.newBufferedReader(Path.of(inputArff))) {
+            raw = new Instances(reader);
+        }
+        Attribute classAttr = raw.attribute("Default");
         if (classAttr != null) raw.setClassIndex(classAttr.index());
         log.info("Loaded {} rows × {} cols", raw.numInstances(), raw.numAttributes());
 
-        // Build clustering input: drop nominals + CLIENTNUM, then min-max normalize.
+        // Select the approved behaviour features, then min-max normalize.
         // We fit the Normalize filter inline (instead of via Preprocessor.normalize)
         // so we can persist the fitted filter for predict-time reuse — without it
         // /api/predict can't normalize a single new row to match the trained centroids.
-        Instances clusterIn = removeAttributes(raw, "CLIENTNUM");
-        clusterIn = removeAttributesByName(clusterIn, NOMINAL_DROP);
+        Instances clusterIn = selectAttributes(raw, ClusteringService.CLUSTER_FEATURES);
         clusterIn.setClassIndex(-1);
         weka.filters.unsupervised.attribute.Normalize normalizer =
                 new weka.filters.unsupervised.attribute.Normalize();
@@ -169,18 +164,17 @@ public class Phase6Pipeline {
 
     // -------------------- helpers: data prep --------------------
 
-    private static Instances removeAttributes(Instances data, String... names) throws Exception {
-        return removeAttributesByName(data, List.of(names));
-    }
-
-    private static Instances removeAttributesByName(Instances data, List<String> names) throws Exception {
+    private static Instances selectAttributes(Instances data, List<String> names) throws Exception {
         List<Integer> indices = new ArrayList<>();
         for (String n : names) {
             Attribute a = data.attribute(n);
-            if (a != null) indices.add(a.index());
+            if (a == null || !a.isNumeric()) {
+                throw new IllegalStateException("Missing numeric clustering feature: " + n);
+            }
+            indices.add(a.index());
         }
-        if (indices.isEmpty()) return data;
         Remove rm = new Remove();
+        rm.setInvertSelection(true);
         rm.setAttributeIndicesArray(indices.stream().mapToInt(Integer::intValue).toArray());
         rm.setInputFormat(data);
         return Filter.useFilter(data, rm);
@@ -244,7 +238,7 @@ public class Phase6Pipeline {
         try {
             ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> doc = mapper.readValue(f, Map.class);
-            List<Number> list = (List<Number>) doc.get("outlierClientNums");
+            List<Number> list = (List<Number>) doc.get("outlierClientIds");
             Set<Long> out = new HashSet<>();
             if (list != null) for (Number n : list) out.add(n.longValue());
             return out;
@@ -277,12 +271,12 @@ public class Phase6Pipeline {
             boolean[] strongCluster, boolean[] mildCluster, Set<Long> phase2OutlierSet,
             double mu, double sd, double strongThreshold, double mildThreshold) {
 
-        Attribute clientNumAttr = raw.attribute("CLIENTNUM");
+        Attribute clientIdAttr = raw.attribute("ID");
         List<Map<String, Object>> records = new ArrayList<>();
         int combinedCount = 0;
         for (int i = 0; i < raw.numInstances(); i++) {
-            long clientNum = clientNumAttr == null ? 0L : (long) raw.instance(i).value(clientNumAttr);
-            boolean p2 = phase2OutlierSet.contains(clientNum);
+            long clientId = clientIdAttr == null ? 0L : (long) raw.instance(i).value(clientIdAttr);
+            boolean p2 = phase2OutlierSet.contains(clientId);
             boolean strong = strongCluster[i];
             boolean mild = mildCluster[i];
             if (!p2 && !mild && !strong) continue; // include row if any anomaly signal fired
@@ -292,7 +286,7 @@ public class Phase6Pipeline {
             boolean isAnomaly = strong && p2;
             if (isAnomaly) combinedCount++;
             Map<String, Object> r = new LinkedHashMap<>();
-            r.put("clientNum", clientNum);
+            r.put("clientId", clientId);
             r.put("clusterId", assignments[i]);
             r.put("centroidDistance", round(distances[i]));
             r.put("phase2Outlier", p2);
@@ -322,11 +316,11 @@ public class Phase6Pipeline {
     private static Map<String, Object> buildPcaDoc(
             Instances raw, int[] assignments, List<double[]> coords) {
 
-        Attribute clientNumAttr = raw.attribute("CLIENTNUM");
+        Attribute clientIdAttr = raw.attribute("ID");
         List<Map<String, Object>> rows = new ArrayList<>(coords.size());
         for (int i = 0; i < coords.size(); i++) {
             Map<String, Object> r = new LinkedHashMap<>();
-            r.put("clientNum", clientNumAttr == null ? 0L : (long) raw.instance(i).value(clientNumAttr));
+            r.put("clientId", clientIdAttr == null ? 0L : (long) raw.instance(i).value(clientIdAttr));
             r.put("clusterId", assignments[i]);
             r.put("x", coords.get(i)[0]);
             r.put("y", coords.get(i)[1]);
@@ -335,7 +329,7 @@ public class Phase6Pipeline {
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("totalRows", coords.size());
         doc.put("componentCount", 2);
-        doc.put("source", "min-max normalized numeric features minus CLIENTNUM/Attrition_Flag/all nominals");
+        doc.put("source", "min-max normalized credit-behaviour feature allowlist");
         doc.put("points", rows);
         doc.put("generatedAt", Instant.now().toString());
         return doc;
@@ -367,12 +361,12 @@ public class Phase6Pipeline {
             System.out.printf("%-4d %14.4f %14.4f%n", e.kMin() + i, e.wcss()[i], e.silhouette()[i]);
         }
         System.out.println();
-        System.out.printf("%-12s %6s %12s %12s %s%n", "ClusterId", "Size", "AvgRisk", "Churn%", "Description");
+        System.out.printf("%-12s %6s %12s %12s %s%n", "ClusterId", "Size", "AvgRisk", "Default%", "Description");
         System.out.println("-".repeat(108));
         for (ClusterResponse c : summaries) {
             System.out.printf("%-12s %6d %12.4f %12.4f %s%n",
                     c.getClusterId(), c.getSize(),
-                    c.getAvgRisk(), c.getChurnRate() * 100,
+                    c.getAvgRisk(), c.getDefaultRate() * 100,
                     c.getDescription());
         }
         System.out.println();

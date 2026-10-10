@@ -20,6 +20,49 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 class ClassificationServiceTest {
 
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path tempDir;
+
+    @Test
+    void predictionLabelsPermutationImportanceAndUsesImportanceRatherThanImpurity() throws Exception {
+        var importance = tempDir.resolve("importance.json");
+        java.nio.file.Files.writeString(importance, """
+                {"metric":"PermutationImportance","ranking":[
+                  {"name":"AGE","importance":0.1,"impuritySplitCount":99999},
+                  {"name":"PAY_1","importance":0.6,"impuritySplitCount":2},
+                  {"name":"MONTHS_DELAYED","importance":0.3,"impuritySplitCount":1}]}
+                """);
+        var cfg = Mockito.mock(ModelConfig.class);
+        var classifier = Mockito.mock(weka.classifiers.Classifier.class);
+        Mockito.when(cfg.getClassifier()).thenReturn(classifier);
+        Mockito.when(cfg.getClassifierPath()).thenReturn("models/RANDOMFOREST_COST.model");
+        var builder = Mockito.mock(PredictInputBuilder.class);
+        Mockito.when(builder.isReady()).thenReturn(true);
+        var instance = Mockito.mock(weka.core.Instance.class);
+        var outcome = new weka.core.Attribute("Default", java.util.List.of("No", "Yes"));
+        Mockito.when(instance.classAttribute()).thenReturn(outcome);
+        Mockito.when(builder.build(Mockito.any())).thenReturn(instance);
+        Mockito.when(classifier.distributionForInstance(instance)).thenReturn(new double[] {0.8, 0.2});
+        Mockito.when(builder.engineer(Mockito.any())).thenReturn(
+                new PredictInputBuilder.EngineeredFeatures(0, 0, 0, 0, 0, 0, "Low"));
+        var service = new ClassificationService(cfg, Mockito.mock(ClusteringService.class), builder,
+                Mockito.mock(ClusterRepository.class), Mockito.mock(PredictionLogRepository.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "featureImportancePath", importance.toString());
+
+        var response = service.predict(sampleRequest());
+        var json = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(response);
+        org.assertj.core.api.Assertions.assertThat(json.path("importanceMethod").asText())
+                .isEqualTo("permutation importance, holdout AUC drop");
+        org.assertj.core.api.Assertions.assertThat(response.getTopFeatures())
+                .extracting(com.creditminer.dto.response.PredictResponse.FeatureContribution::getName)
+                .containsExactly("PAY_1", "MONTHS_DELAYED", "AGE");
+        org.assertj.core.api.Assertions.assertThat(response.getTopFeatures().get(0).getContribution()).isEqualTo(0.6);
+
+        java.nio.file.Files.writeString(importance, "{}");
+        org.assertj.core.api.Assertions.assertThat(service.predict(sampleRequest()).getTopFeatures())
+                .isEqualTo(response.getTopFeatures());
+    }
+
     @Test
     void predictThrowsModelNotLoadedWhenClassifierMissing() {
         ModelConfig cfg = Mockito.mock(ModelConfig.class);
@@ -52,22 +95,19 @@ class ClassificationServiceTest {
 
     private PredictRequest sampleRequest() {
         PredictRequest r = new PredictRequest();
-        r.setCustomerAge(45);
-        r.setGender("M");
-        r.setDependentCount(3);
-        r.setEducationLevel("Graduate");
-        r.setMaritalStatus("Married");
-        r.setIncomeCategory("$60K - $80K");
-        r.setCardCategory("Blue");
-        r.setMonthsOnBook(36);
-        r.setTotalRelationshipCount(5);
-        r.setMonthsInactive12Mon(2);
-        r.setContactsCount12Mon(3);
-        r.setCreditLimit(BigDecimal.valueOf(12500));
-        r.setTotalRevolvingBal(BigDecimal.valueOf(800));
-        r.setTotalTransAmt(BigDecimal.valueOf(4500));
-        r.setTotalTransCt(45);
-        r.setAvgUtilizationRatio(BigDecimal.valueOf(0.064));
+        r.setLimitBal(BigDecimal.valueOf(12500));
+        r.setSex("Female");
+        r.setEducation("Graduate");
+        r.setMarriage("Married");
+        r.setAge(45);
+        r.setPay1(0); r.setPay2(0); r.setPay3(0);
+        r.setPay4(0); r.setPay5(0); r.setPay6(0);
+        r.setBillAmt1(BigDecimal.valueOf(800)); r.setBillAmt2(BigDecimal.valueOf(700));
+        r.setBillAmt3(BigDecimal.valueOf(600)); r.setBillAmt4(BigDecimal.valueOf(500));
+        r.setBillAmt5(BigDecimal.valueOf(400)); r.setBillAmt6(BigDecimal.valueOf(300));
+        r.setPayAmt1(BigDecimal.valueOf(100)); r.setPayAmt2(BigDecimal.valueOf(100));
+        r.setPayAmt3(BigDecimal.valueOf(100)); r.setPayAmt4(BigDecimal.valueOf(100));
+        r.setPayAmt5(BigDecimal.valueOf(100)); r.setPayAmt6(BigDecimal.valueOf(100));
         return r;
     }
 }

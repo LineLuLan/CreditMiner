@@ -14,6 +14,7 @@ import {
   Network,
   Sparkles,
   Users,
+  Workflow,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -125,7 +126,7 @@ export function MobileNav() {
             </div>
             <nav className="flex-1 space-y-1 overflow-y-auto p-4">
               {NAV_ITEMS.map((item) => {
-                const Icon = ICON_MAP[item.icon as keyof typeof ICON_MAP];
+                const Icon = item.href === "/pipeline" ? Workflow : ICON_MAP[item.icon as keyof typeof ICON_MAP];
                 const active =
                   pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
                 return (
@@ -147,7 +148,7 @@ export function MobileNav() {
             </nav>
             <div className="border-t p-4 text-xs text-muted-foreground">
               <p className="font-medium text-foreground">Demo build</p>
-              <p>CRISP-DM · CreditCard churn</p>
+              <p>CRISP-DM {"\u00b7"} UCI credit default</p>
             </div>
           </aside>
         </div>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>nz.ac.waikato.cms.weka</groupId>
+  <artifactId>generalizedSequentialPatterns</artifactId>
+  <version>1.0.1</version>
+  <packaging>jar</packaging>
+  <name>Weka package: generalizedSequentialPatterns</name>
+  <description>GSP sequential pattern mining for Weka (Sebastian Beer, 2012-03-20, GPL 3.0). Installed manually from the Weka package repository; the same jar sits in backend/lib.</description>
+</project>

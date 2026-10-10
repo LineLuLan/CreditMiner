@@ -1,0 +1,1562 @@
+{
+  "generatedAt" : "2026-10-10T16:58:05.053050300Z",
+  "sourceFiles" : [ "data/processed/enriched.arff", "data/processed/phase6_pca_2d.json", "data/processed/phase6_clusters.json", "data/processed/phase5_feature_importance.json", "models/rules.json" ],
+  "overall" : {
+    "rows" : 29965,
+    "defaults" : 6630,
+    "nonDefaults" : 23335,
+    "defaultRate" : 0.2213
+  },
+  "defaultByBucket" : {
+    "AVG_UTILIZATION" : [ {
+      "bucket" : "<= 0",
+      "count" : 1041,
+      "defaults" : 363,
+      "defaultRate" : 0.3487,
+      "liftVsBase" : 1.576
+    }, {
+      "bucket" : "(0, 0.25]",
+      "count" : 13310,
+      "defaults" : 2216,
+      "defaultRate" : 0.1665,
+      "liftVsBase" : 0.7525
+    }, {
+      "bucket" : "(0.25, 0.5]",
+      "count" : 4555,
+      "defaults" : 905,
+      "defaultRate" : 0.1987,
+      "liftVsBase" : 0.898
+    }, {
+      "bucket" : "(0.5, 1]",
+      "count" : 10422,
+      "defaults" : 2928,
+      "defaultRate" : 0.2809,
+      "liftVsBase" : 1.2698
+    }, {
+      "bucket" : "> 1",
+      "count" : 637,
+      "defaults" : 218,
+      "defaultRate" : 0.3422,
+      "liftVsBase" : 1.5467
+    } ],
+    "MONTHS_DELAYED" : [ {
+      "bucket" : "0",
+      "count" : 19918,
+      "defaults" : 2333,
+      "defaultRate" : 0.1171,
+      "liftVsBase" : 0.5294
+    }, {
+      "bucket" : "1",
+      "count" : 4405,
+      "defaults" : 1316,
+      "defaultRate" : 0.2988,
+      "liftVsBase" : 1.3502
+    }, {
+      "bucket" : "2",
+      "count" : 1899,
+      "defaults" : 736,
+      "defaultRate" : 0.3876,
+      "liftVsBase" : 1.7517
+    }, {
+      "bucket" : "3",
+      "count" : 1154,
+      "defaults" : 587,
+      "defaultRate" : 0.5087,
+      "liftVsBase" : 2.299
+    }, {
+      "bucket" : "4",
+      "count" : 951,
+      "defaults" : 545,
+      "defaultRate" : 0.5731,
+      "liftVsBase" : 2.5901
+    }, {
+      "bucket" : "5",
+      "count" : 298,
+      "defaults" : 171,
+      "defaultRate" : 0.5738,
+      "liftVsBase" : 2.5935
+    }, {
+      "bucket" : "6",
+      "count" : 1340,
+      "defaults" : 942,
+      "defaultRate" : 0.703,
+      "liftVsBase" : 3.1772
+    } ],
+    "MAX_DELAY" : [ {
+      "bucket" : "<= 0",
+      "count" : 19918,
+      "defaults" : 2333,
+      "defaultRate" : 0.1171,
+      "liftVsBase" : 0.5294
+    }, {
+      "bucket" : "1",
+      "count" : 1668,
+      "defaults" : 418,
+      "defaultRate" : 0.2506,
+      "liftVsBase" : 1.1326
+    }, {
+      "bucket" : "2",
+      "count" : 7187,
+      "defaults" : 3130,
+      "defaultRate" : 0.4355,
+      "liftVsBase" : 1.9683
+    }, {
+      "bucket" : "3+",
+      "count" : 1192,
+      "defaults" : 749,
+      "defaultRate" : 0.6284,
+      "liftVsBase" : 2.8399
+    } ],
+    "AGE" : [ {
+      "bucket" : "<= 29",
+      "count" : 9603,
+      "defaults" : 2196,
+      "defaultRate" : 0.2287,
+      "liftVsBase" : 1.0335
+    }, {
+      "bucket" : "30-39",
+      "count" : 11226,
+      "defaults" : 2275,
+      "defaultRate" : 0.2027,
+      "liftVsBase" : 0.9159
+    }, {
+      "bucket" : "40-49",
+      "count" : 6456,
+      "defaults" : 1481,
+      "defaultRate" : 0.2294,
+      "liftVsBase" : 1.0368
+    }, {
+      "bucket" : "50-59",
+      "count" : 2341,
+      "defaults" : 582,
+      "defaultRate" : 0.2486,
+      "liftVsBase" : 1.1236
+    }, {
+      "bucket" : "60+",
+      "count" : 339,
+      "defaults" : 96,
+      "defaultRate" : 0.2832,
+      "liftVsBase" : 1.2799
+    } ],
+    "LIMIT_BAL" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : 10000.0,
+      "hi" : 50000.0,
+      "count" : 7673,
+      "defaults" : 2439,
+      "defaultRate" : 0.3179,
+      "liftVsBase" : 1.4366
+    }, {
+      "bucket" : "Q2",
+      "lo" : 50000.0,
+      "hi" : 140000.0,
+      "count" : 7607,
+      "defaults" : 1882,
+      "defaultRate" : 0.2474,
+      "liftVsBase" : 1.1182
+    }, {
+      "bucket" : "Q3",
+      "lo" : 140000.0,
+      "hi" : 240000.0,
+      "count" : 7627,
+      "defaults" : 1324,
+      "defaultRate" : 0.1736,
+      "liftVsBase" : 0.7846
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 240000.0,
+      "hi" : 1000000.0,
+      "count" : 7058,
+      "defaults" : 985,
+      "defaultRate" : 0.1396,
+      "liftVsBase" : 0.6307
+    } ],
+    "UTILIZATION_1" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : -0.6199,
+      "hi" : 0.0223,
+      "count" : 7493,
+      "defaults" : 1576,
+      "defaultRate" : 0.2103,
+      "liftVsBase" : 0.9506
+    }, {
+      "bucket" : "Q2",
+      "lo" : 0.0223,
+      "hi" : 0.3153,
+      "count" : 7490,
+      "defaults" : 1185,
+      "defaultRate" : 0.1582,
+      "liftVsBase" : 0.7151
+    }, {
+      "bucket" : "Q3",
+      "lo" : 0.3153,
+      "hi" : 0.8303,
+      "count" : 7491,
+      "defaults" : 1880,
+      "defaultRate" : 0.251,
+      "liftVsBase" : 1.1343
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 0.8303,
+      "hi" : 5.0,
+      "count" : 7491,
+      "defaults" : 1989,
+      "defaultRate" : 0.2655,
+      "liftVsBase" : 1.2
+    } ],
+    "PAY_RATIO" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : 0.0,
+      "hi" : 0.0413,
+      "count" : 7493,
+      "defaults" : 2187,
+      "defaultRate" : 0.2919,
+      "liftVsBase" : 1.3191
+    }, {
+      "bucket" : "Q2",
+      "lo" : 0.0413,
+      "hi" : 0.0882,
+      "count" : 7490,
+      "defaults" : 1960,
+      "defaultRate" : 0.2617,
+      "liftVsBase" : 1.1827
+    }, {
+      "bucket" : "Q3",
+      "lo" : 0.0882,
+      "hi" : 0.6106,
+      "count" : 7491,
+      "defaults" : 1340,
+      "defaultRate" : 0.1789,
+      "liftVsBase" : 0.8085
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 0.6106,
+      "hi" : 5.0,
+      "count" : 7491,
+      "defaults" : 1143,
+      "defaultRate" : 0.1526,
+      "liftVsBase" : 0.6896
+    } ],
+    "BILL_TREND" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : -1.8273,
+      "hi" : -0.0292,
+      "count" : 7492,
+      "defaults" : 2189,
+      "defaultRate" : 0.2922,
+      "liftVsBase" : 1.3205
+    }, {
+      "bucket" : "Q2",
+      "lo" : -0.0292,
+      "hi" : 0.0069,
+      "count" : 7491,
+      "defaults" : 1688,
+      "defaultRate" : 0.2253,
+      "liftVsBase" : 1.0184
+    }, {
+      "bucket" : "Q3",
+      "lo" : 0.0069,
+      "hi" : 0.1818,
+      "count" : 7492,
+      "defaults" : 1232,
+      "defaultRate" : 0.1644,
+      "liftVsBase" : 0.7432
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 0.1818,
+      "hi" : 5.0,
+      "count" : 7490,
+      "defaults" : 1521,
+      "defaultRate" : 0.2031,
+      "liftVsBase" : 0.9178
+    } ],
+    "BILL_AMT1" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : -165580.0,
+      "hi" : 3595.0,
+      "count" : 7492,
+      "defaults" : 1728,
+      "defaultRate" : 0.2306,
+      "liftVsBase" : 1.0424
+    }, {
+      "bucket" : "Q2",
+      "lo" : 3595.0,
+      "hi" : 22438.0,
+      "count" : 7491,
+      "defaults" : 1713,
+      "defaultRate" : 0.2287,
+      "liftVsBase" : 1.0335
+    }, {
+      "bucket" : "Q3",
+      "lo" : 22438.0,
+      "hi" : 67260.0,
+      "count" : 7491,
+      "defaults" : 1687,
+      "defaultRate" : 0.2252,
+      "liftVsBase" : 1.0178
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 67260.0,
+      "hi" : 964511.0,
+      "count" : 7491,
+      "defaults" : 1502,
+      "defaultRate" : 0.2005,
+      "liftVsBase" : 0.9062
+    } ],
+    "PAY_AMT1" : [ {
+      "bucket" : "Q1 (<= q1)",
+      "lo" : 0.0,
+      "hi" : 1000.0,
+      "count" : 7805,
+      "defaults" : 2478,
+      "defaultRate" : 0.3175,
+      "liftVsBase" : 1.4349
+    }, {
+      "bucket" : "Q2",
+      "lo" : 1000.0,
+      "hi" : 2102.0,
+      "count" : 7179,
+      "defaults" : 1586,
+      "defaultRate" : 0.2209,
+      "liftVsBase" : 0.9985
+    }, {
+      "bucket" : "Q3",
+      "lo" : 2102.0,
+      "hi" : 5008.0,
+      "count" : 7492,
+      "defaults" : 1533,
+      "defaultRate" : 0.2046,
+      "liftVsBase" : 0.9248
+    }, {
+      "bucket" : "Q4 (> q3)",
+      "lo" : 5008.0,
+      "hi" : 873552.0,
+      "count" : 7489,
+      "defaults" : 1033,
+      "defaultRate" : 0.1379,
+      "liftVsBase" : 0.6234
+    } ],
+    "SEX" : [ {
+      "bucket" : "Male",
+      "count" : 11874,
+      "defaults" : 2869,
+      "defaultRate" : 0.2416,
+      "liftVsBase" : 1.092
+    }, {
+      "bucket" : "Female",
+      "count" : 18091,
+      "defaults" : 3761,
+      "defaultRate" : 0.2079,
+      "liftVsBase" : 0.9396
+    } ],
+    "EDUCATION" : [ {
+      "bucket" : "Graduate",
+      "count" : 10563,
+      "defaults" : 2032,
+      "defaultRate" : 0.1924,
+      "liftVsBase" : 0.8694
+    }, {
+      "bucket" : "University",
+      "count" : 14019,
+      "defaults" : 3328,
+      "defaultRate" : 0.2374,
+      "liftVsBase" : 1.0729
+    }, {
+      "bucket" : "HighSchool",
+      "count" : 4915,
+      "defaults" : 1237,
+      "defaultRate" : 0.2517,
+      "liftVsBase" : 1.1375
+    }, {
+      "bucket" : "Other",
+      "count" : 468,
+      "defaults" : 33,
+      "defaultRate" : 0.0705,
+      "liftVsBase" : 0.3187
+    } ],
+    "MARRIAGE" : [ {
+      "bucket" : "Married",
+      "count" : 13643,
+      "defaults" : 3201,
+      "defaultRate" : 0.2346,
+      "liftVsBase" : 1.0604
+    }, {
+      "bucket" : "Single",
+      "count" : 15945,
+      "defaults" : 3340,
+      "defaultRate" : 0.2095,
+      "liftVsBase" : 0.9467
+    }, {
+      "bucket" : "Other",
+      "count" : 377,
+      "defaults" : 89,
+      "defaultRate" : 0.2361,
+      "liftVsBase" : 1.067
+    } ],
+    "RISK_TIER" : [ {
+      "bucket" : "Low",
+      "count" : 13406,
+      "defaults" : 1462,
+      "defaultRate" : 0.1091,
+      "liftVsBase" : 0.4929
+    }, {
+      "bucket" : "Medium",
+      "count" : 7846,
+      "defaults" : 1233,
+      "defaultRate" : 0.1572,
+      "liftVsBase" : 0.7103
+    }, {
+      "bucket" : "High",
+      "count" : 8713,
+      "defaults" : 3935,
+      "defaultRate" : 0.4516,
+      "liftVsBase" : 2.0412
+    } ],
+    "PAY_1" : [ {
+      "bucket" : "-2",
+      "count" : 2750,
+      "defaults" : 364,
+      "defaultRate" : 0.1324,
+      "liftVsBase" : 0.5982
+    }, {
+      "bucket" : "-1",
+      "count" : 5682,
+      "defaults" : 954,
+      "defaultRate" : 0.1679,
+      "liftVsBase" : 0.7588
+    }, {
+      "bucket" : "0",
+      "count" : 14737,
+      "defaults" : 1888,
+      "defaultRate" : 0.1281,
+      "liftVsBase" : 0.579
+    }, {
+      "bucket" : "1",
+      "count" : 3667,
+      "defaults" : 1248,
+      "defaultRate" : 0.3403,
+      "liftVsBase" : 1.5382
+    }, {
+      "bucket" : "2",
+      "count" : 2666,
+      "defaults" : 1843,
+      "defaultRate" : 0.6913,
+      "liftVsBase" : 3.1244
+    }, {
+      "bucket" : "3",
+      "count" : 322,
+      "defaults" : 244,
+      "defaultRate" : 0.7578,
+      "liftVsBase" : 3.4248
+    }, {
+      "bucket" : "4",
+      "count" : 76,
+      "defaults" : 52,
+      "defaultRate" : 0.6842,
+      "liftVsBase" : 3.0924
+    }, {
+      "bucket" : "5",
+      "count" : 26,
+      "defaults" : 13,
+      "defaultRate" : 0.5,
+      "liftVsBase" : 2.2598
+    }, {
+      "bucket" : "6",
+      "count" : 11,
+      "defaults" : 6,
+      "defaultRate" : 0.5455,
+      "liftVsBase" : 2.4652
+    }, {
+      "bucket" : "7",
+      "count" : 9,
+      "defaults" : 7,
+      "defaultRate" : 0.7778,
+      "liftVsBase" : 3.5153
+    }, {
+      "bucket" : "8",
+      "count" : 19,
+      "defaults" : 11,
+      "defaultRate" : 0.5789,
+      "liftVsBase" : 2.6166
+    } ],
+    "PAY_2" : [ {
+      "bucket" : "-2",
+      "count" : 3752,
+      "defaults" : 686,
+      "defaultRate" : 0.1828,
+      "liftVsBase" : 0.8263
+    }, {
+      "bucket" : "-1",
+      "count" : 6046,
+      "defaults" : 966,
+      "defaultRate" : 0.1598,
+      "liftVsBase" : 0.7221
+    }, {
+      "bucket" : "0",
+      "count" : 15730,
+      "defaults" : 2503,
+      "defaultRate" : 0.1591,
+      "liftVsBase" : 0.7192
+    }, {
+      "bucket" : "1",
+      "count" : 28,
+      "defaults" : 5,
+      "defaultRate" : 0.1786,
+      "liftVsBase" : 0.8071
+    }, {
+      "bucket" : "2",
+      "count" : 3926,
+      "defaults" : 2183,
+      "defaultRate" : 0.556,
+      "liftVsBase" : 2.5131
+    }, {
+      "bucket" : "3",
+      "count" : 326,
+      "defaults" : 201,
+      "defaultRate" : 0.6166,
+      "liftVsBase" : 2.7866
+    }, {
+      "bucket" : "4",
+      "count" : 99,
+      "defaults" : 50,
+      "defaultRate" : 0.5051,
+      "liftVsBase" : 2.2826
+    }, {
+      "bucket" : "5",
+      "count" : 25,
+      "defaults" : 15,
+      "defaultRate" : 0.6,
+      "liftVsBase" : 2.7118
+    }, {
+      "bucket" : "6",
+      "count" : 12,
+      "defaults" : 9,
+      "defaultRate" : 0.75,
+      "liftVsBase" : 3.3897
+    }, {
+      "bucket" : "7",
+      "count" : 20,
+      "defaults" : 12,
+      "defaultRate" : 0.6,
+      "liftVsBase" : 2.7118
+    }, {
+      "bucket" : "8",
+      "count" : 1,
+      "defaults" : 0,
+      "defaultRate" : 0.0,
+      "liftVsBase" : 0.0
+    } ],
+    "PAY_3" : [ {
+      "bucket" : "-2",
+      "count" : 4055,
+      "defaults" : 752,
+      "defaultRate" : 0.1855,
+      "liftVsBase" : 0.8382
+    }, {
+      "bucket" : "-1",
+      "count" : 5934,
+      "defaults" : 926,
+      "defaultRate" : 0.156,
+      "liftVsBase" : 0.7053
+    }, {
+      "bucket" : "0",
+      "count" : 15764,
+      "defaults" : 2751,
+      "defaultRate" : 0.1745,
+      "liftVsBase" : 0.7887
+    }, {
+      "bucket" : "1",
+      "count" : 4,
+      "defaults" : 1,
+      "defaultRate" : 0.25,
+      "liftVsBase" : 1.1299
+    }, {
+      "bucket" : "2",
+      "count" : 3819,
+      "defaults" : 1969,
+      "defaultRate" : 0.5156,
+      "liftVsBase" : 2.3302
+    }, {
+      "bucket" : "3",
+      "count" : 240,
+      "defaults" : 138,
+      "defaultRate" : 0.575,
+      "liftVsBase" : 2.5988
+    }, {
+      "bucket" : "4",
+      "count" : 75,
+      "defaults" : 43,
+      "defaultRate" : 0.5733,
+      "liftVsBase" : 2.5912
+    }, {
+      "bucket" : "5",
+      "count" : 21,
+      "defaults" : 12,
+      "defaultRate" : 0.5714,
+      "liftVsBase" : 2.5826
+    }, {
+      "bucket" : "6",
+      "count" : 23,
+      "defaults" : 14,
+      "defaultRate" : 0.6087,
+      "liftVsBase" : 2.7511
+    }, {
+      "bucket" : "7",
+      "count" : 27,
+      "defaults" : 22,
+      "defaultRate" : 0.8148,
+      "liftVsBase" : 3.6826
+    }, {
+      "bucket" : "8",
+      "count" : 3,
+      "defaults" : 2,
+      "defaultRate" : 0.6667,
+      "liftVsBase" : 3.0131
+    } ],
+    "PAY_4" : [ {
+      "bucket" : "-2",
+      "count" : 4318,
+      "defaults" : 832,
+      "defaultRate" : 0.1927,
+      "liftVsBase" : 0.8708
+    }, {
+      "bucket" : "-1",
+      "count" : 5683,
+      "defaults" : 904,
+      "defaultRate" : 0.1591,
+      "liftVsBase" : 0.7189
+    }, {
+      "bucket" : "0",
+      "count" : 16455,
+      "defaults" : 3016,
+      "defaultRate" : 0.1833,
+      "liftVsBase" : 0.8284
+    }, {
+      "bucket" : "1",
+      "count" : 2,
+      "defaults" : 1,
+      "defaultRate" : 0.5,
+      "liftVsBase" : 2.2598
+    }, {
+      "bucket" : "2",
+      "count" : 3159,
+      "defaults" : 1653,
+      "defaultRate" : 0.5233,
+      "liftVsBase" : 2.365
+    }, {
+      "bucket" : "3",
+      "count" : 180,
+      "defaults" : 110,
+      "defaultRate" : 0.6111,
+      "liftVsBase" : 2.762
+    }, {
+      "bucket" : "4",
+      "count" : 68,
+      "defaults" : 45,
+      "defaultRate" : 0.6618,
+      "liftVsBase" : 2.9909
+    }, {
+      "bucket" : "5",
+      "count" : 35,
+      "defaults" : 18,
+      "defaultRate" : 0.5143,
+      "liftVsBase" : 2.3244
+    }, {
+      "bucket" : "6",
+      "count" : 5,
+      "defaults" : 2,
+      "defaultRate" : 0.4,
+      "liftVsBase" : 1.8078
+    }, {
+      "bucket" : "7",
+      "count" : 58,
+      "defaults" : 48,
+      "defaultRate" : 0.8276,
+      "liftVsBase" : 3.7404
+    }, {
+      "bucket" : "8",
+      "count" : 2,
+      "defaults" : 1,
+      "defaultRate" : 0.5,
+      "liftVsBase" : 2.2598
+    } ],
+    "PAY_5" : [ {
+      "bucket" : "-2",
+      "count" : 4516,
+      "defaults" : 890,
+      "defaultRate" : 0.1971,
+      "liftVsBase" : 0.8907
+    }, {
+      "bucket" : "-1",
+      "count" : 5535,
+      "defaults" : 897,
+      "defaultRate" : 0.1621,
+      "liftVsBase" : 0.7324
+    }, {
+      "bucket" : "0",
+      "count" : 16947,
+      "defaults" : 3195,
+      "defaultRate" : 0.1885,
+      "liftVsBase" : 0.8521
+    }, {
+      "bucket" : "2",
+      "count" : 2626,
+      "defaults" : 1423,
+      "defaultRate" : 0.5419,
+      "liftVsBase" : 2.4491
+    }, {
+      "bucket" : "3",
+      "count" : 178,
+      "defaults" : 113,
+      "defaultRate" : 0.6348,
+      "liftVsBase" : 2.8692
+    }, {
+      "bucket" : "4",
+      "count" : 83,
+      "defaults" : 50,
+      "defaultRate" : 0.6024,
+      "liftVsBase" : 2.7227
+    }, {
+      "bucket" : "5",
+      "count" : 17,
+      "defaults" : 10,
+      "defaultRate" : 0.5882,
+      "liftVsBase" : 2.6586
+    }, {
+      "bucket" : "6",
+      "count" : 4,
+      "defaults" : 3,
+      "defaultRate" : 0.75,
+      "liftVsBase" : 3.3897
+    }, {
+      "bucket" : "7",
+      "count" : 58,
+      "defaults" : 48,
+      "defaultRate" : 0.8276,
+      "liftVsBase" : 3.7404
+    }, {
+      "bucket" : "8",
+      "count" : 1,
+      "defaults" : 1,
+      "defaultRate" : 1.0,
+      "liftVsBase" : 4.5196
+    } ],
+    "PAY_6" : [ {
+      "bucket" : "-2",
+      "count" : 4865,
+      "defaults" : 976,
+      "defaultRate" : 0.2006,
+      "liftVsBase" : 0.9067
+    }, {
+      "bucket" : "-1",
+      "count" : 5736,
+      "defaults" : 975,
+      "defaultRate" : 0.17,
+      "liftVsBase" : 0.7682
+    }, {
+      "bucket" : "0",
+      "count" : 16286,
+      "defaults" : 3069,
+      "defaultRate" : 0.1884,
+      "liftVsBase" : 0.8517
+    }, {
+      "bucket" : "2",
+      "count" : 2766,
+      "defaults" : 1401,
+      "defaultRate" : 0.5065,
+      "liftVsBase" : 2.2892
+    }, {
+      "bucket" : "3",
+      "count" : 184,
+      "defaults" : 118,
+      "defaultRate" : 0.6413,
+      "liftVsBase" : 2.8984
+    }, {
+      "bucket" : "4",
+      "count" : 48,
+      "defaults" : 30,
+      "defaultRate" : 0.625,
+      "liftVsBase" : 2.8248
+    }, {
+      "bucket" : "5",
+      "count" : 13,
+      "defaults" : 7,
+      "defaultRate" : 0.5385,
+      "liftVsBase" : 2.4336
+    }, {
+      "bucket" : "6",
+      "count" : 19,
+      "defaults" : 14,
+      "defaultRate" : 0.7368,
+      "liftVsBase" : 3.3302
+    }, {
+      "bucket" : "7",
+      "count" : 46,
+      "defaults" : 38,
+      "defaultRate" : 0.8261,
+      "liftVsBase" : 3.7336
+    }, {
+      "bucket" : "8",
+      "count" : 2,
+      "defaults" : 2,
+      "defaultRate" : 1.0,
+      "liftVsBase" : 4.5196
+    } ]
+  },
+  "byCluster" : [ {
+    "clusterId" : 0,
+    "personaName" : "High-Default Persistent Delayers",
+    "size" : 5516,
+    "defaults" : 2950,
+    "defaultRate" : 0.5348,
+    "liftVsBase" : 2.4171,
+    "shareOfClients" : 0.1841,
+    "shareOfDefaults" : 0.4449,
+    "avgLIMIT_BAL" : 99448.1508,
+    "avgAGE" : 34.9971,
+    "avgUTILIZATION_1" : 0.5831,
+    "avgAVG_UTILIZATION" : 0.5628,
+    "avgPAY_RATIO" : 0.1309,
+    "avgMONTHS_DELAYED" : 3.6875,
+    "avgMAX_DELAY" : 2.3597,
+    "avgBILL_TREND" : 0.0557
+  }, {
+    "clusterId" : 1,
+    "personaName" : "Lower-Default Current Payers",
+    "size" : 24449,
+    "defaults" : 3680,
+    "defaultRate" : 0.1505,
+    "liftVsBase" : 0.6803,
+    "shareOfClients" : 0.8159,
+    "shareOfDefaults" : 0.5551,
+    "avgLIMIT_BAL" : 182782.2684,
+    "avgAGE" : 35.5987,
+    "avgUTILIZATION_1" : 0.3884,
+    "avgAVG_UTILIZATION" : 0.3307,
+    "avgPAY_RATIO" : 0.4488,
+    "avgMONTHS_DELAYED" : 0.1906,
+    "avgMAX_DELAY" : 0.0058,
+    "avgBILL_TREND" : 0.1165
+  } ],
+  "pointBiserial" : [ {
+    "feature" : "MONTHS_DELAYED",
+    "r" : 0.3984
+  }, {
+    "feature" : "MAX_DELAY",
+    "r" : 0.3311
+  }, {
+    "feature" : "PAY_1",
+    "r" : 0.325
+  }, {
+    "feature" : "PAY_2",
+    "r" : 0.2637
+  }, {
+    "feature" : "PAY_3",
+    "r" : 0.2352
+  }, {
+    "feature" : "PAY_4",
+    "r" : 0.2166
+  }, {
+    "feature" : "PAY_5",
+    "r" : 0.2041
+  }, {
+    "feature" : "PAY_6",
+    "r" : 0.1867
+  }, {
+    "feature" : "LIMIT_BAL",
+    "r" : -0.1539
+  }, {
+    "feature" : "AVG_UTILIZATION",
+    "r" : 0.1155
+  }, {
+    "feature" : "UTILIZATION_1",
+    "r" : 0.0863
+  }, {
+    "feature" : "PAY_RATIO",
+    "r" : -0.0779
+  }, {
+    "feature" : "PAY_AMT1",
+    "r" : -0.073
+  }, {
+    "feature" : "PAY_AMT2",
+    "r" : -0.0586
+  }, {
+    "feature" : "PAY_AMT4",
+    "r" : -0.0569
+  }, {
+    "feature" : "PAY_AMT3",
+    "r" : -0.0563
+  }, {
+    "feature" : "PAY_AMT5",
+    "r" : -0.0552
+  }, {
+    "feature" : "PAY_AMT6",
+    "r" : -0.0533
+  }, {
+    "feature" : "BILL_TREND",
+    "r" : -0.0238
+  }, {
+    "feature" : "BILL_AMT1",
+    "r" : -0.0198
+  }, {
+    "feature" : "BILL_AMT2",
+    "r" : -0.0143
+  }, {
+    "feature" : "BILL_AMT3",
+    "r" : -0.0142
+  }, {
+    "feature" : "AGE",
+    "r" : 0.0136
+  }, {
+    "feature" : "BILL_AMT4",
+    "r" : -0.0103
+  }, {
+    "feature" : "BILL_AMT5",
+    "r" : -0.0069
+  }, {
+    "feature" : "BILL_AMT6",
+    "r" : -0.0055
+  } ],
+  "classMeans" : [ {
+    "feature" : "MAX_DELAY",
+    "nonDefaultMean" : 0.2018,
+    "defaultMean" : 1.2745,
+    "ratioDefaultOverNonDefault" : 6.3157
+  }, {
+    "feature" : "PAY_1",
+    "nonDefaultMean" : -0.2114,
+    "defaultMean" : 0.6682,
+    "ratioDefaultOverNonDefault" : -3.1614
+  }, {
+    "feature" : "MONTHS_DELAYED",
+    "nonDefaultMean" : 0.5041,
+    "defaultMean" : 1.9964,
+    "ratioDefaultOverNonDefault" : 3.9603
+  }, {
+    "feature" : "PAY_2",
+    "nonDefaultMean" : -0.3,
+    "defaultMean" : 0.4599,
+    "ratioDefaultOverNonDefault" : -1.533
+  }, {
+    "feature" : "PAY_3",
+    "nonDefaultMean" : -0.3143,
+    "defaultMean" : 0.3633,
+    "ratioDefaultOverNonDefault" : -1.1559
+  }, {
+    "feature" : "PAY_4",
+    "nonDefaultMean" : -0.3538,
+    "defaultMean" : 0.2557,
+    "ratioDefaultOverNonDefault" : -0.7227
+  }, {
+    "feature" : "PAY_5",
+    "nonDefaultMean" : -0.3877,
+    "defaultMean" : 0.1689,
+    "ratioDefaultOverNonDefault" : -0.4358
+  }, {
+    "feature" : "PAY_6",
+    "nonDefaultMean" : -0.4038,
+    "defaultMean" : 0.1131,
+    "ratioDefaultOverNonDefault" : -0.2801
+  }, {
+    "feature" : "PAY_AMT2",
+    "nonDefaultMean" : 6648.5938,
+    "defaultMean" : 3391.7163,
+    "ratioDefaultOverNonDefault" : 0.5101
+  }, {
+    "feature" : "PAY_AMT1",
+    "nonDefaultMean" : 6315.0521,
+    "defaultMean" : 3400.1184,
+    "ratioDefaultOverNonDefault" : 0.5384
+  }, {
+    "feature" : "PAY_AMT3",
+    "nonDefaultMean" : 5760.5233,
+    "defaultMean" : 3370.3989,
+    "ratioDefaultOverNonDefault" : 0.5851
+  }, {
+    "feature" : "PAY_AMT4",
+    "nonDefaultMean" : 5306.9928,
+    "defaultMean" : 3158.4825,
+    "ratioDefaultOverNonDefault" : 0.5952
+  }, {
+    "feature" : "PAY_AMT6",
+    "nonDefaultMean" : 5726.3558,
+    "defaultMean" : 3444.5965,
+    "ratioDefaultOverNonDefault" : 0.6015
+  }, {
+    "feature" : "PAY_AMT5",
+    "nonDefaultMean" : 5254.6188,
+    "defaultMean" : 3222.0528,
+    "ratioDefaultOverNonDefault" : 0.6132
+  }, {
+    "feature" : "PAY_RATIO",
+    "nonDefaultMean" : 0.4173,
+    "defaultMean" : 0.2953,
+    "ratioDefaultOverNonDefault" : 0.7076
+  }, {
+    "feature" : "AVG_UTILIZATION",
+    "nonDefaultMean" : 0.3518,
+    "defaultMean" : 0.4497,
+    "ratioDefaultOverNonDefault" : 1.2782
+  }, {
+    "feature" : "LIMIT_BAL",
+    "nonDefaultMean" : 178084.5082,
+    "defaultMean" : 129984.5671,
+    "ratioDefaultOverNonDefault" : 0.7299
+  }, {
+    "feature" : "UTILIZATION_1",
+    "nonDefaultMean" : 0.4053,
+    "defaultMean" : 0.4907,
+    "ratioDefaultOverNonDefault" : 1.2108
+  }, {
+    "feature" : "BILL_TREND",
+    "nonDefaultMean" : 0.1091,
+    "defaultMean" : 0.0919,
+    "ratioDefaultOverNonDefault" : 0.8419
+  }, {
+    "feature" : "BILL_AMT1",
+    "nonDefaultMean" : 52058.7202,
+    "defaultMean" : 48552.8131,
+    "ratioDefaultOverNonDefault" : 0.9327
+  }, {
+    "feature" : "BILL_AMT3",
+    "nonDefaultMean" : 47592.3148,
+    "defaultMean" : 45222.2383,
+    "ratioDefaultOverNonDefault" : 0.9502
+  }, {
+    "feature" : "BILL_AMT2",
+    "nonDefaultMean" : 49779.0991,
+    "defaultMean" : 47326.1596,
+    "ratioDefaultOverNonDefault" : 0.9507
+  }, {
+    "feature" : "BILL_AMT4",
+    "nonDefaultMean" : 43665.24,
+    "defaultMean" : 42074.7442,
+    "ratioDefaultOverNonDefault" : 0.9636
+  }, {
+    "feature" : "BILL_AMT5",
+    "nonDefaultMean" : 40580.6915,
+    "defaultMean" : 39575.7246,
+    "ratioDefaultOverNonDefault" : 0.9752
+  }, {
+    "feature" : "BILL_AMT6",
+    "nonDefaultMean" : 39090.6654,
+    "defaultMean" : 38305.8214,
+    "ratioDefaultOverNonDefault" : 0.9799
+  }, {
+    "feature" : "AGE",
+    "nonDefaultMean" : 35.421,
+    "defaultMean" : 35.7235,
+    "ratioDefaultOverNonDefault" : 1.0085
+  } ],
+  "featureImportance" : {
+    "model" : "RandomForest",
+    "variant" : "cost",
+    "metric" : "PermutationImportance",
+    "method" : "mean ROC AUC drop over 5 column shuffles on the 5,993-row holdout, seed 42; impurity fields from Weka for reference",
+    "aucDropStdDefinition" : "population standard deviation across the five AUC drops",
+    "baseline" : {
+      "f1Default" : 0.5332842956969474,
+      "rocAuc" : 0.7773025100663462
+    },
+    "ranking" : [ {
+      "name" : "PAY_1",
+      "aucDrop" : 0.023521833120517165,
+      "aucDropStd" : 9.726944598489418E-4,
+      "f1Drop" : 0.05002686431383878,
+      "impurityAvgPerSplit" : 0.315353067520703,
+      "impuritySplitCount" : 3847.0,
+      "importance" : 0.4365961079214716
+    }, {
+      "name" : "RISK_TIER",
+      "aucDrop" : 0.006693073959487661,
+      "aucDropStd" : 0.0028909843953214523,
+      "f1Drop" : -0.0014159962513621061,
+      "impurityAvgPerSplit" : 0.15238395438122082,
+      "impuritySplitCount" : 497.0,
+      "importance" : 0.12423224098949892
+    }, {
+      "name" : "MONTHS_DELAYED",
+      "aucDrop" : 0.005881221800252701,
+      "aucDropStd" : 0.0012099461544280762,
+      "f1Drop" : 0.01458259552776473,
+      "impurityAvgPerSplit" : 0.19138015591135737,
+      "impuritySplitCount" : 1354.0,
+      "importance" : 0.10916319891639399
+    }, {
+      "name" : "MAX_DELAY",
+      "aucDrop" : 0.0041256749275503605,
+      "aucDropStd" : 0.0013614536839233148,
+      "f1Drop" : 0.002498396435186545,
+      "impurityAvgPerSplit" : 0.20232919601002836,
+      "impuritySplitCount" : 1459.0,
+      "importance" : 0.07657794384853978
+    }, {
+      "name" : "LIMIT_BAL",
+      "aucDrop" : 0.002827416011978423,
+      "aucDropStd" : 0.0010272725987866952,
+      "f1Drop" : -0.0017238695938819326,
+      "impurityAvgPerSplit" : 0.3948425848923891,
+      "impuritySplitCount" : 24755.0,
+      "importance" : 0.052480553704289154
+    }, {
+      "name" : "PAY_AMT1",
+      "aucDrop" : 0.0027863555964489526,
+      "aucDropStd" : 0.0016205121387604323,
+      "f1Drop" : 0.003288783032166909,
+      "impurityAvgPerSplit" : 0.3021792358039955,
+      "impuritySplitCount" : 12657.0,
+      "importance" : 0.051718418477925
+    }, {
+      "name" : "PAY_AMT2",
+      "aucDrop" : 0.002268858623866832,
+      "aucDropStd" : 8.985216293641278E-4,
+      "f1Drop" : -0.0036789399033159364,
+      "impurityAvgPerSplit" : 0.28608299510639074,
+      "impuritySplitCount" : 12080.0,
+      "importance" : 0.04211299517044382
+    }, {
+      "name" : "PAY_AMT3",
+      "aucDrop" : 0.0017472249073352542,
+      "aucDropStd" : 0.0016893857872838233,
+      "f1Drop" : 0.0019041079592214461,
+      "impurityAvgPerSplit" : 0.28218676360798456,
+      "impuritySplitCount" : 11557.0,
+      "importance" : 0.032430788463533394
+    }, {
+      "name" : "BILL_AMT1",
+      "aucDrop" : 0.001316001668917588,
+      "aucDropStd" : 8.300825386787546E-4,
+      "f1Drop" : -0.001388420247144828,
+      "impurityAvgPerSplit" : 0.35586785621289946,
+      "impuritySplitCount" : 18789.0,
+      "importance" : 0.024426718943363856
+    }, {
+      "name" : "BILL_AMT3",
+      "aucDrop" : 0.0012161865619811473,
+      "aucDropStd" : 5.171853466248963E-4,
+      "f1Drop" : 2.5937706653078596E-4,
+      "impurityAvgPerSplit" : 0.33962638211017654,
+      "impuritySplitCount" : 15948.0,
+      "importance" : 0.022574019496984257
+    }, {
+      "name" : "SEX",
+      "aucDrop" : 7.582199202965211E-4,
+      "aucDropStd" : 6.687674884876494E-4,
+      "f1Drop" : -0.0036505205959056044,
+      "impurityAvgPerSplit" : 0.4120078406830158,
+      "impuritySplitCount" : 7103.0,
+      "importance" : 0.014073557296911525
+    }, {
+      "name" : "MARRIAGE",
+      "aucDrop" : 6.197197937703569E-4,
+      "aucDropStd" : 8.054578745131009E-4,
+      "f1Drop" : 0.0017346168365021564,
+      "impurityAvgPerSplit" : 0.3814447750933774,
+      "impuritySplitCount" : 6899.0,
+      "importance" : 0.011502813091809146
+    }, {
+      "name" : "PAY_AMT6",
+      "aucDrop" : 1.1371198114156212E-4,
+      "aucDropStd" : 3.5838846316840387E-4,
+      "f1Drop" : -0.0033664823491212693,
+      "impurityAvgPerSplit" : 0.2677797111751895,
+      "impuritySplitCount" : 11651.0,
+      "importance" : 0.0021106436788356163
+    }, {
+      "name" : "EDUCATION",
+      "aucDrop" : -8.931165550238874E-5,
+      "aucDropStd" : 0.0013074792628366611,
+      "f1Drop" : -0.0049013018035344745,
+      "impurityAvgPerSplit" : 0.3635314145804172,
+      "impuritySplitCount" : 8662.0,
+      "importance" : 0.0
+    }, {
+      "name" : "BILL_AMT5",
+      "aucDrop" : -1.6159156052530932E-4,
+      "aucDropStd" : 5.067280668083279E-4,
+      "f1Drop" : -0.004848995328222361,
+      "impurityAvgPerSplit" : 0.31138133510175586,
+      "impuritySplitCount" : 14647.0,
+      "importance" : 0.0
+    }, {
+      "name" : "PAY_5",
+      "aucDrop" : -1.6673017215000917E-4,
+      "aucDropStd" : 5.730032375165491E-4,
+      "f1Drop" : 0.0012146926603907372,
+      "impurityAvgPerSplit" : 0.3418108921108882,
+      "impuritySplitCount" : 2932.0,
+      "importance" : 0.0
+    }, {
+      "name" : "AGE",
+      "aucDrop" : -5.102899889827262E-4,
+      "aucDropStd" : 0.001534750701575101,
+      "f1Drop" : -0.002281567267107287,
+      "impurityAvgPerSplit" : 0.3897377877035235,
+      "impuritySplitCount" : 27238.0,
+      "importance" : 0.0
+    }, {
+      "name" : "PAY_2",
+      "aucDrop" : -6.974130160710024E-4,
+      "aucDropStd" : 7.93536662030102E-4,
+      "f1Drop" : 0.004154058172831032,
+      "impurityAvgPerSplit" : 0.3497542538294654,
+      "impuritySplitCount" : 2818.0,
+      "importance" : 0.0
+    }, {
+      "name" : "PAY_4",
+      "aucDrop" : -8.047421305718671E-4,
+      "aucDropStd" : 2.938856626342303E-4,
+      "f1Drop" : 0.0012961497889541595,
+      "impurityAvgPerSplit" : 0.3578475298520113,
+      "impuritySplitCount" : 3018.0,
+      "importance" : 0.0
+    }, {
+      "name" : "PAY_AMT5",
+      "aucDrop" : -9.190358413313504E-4,
+      "aucDropStd" : 8.478810138697724E-4,
+      "f1Drop" : -0.0011119723562254213,
+      "impurityAvgPerSplit" : 0.2711317508895388,
+      "impuritySplitCount" : 10889.0,
+      "importance" : 0.0
+    }, {
+      "name" : "PAY_AMT4",
+      "aucDrop" : -9.696139997757535E-4,
+      "aucDropStd" : 0.0015641802668904291,
+      "f1Drop" : -0.0017408286722347954,
+      "impurityAvgPerSplit" : 0.27645784405625495,
+      "impuritySplitCount" : 11181.0,
+      "importance" : 0.0
+    }, {
+      "name" : "UTILIZATION_1",
+      "aucDrop" : -9.832038500159346E-4,
+      "aucDropStd" : 7.980354352418524E-4,
+      "f1Drop" : -1.2612214655607356E-4,
+      "impurityAvgPerSplit" : 0.26372409395814056,
+      "impuritySplitCount" : 14254.0,
+      "importance" : 0.0
+    }, {
+      "name" : "PAY_3",
+      "aucDrop" : -0.001165301379571848,
+      "aucDropStd" : 3.968455096124679E-4,
+      "f1Drop" : -0.0041620722600399064,
+      "impurityAvgPerSplit" : 0.35189563975937127,
+      "impuritySplitCount" : 2861.0,
+      "importance" : 0.0
+    }, {
+      "name" : "PAY_6",
+      "aucDrop" : -0.001444870938436571,
+      "aucDropStd" : 5.170008732359006E-4,
+      "f1Drop" : 5.806764498028638E-4,
+      "impurityAvgPerSplit" : 0.35253274366030035,
+      "impuritySplitCount" : 3360.0,
+      "importance" : 0.0
+    }, {
+      "name" : "BILL_TREND",
+      "aucDrop" : -0.001640752228105291,
+      "aucDropStd" : 8.499208139480172E-4,
+      "f1Drop" : -0.0014143597119378182,
+      "impurityAvgPerSplit" : 0.2499082467741446,
+      "impuritySplitCount" : 13149.0,
+      "importance" : 0.0
+    }, {
+      "name" : "BILL_AMT6",
+      "aucDrop" : -0.0018010187378342036,
+      "aucDropStd" : 6.022939851592547E-4,
+      "f1Drop" : -0.003591655955753037,
+      "impurityAvgPerSplit" : 0.30591772334244893,
+      "impuritySplitCount" : 13485.0,
+      "importance" : 0.0
+    }, {
+      "name" : "PAY_RATIO",
+      "aucDrop" : -0.001992714806085316,
+      "aucDropStd" : 0.0013652110129496432,
+      "f1Drop" : -0.0033381733352719546,
+      "impurityAvgPerSplit" : 0.2488801258199567,
+      "impuritySplitCount" : 13507.0,
+      "importance" : 0.0
+    }, {
+      "name" : "AVG_UTILIZATION",
+      "aucDrop" : -0.0020489971466162602,
+      "aucDropStd" : 4.0743218868566984E-4,
+      "f1Drop" : -0.008932277933429166,
+      "impurityAvgPerSplit" : 0.2592330035164218,
+      "impuritySplitCount" : 14688.0,
+      "importance" : 0.0
+    }, {
+      "name" : "BILL_AMT4",
+      "aucDrop" : -0.0027389123142788074,
+      "aucDropStd" : 0.0012228565617611177,
+      "f1Drop" : -0.005346407925071151,
+      "impurityAvgPerSplit" : 0.32287045380633345,
+      "impuritySplitCount" : 15105.0,
+      "importance" : 0.0
+    }, {
+      "name" : "BILL_AMT2",
+      "aucDrop" : -0.0029988000210716013,
+      "aucDropStd" : 7.908470662257073E-4,
+      "f1Drop" : -0.0031357454673940134,
+      "impurityAvgPerSplit" : 0.34479460398129214,
+      "impuritySplitCount" : 17134.0,
+      "importance" : 0.0
+    } ],
+    "generatedAt" : "2026-10-10T16:07:53.535989700Z",
+    "runtimeMs" : 83177
+  },
+  "rules" : {
+    "topDefault" : [ {
+      "ruleId" : 1,
+      "lhs" : "PAY_1=3+",
+      "rhs" : "Default=Yes",
+      "support" : 0.0111,
+      "confidence" : 0.7192,
+      "lift" : 3.2506,
+      "category" : "default",
+      "pass" : "default",
+      "jointCount" : 333,
+      "lhsCount" : 463,
+      "familyId" : "PAY_1=3+",
+      "familyLabel" : "Sep: 3+ mo late",
+      "shortName" : "Sep: 3+ mo late",
+      "conditions" : [ {
+        "attribute" : "PAY_1",
+        "label" : "Sep status",
+        "operator" : "in",
+        "value" : "[3, inf)",
+        "unit" : "months"
+      } ]
+    }, {
+      "ruleId" : 2,
+      "lhs" : "PAY_1=2",
+      "rhs" : "Default=Yes",
+      "support" : 0.0615,
+      "confidence" : 0.6913,
+      "lift" : 3.1244,
+      "category" : "default",
+      "pass" : "default",
+      "jointCount" : 1843,
+      "lhsCount" : 2666,
+      "familyId" : "PAY_1=2",
+      "familyLabel" : "Sep: 2 mo late",
+      "shortName" : "Sep: 2 mo late",
+      "conditions" : [ {
+        "attribute" : "PAY_1",
+        "label" : "Sep status",
+        "operator" : "=",
+        "value" : "2",
+        "unit" : "months"
+      } ]
+    }, {
+      "ruleId" : 3,
+      "lhs" : "MAX_DELAY=3+",
+      "rhs" : "Default=Yes",
+      "support" : 0.025,
+      "confidence" : 0.6284,
+      "lift" : 2.8399,
+      "category" : "default",
+      "pass" : "default",
+      "jointCount" : 749,
+      "lhsCount" : 1192,
+      "familyId" : "MAX_DELAY=3+",
+      "familyLabel" : "Worst delay: 3+ mo late",
+      "shortName" : "Worst delay: 3+ mo late",
+      "conditions" : [ {
+        "attribute" : "MAX_DELAY",
+        "label" : "Worst delay",
+        "operator" : "in",
+        "value" : "[3, inf)",
+        "unit" : "months"
+      } ]
+    }, {
+      "ruleId" : 4,
+      "lhs" : "MONTHS_DELAYED=3+",
+      "rhs" : "Default=Yes",
+      "support" : 0.0749,
+      "confidence" : 0.5998,
+      "lift" : 2.7108,
+      "category" : "default",
+      "pass" : "default",
+      "jointCount" : 2245,
+      "lhsCount" : 3743,
+      "familyId" : "MONTHS_DELAYED=3+",
+      "familyLabel" : "Late months: 3+ mo",
+      "shortName" : "Late months: 3+ mo",
+      "conditions" : [ {
+        "attribute" : "MONTHS_DELAYED",
+        "label" : "Late months",
+        "operator" : "in",
+        "value" : "[3, inf)",
+        "unit" : "months"
+      } ]
+    }, {
+      "ruleId" : 5,
+      "lhs" : "MAX_DELAY=2",
+      "rhs" : "Default=Yes",
+      "support" : 0.1045,
+      "confidence" : 0.4355,
+      "lift" : 1.9683,
+      "category" : "default",
+      "pass" : "default",
+      "jointCount" : 3130,
+      "lhsCount" : 7187,
+      "familyId" : "MAX_DELAY=2",
+      "familyLabel" : "Worst delay: 2 mo late",
+      "shortName" : "Worst delay: 2 mo late",
+      "conditions" : [ {
+        "attribute" : "MAX_DELAY",
+        "label" : "Worst delay",
+        "operator" : "=",
+        "value" : "2",
+        "unit" : "months"
+      } ]
+    } ],
+    "topNonDefault" : [ {
+      "ruleId" : 11,
+      "lhs" : "MAX_DELAY=<=0",
+      "rhs" : "Default=No",
+      "support" : 0.5869,
+      "confidence" : 0.8829,
+      "lift" : 1.1337,
+      "category" : "non-default",
+      "pass" : "non-default",
+      "jointCount" : 17585,
+      "lhsCount" : 19918,
+      "familyId" : "MAX_DELAY=<=0",
+      "familyLabel" : "Worst delay: no delay",
+      "shortName" : "Worst delay: no delay",
+      "conditions" : [ {
+        "attribute" : "MAX_DELAY",
+        "label" : "Worst delay",
+        "operator" : "<=",
+        "value" : "0",
+        "unit" : "months"
+      } ]
+    }, {
+      "ruleId" : 12,
+      "lhs" : "PAY_1=0",
+      "rhs" : "Default=No",
+      "support" : 0.4288,
+      "confidence" : 0.8719,
+      "lift" : 1.1196,
+      "category" : "non-default",
+      "pass" : "non-default",
+      "jointCount" : 12849,
+      "lhsCount" : 14737,
+      "familyId" : "PAY_1=0",
+      "familyLabel" : "Sep: revolving",
+      "shortName" : "Sep: revolving",
+      "conditions" : [ {
+        "attribute" : "PAY_1",
+        "label" : "Sep status",
+        "operator" : "=",
+        "value" : "0",
+        "unit" : "months"
+      } ]
+    }, {
+      "ruleId" : 13,
+      "lhs" : "PAY_1=-2",
+      "rhs" : "Default=No",
+      "support" : 0.0796,
+      "confidence" : 0.8676,
+      "lift" : 1.1142,
+      "category" : "non-default",
+      "pass" : "non-default",
+      "jointCount" : 2386,
+      "lhsCount" : 2750,
+      "familyId" : "PAY_1=-2",
+      "familyLabel" : "Sep: no use",
+      "shortName" : "Sep: no use",
+      "conditions" : [ {
+        "attribute" : "PAY_1",
+        "label" : "Sep status",
+        "operator" : "=",
+        "value" : "-2",
+        "unit" : "months"
+      } ]
+    }, {
+      "ruleId" : 14,
+      "lhs" : "LIMIT_BAL=>240000",
+      "rhs" : "Default=No",
+      "support" : 0.2027,
+      "confidence" : 0.8604,
+      "lift" : 1.1049,
+      "category" : "non-default",
+      "pass" : "non-default",
+      "jointCount" : 6073,
+      "lhsCount" : 7058,
+      "familyId" : "LIMIT_BAL=>240000",
+      "familyLabel" : "Limit: >NT$240k",
+      "shortName" : "Limit: >NT$240k",
+      "conditions" : [ {
+        "attribute" : "LIMIT_BAL",
+        "label" : "Limit",
+        "operator" : ">",
+        "value" : "240000",
+        "unit" : "NT$"
+      } ]
+    }, {
+      "ruleId" : 15,
+      "lhs" : "PAY_RATIO=50-100%",
+      "rhs" : "Default=No",
+      "support" : 0.1358,
+      "confidence" : 0.8538,
+      "lift" : 1.0963,
+      "category" : "non-default",
+      "pass" : "non-default",
+      "jointCount" : 4069,
+      "lhsCount" : 4766,
+      "familyId" : "PAY_RATIO=50-100%",
+      "familyLabel" : "Payment ratio: 50-100%",
+      "shortName" : "Payment ratio: 50-100%",
+      "conditions" : [ {
+        "attribute" : "PAY_RATIO",
+        "label" : "Payment ratio",
+        "operator" : "in",
+        "value" : "(50, 100)",
+        "unit" : "%"
+      } ]
+    } ]
+  },
+  "combos" : [ {
+    "label" : "MONTHS_DELAYED >= 3",
+    "count" : 3743,
+    "defaults" : 2245,
+    "defaultRate" : 0.5998,
+    "liftVsBase" : 2.7108
+  }, {
+    "label" : "MAX_DELAY >= 2",
+    "count" : 8379,
+    "defaults" : 3879,
+    "defaultRate" : 0.4629,
+    "liftVsBase" : 2.0923
+  }, {
+    "label" : "AVG_UTILIZATION >= 0.8",
+    "count" : 5064,
+    "defaults" : 1618,
+    "defaultRate" : 0.3195,
+    "liftVsBase" : 1.4441
+  }, {
+    "label" : "PAY_RATIO < 0.1",
+    "count" : 15563,
+    "defaults" : 4288,
+    "defaultRate" : 0.2755,
+    "liftVsBase" : 1.2453
+  }, {
+    "label" : "PAY_1 >= 2",
+    "count" : 3129,
+    "defaults" : 2176,
+    "defaultRate" : 0.6954,
+    "liftVsBase" : 3.1431
+  }, {
+    "label" : "RISK_TIER == High",
+    "count" : 8713,
+    "defaults" : 3935,
+    "defaultRate" : 0.4516,
+    "liftVsBase" : 2.0412
+  }, {
+    "label" : "AGE <= 30 AND MONTHS_DELAYED >= 1",
+    "count" : 3951,
+    "defaults" : 1685,
+    "defaultRate" : 0.4265,
+    "liftVsBase" : 1.9275
+  } ]
+}

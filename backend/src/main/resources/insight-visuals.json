@@ -1,0 +1,450 @@
+[
+  {
+    "title": "Two months late now predicts default",
+    "headline": {
+      "value": "69.1%",
+      "label": "default when two months late"
+    },
+    "lift": "3.1x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Latest statement status (PAY_1)",
+    "bars": [
+      {
+        "label": "No use",
+        "value": 13.2,
+        "n": 2750,
+        "highlight": false
+      },
+      {
+        "label": "Paid in full",
+        "value": 16.8,
+        "n": 5682,
+        "highlight": false
+      },
+      {
+        "label": "Revolving",
+        "value": 12.8,
+        "n": 14737,
+        "highlight": false
+      },
+      {
+        "label": "1 month late",
+        "value": 34.0,
+        "n": 3667,
+        "highlight": true
+      },
+      {
+        "label": "2 months late",
+        "value": 69.1,
+        "n": 2666,
+        "highlight": true
+      },
+      {
+        "label": "3 months late",
+        "value": 75.8,
+        "n": 322,
+        "highlight": true
+      },
+      {
+        "label": "4 months late",
+        "value": 68.4,
+        "n": 76,
+        "highlight": true
+      },
+      {
+        "label": "5 months late",
+        "value": 50.0,
+        "n": 26,
+        "highlight": true
+      },
+      {
+        "label": "6 months late",
+        "value": 54.5,
+        "n": 11,
+        "highlight": true
+      },
+      {
+        "label": "7 months late",
+        "value": 77.8,
+        "n": 9,
+        "highlight": true
+      },
+      {
+        "label": "8 months late",
+        "value": 57.9,
+        "n": 19,
+        "highlight": true
+      }
+    ]
+  },
+  {
+    "title": "Worst delay of three or more months",
+    "headline": {
+      "value": "62.8%",
+      "label": "default with worst delay of three or more months"
+    },
+    "lift": "2.8x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Worst delay across six statements (months)",
+    "bars": [
+      {
+        "label": "<= 0",
+        "value": 11.7,
+        "n": 19918,
+        "highlight": false
+      },
+      {
+        "label": "1",
+        "value": 25.1,
+        "n": 1668,
+        "highlight": true
+      },
+      {
+        "label": "2",
+        "value": 43.6,
+        "n": 7187,
+        "highlight": true
+      },
+      {
+        "label": "3+",
+        "value": 62.8,
+        "n": 1192,
+        "highlight": true
+      }
+    ]
+  },
+  {
+    "title": "Each late month adds risk",
+    "headline": {
+      "value": "60.0%",
+      "label": "default with three or more late months"
+    },
+    "lift": "2.7x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Late months across six statements",
+    "bars": [
+      {
+        "label": "No late months",
+        "value": 11.7,
+        "n": 19918,
+        "highlight": false
+      },
+      {
+        "label": "3+ late months",
+        "value": 60.0,
+        "n": 3743,
+        "highlight": true
+      }
+    ]
+  },
+  {
+    "title": "One cluster holds almost half of all defaults",
+    "headline": {
+      "value": "53.5%",
+      "label": "default in cluster 0"
+    },
+    "lift": "2.4x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "K-means cluster",
+    "bars": [
+      {
+        "label": "High-Default Persistent Delayers",
+        "value": 53.5,
+        "n": 5516,
+        "highlight": true
+      },
+      {
+        "label": "Lower-Default Current Payers",
+        "value": 15.1,
+        "n": 24449,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Low credit limits carry the most default",
+    "headline": {
+      "value": "31.8%",
+      "label": "default in the lowest quarter"
+    },
+    "lift": "1.4x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Credit-limit quartiles",
+    "bars": [
+      {
+        "label": "Q1",
+        "value": 31.8,
+        "n": 7673,
+        "highlight": true
+      },
+      {
+        "label": "Q2",
+        "value": 24.7,
+        "n": 7607,
+        "highlight": true
+      },
+      {
+        "label": "Q3",
+        "value": 17.4,
+        "n": 7627,
+        "highlight": false
+      },
+      {
+        "label": "Q4",
+        "value": 14.0,
+        "n": 7058,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Small payments signal default",
+    "headline": {
+      "value": "31.7%",
+      "label": "default in the lowest quarter"
+    },
+    "lift": "1.4x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Latest-payment amount quartiles",
+    "bars": [
+      {
+        "label": "Q1",
+        "value": 31.7,
+        "n": 7805,
+        "highlight": true
+      },
+      {
+        "label": "Q2",
+        "value": 22.1,
+        "n": 7179,
+        "highlight": false
+      },
+      {
+        "label": "Q3",
+        "value": 20.5,
+        "n": 7492,
+        "highlight": false
+      },
+      {
+        "label": "Q4",
+        "value": 13.8,
+        "n": 7489,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Paying a larger share of the bill lowers risk",
+    "headline": {
+      "value": "29.2%",
+      "label": "default in the lowest payment-ratio quarter"
+    },
+    "lift": "1.3x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Six-month aggregate payment-ratio quartiles",
+    "bars": [
+      {
+        "label": "Q1",
+        "value": 29.2,
+        "n": 7493,
+        "highlight": true
+      },
+      {
+        "label": "Q2",
+        "value": 26.2,
+        "n": 7490,
+        "highlight": true
+      },
+      {
+        "label": "Q3",
+        "value": 17.9,
+        "n": 7491,
+        "highlight": false
+      },
+      {
+        "label": "Q4",
+        "value": 15.3,
+        "n": 7491,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "Age matters only at the edges",
+    "headline": {
+      "value": "28.3%",
+      "label": "default at age 60+ (n=339)"
+    },
+    "lift": "1.3x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Age bands (years)",
+    "bars": [
+      {
+        "label": "<= 29",
+        "value": 22.9,
+        "n": 9603,
+        "highlight": true
+      },
+      {
+        "label": "30-39",
+        "value": 20.3,
+        "n": 11226,
+        "highlight": false
+      },
+      {
+        "label": "40-49",
+        "value": 22.9,
+        "n": 6456,
+        "highlight": true
+      },
+      {
+        "label": "50-59",
+        "value": 24.9,
+        "n": 2341,
+        "highlight": true
+      },
+      {
+        "label": "60+",
+        "value": 28.3,
+        "n": 339,
+        "highlight": true
+      }
+    ]
+  },
+  {
+    "title": "Demographic default rates differ",
+    "headline": {
+      "value": "18.1 pts",
+      "label": "education spread including Other"
+    },
+    "lift": "",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Education, marital status and sex",
+    "bars": [
+      {
+        "label": "Education: Graduate",
+        "value": 19.2,
+        "n": 10563,
+        "highlight": false
+      },
+      {
+        "label": "Education: University",
+        "value": 23.7,
+        "n": 14019,
+        "highlight": true
+      },
+      {
+        "label": "Education: HighSchool",
+        "value": 25.2,
+        "n": 4915,
+        "highlight": true
+      },
+      {
+        "label": "Education: Other",
+        "value": 7.1,
+        "n": 468,
+        "highlight": false
+      },
+      {
+        "label": "Marriage: Married",
+        "value": 23.5,
+        "n": 13643,
+        "highlight": true
+      },
+      {
+        "label": "Marriage: Single",
+        "value": 20.9,
+        "n": 15945,
+        "highlight": false
+      },
+      {
+        "label": "Marriage: Other",
+        "value": 23.6,
+        "n": 377,
+        "highlight": true
+      },
+      {
+        "label": "Sex: Male",
+        "value": 24.2,
+        "n": 11874,
+        "highlight": true
+      },
+      {
+        "label": "Sex: Female",
+        "value": 20.8,
+        "n": 18091,
+        "highlight": false
+      }
+    ]
+  },
+  {
+    "title": "The risk tier rule separates clients well",
+    "headline": {
+      "value": "45.2%",
+      "label": "default in the engineered High tier"
+    },
+    "lift": "2.0x",
+    "unit": "% default",
+    "baseline": {
+      "value": 22.1,
+      "label": "Portfolio 22.1%"
+    },
+    "axis": "Engineered risk tier",
+    "bars": [
+      {
+        "label": "Low",
+        "value": 10.9,
+        "n": 13406,
+        "highlight": false
+      },
+      {
+        "label": "Medium",
+        "value": 15.7,
+        "n": 7846,
+        "highlight": false
+      },
+      {
+        "label": "High",
+        "value": 45.2,
+        "n": 8713,
+        "highlight": true
+      }
+    ]
+  }
+]

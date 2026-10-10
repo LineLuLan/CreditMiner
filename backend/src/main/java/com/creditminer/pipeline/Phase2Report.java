@@ -12,6 +12,7 @@ import weka.core.Instances;
 
 import java.io.File;
 import java.time.Instant;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,7 +32,7 @@ import java.util.Map;
  *   <li>Load Phase 1 ARFF (raw, leakage-free) from {@code data/processed/phase1_raw.arff}</li>
  *   <li>Run {@link Preprocessor#run(Instances)} → impute + dedup + outlier flags</li>
  *   <li>Save {@code data/processed/clean.arff}</li>
- *   <li>Save {@code data/processed/phase2_outliers.json} — list of CLIENTNUMs flagged as outliers
+ *   <li>Save {@code data/processed/phase2_outliers.json} with IDs flagged as outliers
  *       (Phase 8 DatabaseSeeder reads this when populating customers.is_outlier)</li>
  *   <li>Save {@code data/processed/phase2_report.json} — summary stats</li>
  *   <li>Print console summary</li>
@@ -49,10 +50,15 @@ public class Phase2Report {
     private static final String DEFAULT_REPORT_JSON = "data/processed/phase2_report.json";
 
     public static void main(String[] args) throws Exception {
-        String inputArff = args.length > 0 ? args[0] : DEFAULT_INPUT_ARFF;
-        String cleanArff = args.length > 1 ? args[1] : DEFAULT_CLEAN_ARFF;
-        String outliersJson = args.length > 2 ? args[2] : DEFAULT_OUTLIERS_JSON;
-        String reportJson = args.length > 3 ? args[3] : DEFAULT_REPORT_JSON;
+        Path inputArff = Path.of(args.length > 0 ? args[0] : DEFAULT_INPUT_ARFF);
+        Path cleanArff = Path.of(args.length > 1 ? args[1] : DEFAULT_CLEAN_ARFF);
+        Path outliersJson = Path.of(args.length > 2 ? args[2] : DEFAULT_OUTLIERS_JSON);
+        Path reportJson = Path.of(args.length > 3 ? args[3] : DEFAULT_REPORT_JSON);
+        run(inputArff, cleanArff, outliersJson, reportJson);
+    }
+
+    public static void run(Path inputArff, Path cleanArff, Path outliersJson, Path reportJson)
+            throws Exception {
 
         log.info("=== Phase 2 — Preprocessing ===");
         log.info("Input ARFF : {}", inputArff);
@@ -61,9 +67,9 @@ public class Phase2Report {
         log.info("Report     : {}", reportJson);
 
         DataLoader loader = new DataLoader();
-        Instances raw = loader.loadArff(inputArff);
+        Instances raw = loader.loadArff(inputArff.toString());
         if (raw.classIndex() < 0) {
-            Attribute classAttr = raw.attribute("Attrition_Flag");
+            Attribute classAttr = raw.attribute("Default");
             if (classAttr != null) raw.setClassIndex(classAttr.index());
         }
 
@@ -72,33 +78,35 @@ public class Phase2Report {
         PreprocessReport report = pre.getLastReport();
         boolean[] outlierFlags = pre.getLastOutlierFlags();
 
-        loader.saveArff(clean, cleanArff);
+        loader.saveArff(clean, cleanArff.toString());
 
-        // Outliers sidecar — list of CLIENTNUMs flagged
-        Attribute clientNumAttr = clean.attribute("CLIENTNUM");
-        List<Long> outlierClientNums = new ArrayList<>();
-        if (clientNumAttr != null) {
+        Attribute idAttribute = clean.attribute("ID");
+        List<Long> outlierClientIds = new ArrayList<>();
+        if (idAttribute != null) {
             for (int i = 0; i < clean.numInstances(); i++) {
                 if (outlierFlags[i]) {
-                    outlierClientNums.add((long) clean.instance(i).value(clientNumAttr));
+                    outlierClientIds.add((long) clean.instance(i).value(idAttribute));
                 }
             }
         }
         Map<String, Object> outliersDoc = new LinkedHashMap<>();
         outliersDoc.put("totalRows", clean.numInstances());
-        outliersDoc.put("outlierCount", outlierClientNums.size());
-        outliersDoc.put("outlierClientNums", outlierClientNums);
+        outliersDoc.put("outlierCount", outlierClientIds.size());
+        outliersDoc.put("outlierClientIds", outlierClientIds);
 
         Map<String, Object> reportDoc = new LinkedHashMap<>();
         reportDoc.put("totalRowsIn", report.totalRowsIn);
         reportDoc.put("totalRowsOut", report.totalRowsOut);
         reportDoc.put("duplicatesDropped", report.duplicatesDropped);
-        reportDoc.put("unknownRewritten", report.unknownRewritten);
         reportDoc.put("numericMedianImputed", report.numericMedianImputed);
+        reportDoc.put("negativeBillByColumn", report.negativeBillByColumn);
+        reportDoc.put("negativeBillTotal", report.negativeBillTotal);
+        reportDoc.put("duplicatesComparedWithout", "ID");
+        reportDoc.put("outlierRule", "1.5 x IQR fences; rows flagged but retained");
         reportDoc.put("outlierByColumn", report.outlierByColumn);
         reportDoc.put("outlierTotalCombined", report.outlierTotalCombined);
         reportDoc.put("outlierTotalCombinedPct", report.outlierTotalCombinedPct);
-        reportDoc.put("outputArff", cleanArff);
+        reportDoc.put("outputArff", cleanArff.toString());
         reportDoc.put("generatedAt", Instant.now().toString());
 
         ObjectMapper mapper = new ObjectMapper();
@@ -112,8 +120,8 @@ public class Phase2Report {
         log.info("=== Phase 2 DONE ===");
     }
 
-    private static void writeJson(ObjectMapper mapper, String path, Object doc) throws java.io.IOException {
-        File f = new File(path);
+    private static void writeJson(ObjectMapper mapper, Path path, Object doc) throws java.io.IOException {
+        File f = path.toFile();
         if (f.getParentFile() != null) f.getParentFile().mkdirs();
         mapper.writeValue(f, doc);
         log.info("Wrote {}", path);
@@ -125,12 +133,6 @@ public class Phase2Report {
         System.out.printf("Rows: %d in → %d out (%d duplicates dropped)%n",
                 r.totalRowsIn, r.totalRowsOut, r.duplicatesDropped);
 
-        if (!r.unknownRewritten.isEmpty()) {
-            System.out.println();
-            System.out.println("'Unknown' → missing rewrites:");
-            r.unknownRewritten.forEach((col, count) ->
-                    System.out.printf("  %-20s %d%n", col, count));
-        }
         if (!r.numericMedianImputed.isEmpty()) {
             System.out.println();
             System.out.println("Numeric median imputations:");
@@ -139,8 +141,9 @@ public class Phase2Report {
         }
 
         System.out.println();
-        System.out.printf("Outliers (combined Z-score|>3 OR IQR-fence): %d (%.2f%%)%n",
+        System.out.printf("Outliers (1.5 x IQR fences, retained): %d (%.2f%%)%n",
                 r.outlierTotalCombined, r.outlierTotalCombinedPct * 100);
+        System.out.printf("Negative bill values retained: %d%n", r.negativeBillTotal);
         System.out.println();
         System.out.printf("%-26s %8s %8s %10s %12s %12s %12s %12s%n",
                 "Column", "Z>3", "IQR", "Combined", "Mean", "Std", "Q1", "Q3");

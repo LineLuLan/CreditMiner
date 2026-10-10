@@ -1,172 +1,90 @@
-# Project Roadmap — CreditMiner
+# CreditMiner project roadmap
 
-> **Master timeline & milestone tracker.** Updated weekly by the lead.
-> Current pointer: **Re-onboarding cleanup - develop is source of truth (2026-06-02)**
+Updated: 2026-09-28
 
----
+## Objective
 
-## Current Status
+Deliver a reproducible IT160IU Data Mining project that predicts credit-card default on UCI dataset 350 and mines six-month repayment sequences with GSP. The repository must include the offline evidence, REST API, interactive dashboard, and print-first academic report.
 
-```
-[####################] Demo implementation complete; re-onboarding cleanup in progress
-```
+## Current status
 
-| Field | Value |
-|---|---|
-| Current focus | Re-onboarding cleanup, safe local init, docs/memory refresh |
-| Source branch | `develop` |
-| Cleanup branch | `codex/reacquaint-cleanup` |
-| Backend state | Phase 8 API documented as complete; local re-verification blocked by missing JDK/Maven |
-| Frontend state | 7 pages documented as live; Corepack/pnpm install, typecheck, lint, and build passed 2026-06-02 |
-| Security state | Previously exposed Neon password redacted from current docs; rotate credential before shared/hosted use |
-| Active blockers | Missing local JDK 17, Maven, Docker, psql, CodeGraph CLI |
+| Workstream | State | Evidence |
+|---|---|---|
+| Data understanding and preparation | Done | 30,000 source rows; 29,965 rows after duplicate removal; Phase 1-3 artifacts |
+| Classification | Done | Ten Weka variants, 10-fold cross-validation, and a 5,993-row holdout test |
+| Clustering and anomaly analysis | Done | K-means with `k=2`, PCA coordinates, and centroid-distance evidence |
+| Association rules | Done | 42 default rules and 50 non-default rules |
+| Sequence mining | Done | GSP patterns at support `0.10` and a fold-local feature experiment |
+| Backend and demo profile | Done | Spring API, H2 demo seed, PostgreSQL profiles, and shaded CLI |
+| Frontend and reports | Done | Current application routes, including the STE report and print-first paper |
+| Repository scope migration | Done in wave 4 | Current dataset, APIs, web views, samples, and documentation aligned |
+| Submission administration | Open | Team roster, instructor confirmation, and final ZIP |
 
----
+## Assignment coverage
 
-## 8-Week Plan
+| Step | Deliverable | Implementation |
+|---|---|---|
+| 1. Understand and prepare data | Data description, cleaning, and engineered features | `Phase1Report`, `Phase2Report`, `Phase3Report` |
+| 2. Apply mining methods | Classification, clustering, anomalies, and association rules | `Phase5Pipeline`, `Phase6Pipeline`, `Phase7Pipeline` |
+| 3. Evaluate and interpret | Cross-validation, holdout metrics, insights, and sequence experiment | Phase 5 evidence, `InsightFactsReport`, `Phase10Pipeline` |
+| 4. Present the result | API, dashboard, STE report, and academic paper | Spring Boot, Next.js, `/mining-report`, `/report/paper` |
 
-| Week | Theme | BE Output | FE Output | Demo state |
-|---|---|---|---|---|
-| **W1** ✅ | Setup + EDA | Repo scaffold, preliminary EDA in Weka GUI | Repo scaffold, layout shell | "skeleton runs locally" |
-| **W2** | Preprocess + Feature Eng | `clean.arff`, `clean_assoc.arff`, 6 derived features | Overview page wired with stub data | "overview KPIs render" |
-| **W3** | Classification | 3 classifiers trained + tuned + comparison table | EDA page wired | "EDA charts work" |
-| **W4** | Clustering + Anomaly | `kmeans.model`, persona descriptions | Customers page table | "browse customers" |
-| **W5** | Apriori + Insights | `rules.json`, 5 insights | Clusters + Rules pages | "rules + clusters viewable" |
-| **W6** | REST API | All 12 endpoints live | All pages talk to real BE | "real data end-to-end" |
-| **W7** | Predict UX + polish | Prediction logging, refinements | Predict form polished + dark mode | "demo-ready" |
-| **W8** | Deploy + report | Render deploy, model upload | Vercel deploy, screenshots | "submit" |
+## Verified headline results
 
----
-
-## Critical Path (must-not-slip)
-
-```
-Phase 1 (W1) ──▶ Phase 2 (W2) ──▶ Phase 3 (W2) ──▶ Phase 5 (W3)
-                                                       │
-                                                       ▼
-                                                   Models exist
-                                                       │
-                                                       ▼
-                                            BE-90 /predict (W6) ◄── FE-70 form (W7)
-                                                       │
-                                                       ▼
-                                                  Demo (W8)
-```
-
-If `/api/predict` slips, the demo loses its centerpiece. Protect it.
-
----
+| Result | Value |
+|---|---:|
+| Rows after cleaning | 29,965 |
+| Training rows | 23,972 |
+| Test rows | 5,993 |
+| Default rate | 22.1% |
+| Best model | RandomForest cost-sensitive |
+| Cross-validation F1, `Default=Yes` | 0.5263 |
+| Holdout F1, `Default=Yes` | 0.5333 |
+| Holdout ROC AUC | 0.777 |
+| Frequent patterns, default group | 2,037 |
+| Frequent patterns, non-default group | 1,729 |
+| Strongest default pattern | `<{PARTIAL}{LATE_2}>`: 48.2% versus 14.1% |
 
 ## Milestones
 
-| ID | Name | Target | Status |
-|---|---|---|---|
-| M1 | Skeleton bootstrap | end W1 | ✅ DONE 2026-05-08 — tag `v0.1.0-skeleton`, all 4 branches pushed to origin |
-| M2 | Models trained (3 classifiers + KMeans + Apriori) | end W5 | DONE per BE handoff; re-run requires local data/toolchain |
-| M3 | Backend API complete (all 12 endpoints) | end W6 | DONE per BE handoff; local verification blocked by JDK/Maven |
-| M4 | Frontend MVP (all 7 pages live) | mid W7 | DONE per FE tracker/audit; local verification pending pnpm |
-| M5 | E2E demo recorded | mid W8 | PENDING |
-| M6 | Submit + report + slides | end W8 | PENDING |
-
----
-
-## Dependency Graph
-
-```
-                       ┌────────────────┐
-                       │  M1 Skeleton   │ ─── tag v0.1.0
-                       └───────┬────────┘
-                               │
-              ┌────────────────┴────────────────┐
-              ▼                                 ▼
-     ┌────────────────┐              ┌──────────────────┐
-     │ BE Phase 1-4   │              │ FE Layout + Pgs  │
-     │ (preprocess +  │              │ stubbed          │
-     │  features)     │              └────────┬─────────┘
-     └───────┬────────┘                       │
-             │                                │
-             ▼                                │
-     ┌────────────────┐                       │
-     │ M2 Models      │                       │
-     │ (classify +    │                       │
-     │  cluster +     │                       │
-     │  rules)        │                       │
-     └───────┬────────┘                       │
-             │                                │
-             ▼                                │
-     ┌────────────────┐                       │
-     │ M3 REST API    │ ◄─────────────────────┘
-     │ (12 endpoints) │
-     └───────┬────────┘
-             │
-             ▼
-     ┌────────────────┐
-     │ M4 FE wired    │
-     └───────┬────────┘
-             │
-             ▼
-     ┌────────────────┐
-     │ M5 + M6 ship   │
-     └────────────────┘
-```
-
----
-
-## Risks & Blockers (live log)
-
-| Date | Risk / Blocker | Severity | Mitigation | Status |
-|---|---|---|---|---|
-| W1 | Apriori may yield few useful rules | High | Lower minSupport to 0.03; try FP-Growth fallback | Not yet hit |
-| W1 | Java + Weka deploy is awkward on Render | Medium | Build fat JAR; use Render's Java runtime | Not yet hit |
-| W1 | 10K rows render slowly in browser | Low | Server-side pagination already planned | Mitigated by design |
-| _(add new entries weekly)_ | | | | |
-
----
-
-## Weekly Reviews
-
-### Week 1 (closed) — Setup
-- ✅ Repo created with 4-branch flow (main / develop / backend / frontend)
-- ✅ Backend skeleton compiles (`mvn clean compile` BUILD SUCCESS)
-- ✅ Frontend builds (`pnpm build` 10/10 pages OK)
-- ✅ DB schema + seed scripts ready
-- ✅ Docker compose for local Postgres
-- ✅ All 7 trackers seeded with detailed initial content
-- ✅ GitHub Actions CI for backend + frontend + docs-sync reminder
-- ✅ Tag `v0.1.0-skeleton` pushed; all branches pushed to origin
-- ✅ Branch protection enabled on all 4 branches via `gh api` (no force-push, no deletion, direct push still allowed for skeleton flow)
-- 🎯 Next: Phase 1 EDA on `backend` branch + FE-10..15 layout polish on `frontend` branch
-
-### Week 2
-_(fill at end of week)_
-
-### Week 3
-_(fill at end of week)_
-
----
-
-## Decisions Log
-
-| Date | Decision | Rationale |
+| Milestone | State | Exit condition |
 |---|---|---|
-| W1 | Branching: 4-branch flat (main / develop / backend / frontend), no rebase | User-mandated; preserves history fully |
-| W1 | Merge strategy: `--no-ff` always | History stays linear-readable but never rewritten |
-| W1 | Move blueprints to `docs/` | Matches README structure; centralizes docs |
-| W1 | Skeleton level = "Detailed scaffolding" | Faster team onboarding |
-| W1 | No auth in API | Academic project; deploy with caveat |
-| W1 | Branch protection: force-push + deletion blocked, no PR review required | Match the user's "direct push allowed but never rewrite history" rule |
+| Scope migration | Complete | Current data schema is used from raw input through UI |
+| Mining evidence | Complete | All eight offline mains produce their contracted artifacts |
+| Application integration | Complete | Demo and PostgreSQL profiles expose the documented API |
+| Report integration | Complete | Web and print views use the same evidence contracts |
+| Documentation refresh | Complete | Root and `docs/` guides describe only the current scope |
+| Team roster | Open | Replace each placeholder with the confirmed name and student ID |
+| Instructor review | Open | Confirm the expected report and code packaging with the instructor |
+| Submission ZIP | Open | Build, inspect, and submit the final folder |
 
----
+## Remaining actions
 
-## Final Deliverables Checklist (W8)
+1. Confirm all team member names and student IDs. Do not infer them from commit history.
+2. Ask the instructor to confirm the final naming and content rules.
+3. Export `/report/paper` to `report.pdf`.
+4. Run the repository quality gates and inspect the generated submission folder.
+5. Build the final ZIP with `scripts/build-submission.ps1`.
 
-- [ ] `clean.csv` + `clean.arff` + `clean_assoc.arff`
-- [ ] `models/*.model` + `models/rules.json`
-- [ ] Backend repo (Maven, deployable)
-- [ ] Frontend repo (Next.js, deployable)
-- [ ] `db/schema.sql` + `db/seed.sql`
-- [ ] 30-40 page technical report (DOCX/PDF)
-- [ ] 15-20 demo slides
-- [ ] 5-7 minute walkthrough video
-- [ ] README with screenshots
-- [ ] Live demo URL (optional)
+## Risks and controls
+
+| Risk | Control |
+|---|---|
+| Generated evidence does not match the submitted code | Regenerate all eight phases in order and compare artifact timestamps |
+| Dataset licence is omitted | Keep the UCI dataset 350 citation and CC BY 4.0 notice in the README and report |
+| Sequence feature selection leaks across folds | Keep pattern selection inside each training fold |
+| Local demo depends on an external database | Use the `demo` profile with H2 and seeded artifacts |
+| Credentials enter the archive | Use the git-ignored `backend/.env` pattern and run a secret scan |
+| Submission contains local caches or credentials | Build from the packaging script and inspect the output before delivery |
+
+## Completion checklist
+
+- [x] Offline phase chain and evidence artifacts
+- [x] Spring API and demo profile
+- [x] Next.js dashboard and report routes
+- [x] GSP sequence evidence
+- [x] Current documentation and API samples
+- [ ] Confirmed team roster
+- [ ] Instructor confirmation
+- [ ] Final `report.pdf`
+- [ ] Final submission ZIP

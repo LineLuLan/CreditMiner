@@ -1,42 +1,82 @@
 [
   {
-    "title": "High utilization signals imminent churn",
-    "discovery": "Customers with Avg_Utilization_Ratio > 0.7 churn at 2.4x the average rate.",
-    "evidence": "Apriori rule {Util=high, Inactive=high} -> Attrited (sup=0.08, conf=0.78, lift=4.84). Confirmed by RandomForest feature importance (utilization ranks top 3).",
-    "recommendation": "Trigger an alert when utilization exceeds 70% for 2 consecutive months; offer credit-limit increase or financial counseling.",
-    "category": "churn",
+    "title": "Two months late now predicts default",
+    "discovery": "Clients two months late on the latest statement defaulted at 69.1%. The portfolio rate is 22.1%.",
+    "evidence": "2,666 clients; 3.1 times the portfolio default rate. This is an observed group rate, not an individual prediction. facts: default-rate-pay1-late2, default-rate-overall.",
+    "recommendation": "Review accounts that are two or more months late on the latest statement.",
+    "category": "driver",
     "priority": 1
   },
   {
-    "title": "Premium Loyal cluster is under-monetized",
-    "discovery": "The Premium Loyal cluster has the highest credit limits but the lowest utilization rate.",
-    "evidence": "Premium centroid: Credit_Limit ~ $20K, Utilization ~ 0.15. Cluster size ~30%, churn rate <6%.",
-    "recommendation": "Push premium credit products, travel rewards, and investment offerings to this cohort.",
-    "category": "opportunity",
+    "title": "Worst delay of three or more months",
+    "discovery": "Clients whose worst delay was three or more months defaulted at 62.8%, compared with 11.7% when the worst delay was zero or less.",
+    "evidence": "1,192 clients had a worst delay of three or more months; 19,918 had no positive delay across the six statements. facts: default-rate-worst-delay-ge3, default-rate-worst-delay-le0, default-rate-overall.",
+    "recommendation": "Review the worst repayment delay across all six statements.",
+    "category": "driver",
     "priority": 2
   },
   {
-    "title": "Inactive months strongly correlates with churn",
-    "discovery": "Customers with Months_Inactive_12_mon >= 4 churn 3.1x more often.",
-    "evidence": "Pearson r(inactive, attrited)=0.21; Apriori rule {Inactive=high, Trans_Ct=low} -> Attrited (lift=3.6).",
-    "recommendation": "Send re-engagement campaigns at 2-month inactivity; escalate at 3 months.",
-    "category": "churn",
-    "priority": 1
-  },
-  {
-    "title": "Low transaction count is the strongest single predictor",
-    "discovery": "Total_Trans_Ct ranks #1 in RandomForest feature importance.",
-    "evidence": "RF importance: Total_Trans_Ct = 0.28 (top), followed by Total_Trans_Amt (0.19) and Avg_Utilization_Ratio (0.17).",
-    "recommendation": "Surface a 'transactions this month vs last' KPI in customer-facing app to drive activity.",
-    "category": "risk",
-    "priority": 2
-  },
-  {
-    "title": "Blue card holders churn 1.6x more than Silver/Gold",
-    "discovery": "Card_Category=Blue customers have a 17.2% churn rate vs 11% for higher tiers.",
-    "evidence": "Apriori rule {Card=Blue, Trans_Ct=low} -> Attrited (sup=0.05, conf=0.72, lift=4.46).",
-    "recommendation": "Promote tier upgrade with first-year fee waiver to active Blue customers.",
-    "category": "opportunity",
+    "title": "Each late month adds risk",
+    "discovery": "Default rates rose across the late-month counts, from 11.7% with none to 70.3% with all six.",
+    "evidence": "3,743 clients had three or more late months and defaulted at 60.0%. Counts describe the six observed statements. facts: default-rate-months-delayed-0, default-rate-months-delayed-1, default-rate-months-delayed-2, default-rate-months-delayed-3, default-rate-months-delayed-4, default-rate-months-delayed-5, default-rate-months-delayed-6, default-rate-months-delayed-ge3.",
+    "recommendation": "Count late months when prioritizing repayment reviews.",
+    "category": "driver",
     "priority": 3
+  },
+  {
+    "title": "One cluster holds almost half of all defaults",
+    "discovery": "Cluster 0 contains 18.4% of clients and 44.5% of all defaults. Its default rate is 53.5%.",
+    "evidence": "Cluster 0: 5,516 clients and 2,950 defaults; 44.5% of portfolio defaults. Cluster 1: 24,449 clients and 15.1% default. facts: share-of-clients-cluster-0, share-of-defaults-cluster-0, default-rate-cluster-0, default-rate-cluster-1.",
+    "recommendation": "Review repayment histories within the higher-default cluster.",
+    "category": "segment",
+    "priority": 4
+  },
+  {
+    "title": "Low credit limits carry the most default",
+    "discovery": "The lowest credit-limit quarter defaulted at 31.8%. The highest quarter defaulted at 14.0%.",
+    "evidence": "7,673 clients in the lowest quarter. Quartile default rates: 31.8%, 24.7%, 17.4%, 14.0%. facts: default-rate-limit-q1, default-rate-limit-q2, default-rate-limit-q3, default-rate-limit-q4.",
+    "recommendation": "Review repayment history alongside the credit limit.",
+    "category": "driver",
+    "priority": 5
+  },
+  {
+    "title": "Small payments signal default",
+    "discovery": "The lowest latest-payment quarter defaulted at 31.7%. The highest quarter defaulted at 13.8%.",
+    "evidence": "7,805 clients in the lowest quarter. Quartile default rates by latest payment amount (PAY_AMT1): 31.7%, 22.1%, 20.5%, 13.8%. The amount is a single-statement figure; it does not establish consecutive low-payment statements. facts: default-rate-payment-amount-q1, default-rate-payment-amount-q2, default-rate-payment-amount-q3, default-rate-payment-amount-q4.",
+    "recommendation": "Review clients whose latest payment falls in the lowest quarter alongside their repayment history.",
+    "category": "driver",
+    "priority": 6
+  },
+  {
+    "title": "Paying a larger share of the bill lowers risk",
+    "discovery": "Higher six-month aggregate payment-ratio quartiles had lower observed default rates: 29.2%, 26.2%, 17.9%, 15.3%.",
+    "evidence": "The lowest quartile has 7,493 clients; the highest has 7,491. PAY_RATIO divides six-month payments by positive bills (denominator at least 1), capped at 5. This association does not show that increasing payments causes lower default. facts: default-rate-payment-ratio-q1, default-rate-payment-ratio-q2, default-rate-payment-ratio-q3, default-rate-payment-ratio-q4.",
+    "recommendation": "Review the six-month aggregate payment ratio with delay history.",
+    "category": "driver",
+    "priority": 7
+  },
+  {
+    "title": "Age matters only at the edges",
+    "discovery": "Clients aged 30-39 had the lowest age-band default rate, 20.3%. Clients aged 60 or more had the highest, 28.3%.",
+    "evidence": "Age 30-39: 11,226 clients. Age 60+: only 339 clients, so the estimate is less precise. These are descriptive group differences. facts: default-rate-age-le29, default-rate-age-30-39, default-rate-age-40-49, default-rate-age-50-59, default-rate-age-60-plus.",
+    "recommendation": "Compare confidence intervals and use age bands for fairness checks.",
+    "category": "context",
+    "priority": 8
+  },
+  {
+    "title": "Demographic default rates differ",
+    "discovery": "Education default rates span 18.1 percentage points including Other. Married clients defaulted at 23.5%, single clients at 20.9%.",
+    "evidence": "Graduate 19.2% (n=10,563); University 23.7% (n=14,019); HighSchool 25.2% (n=4,915); Other 7.1% (n=468). Married 23.5% (n=13,643); Single 20.9% (n=15,945); Other 23.6% (n=377). Male 24.2% (n=11,874); Female 20.8% (n=18,091). These unadjusted comparisons do not measure causal effects. facts: default-rate-education-graduate, default-rate-education-university, default-rate-education-highschool, default-rate-education-other, default-rate-marriage-married, default-rate-marriage-single, default-rate-marriage-other, default-rate-sex-male, default-rate-sex-female.",
+    "recommendation": "Use demographic comparisons for fairness checks alongside repayment evidence.",
+    "category": "context",
+    "priority": 9
+  },
+  {
+    "title": "The risk tier rule separates clients well",
+    "discovery": "An engineered tier built from the delay features and average utilization has default rates of Low 10.9%, Medium 15.7%, High 45.2%.",
+    "evidence": "The High tier has 8,713 clients. The tier reuses worst delay, late-month count and average utilization; it is not independent evidence beyond those inputs. facts: default-rate-risk-tier-low, default-rate-risk-tier-medium, default-rate-risk-tier-high.",
+    "recommendation": "Use the engineered tier as a summary and inspect its input features.",
+    "category": "segment",
+    "priority": 10
   }
 ]

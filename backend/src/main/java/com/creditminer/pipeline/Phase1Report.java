@@ -6,10 +6,12 @@ import com.creditminer.service.DataLoader;
 import com.creditminer.service.DescribeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import weka.core.Instances;
 
 import java.io.File;
+import java.nio.file.Path;
 
 /**
  * OFFLINE Phase 1 — Data Understanding (BE-10..BE-13).
@@ -22,7 +24,7 @@ import java.io.File;
  *
  * <p>Pipeline:
  * <ol>
- *   <li>Load {@code data/raw/BankChurners.csv} via Weka CSVLoader (drops 2 leakage cols)</li>
+ *   <li>Load and normalize the UCI credit-default CSV</li>
  *   <li>Save cleaned {@code Instances} to {@code data/processed/phase1_raw.arff}</li>
  *   <li>Compute describe table (count, missing, mean, std, min, max, median for numeric;
  *       distinctCount, topValue, topCount for nominal)</li>
@@ -36,14 +38,18 @@ import java.io.File;
 @Slf4j
 public class Phase1Report {
 
-    private static final String DEFAULT_CSV = "data/raw/BankChurners.csv";
+    private static final String DEFAULT_CSV = "data/raw/default_credit_card_clients.csv";
     private static final String DEFAULT_ARFF = "data/processed/phase1_raw.arff";
     private static final String DEFAULT_JSON = "data/processed/phase1_describe.json";
 
     public static void main(String[] args) throws Exception {
-        String csvPath = args.length > 0 ? args[0] : DEFAULT_CSV;
-        String arffPath = args.length > 1 ? args[1] : DEFAULT_ARFF;
-        String jsonPath = args.length > 2 ? args[2] : DEFAULT_JSON;
+        Path csvPath = Path.of(args.length > 0 ? args[0] : DEFAULT_CSV);
+        Path arffPath = Path.of(args.length > 1 ? args[1] : DEFAULT_ARFF);
+        Path jsonPath = Path.of(args.length > 2 ? args[2] : DEFAULT_JSON);
+        run(csvPath, arffPath, jsonPath);
+    }
+
+    public static void run(Path csvPath, Path arffPath, Path jsonPath) throws Exception {
 
         log.info("=== Phase 1 — Data Understanding ===");
         log.info("CSV in : {}", csvPath);
@@ -51,23 +57,26 @@ public class Phase1Report {
         log.info("JSON out: {}", jsonPath);
 
         DataLoader loader = new DataLoader();
-        Instances data = loader.loadCsv(csvPath);
+        Instances data = loader.loadCsv(csvPath.toString());
 
-        loader.saveArff(data, arffPath);
+        loader.saveArff(data, arffPath.toString());
 
         DescribeService describer = new DescribeService();
         DescribeResponse report = describer.describe(data, loader.getLastDroppedColumns());
 
         printConsoleTable(report);
 
-        File jsonFile = new File(jsonPath);
+        File jsonFile = jsonPath.toFile();
         if (jsonFile.getParentFile() != null) {
             jsonFile.getParentFile().mkdirs();
         }
         ObjectMapper mapper = new ObjectMapper();
         mapper.findAndRegisterModules();
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
-        mapper.writeValue(jsonFile, report);
+        ObjectNode reportJson = mapper.valueToTree(report);
+        reportJson.set("schemaTransformations", mapper.valueToTree(loader.getLastTransformReport()));
+        reportJson.put("source", "UCI Machine Learning Repository dataset 350 (Yeh & Lien, 2009)");
+        mapper.writeValue(jsonFile, reportJson);
         log.info("Wrote describe JSON: {} ({} columns)", jsonPath, report.getColumns().size());
 
         log.info("=== Phase 1 DONE ===");

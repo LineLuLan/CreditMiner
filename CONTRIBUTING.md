@@ -83,17 +83,17 @@ git push origin develop
 
 Same flow, swap `backend` ↔ `frontend`.
 
-### Updating a docs/ tracker
+### Updating project documentation
 
 ```bash
 # Edit on whichever branch you are working on
-git add docs/BE_Tracker.md
-git commit -m "docs: update BE_Tracker — task BE-12 done"
+git add docs/API.md ACTIVE_STATE.md
+git commit -m "docs: update API contract and active state"
 git push origin <your-branch>
 
 # Sync to develop and the sibling branch
 git checkout develop
-git merge --no-ff <your-branch> -m "docs: sync trackers"
+git merge --no-ff <your-branch> -m "docs: sync project documentation"
 git push origin develop
 
 # Pull develop into the sibling branch (so they see latest tracker)
@@ -102,7 +102,7 @@ git merge --no-ff develop -m "chore: pull tracker updates"
 git push origin <sibling-branch>
 ```
 
-> **Tip**: use `scripts/sync-branches.ps1` to automate the merge dance.
+> **Tip**: use `scripts/sync-branches.ps1` to automate the merge sequence.
 
 ---
 
@@ -138,27 +138,26 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 feat(be): implement /api/predict endpoint with RandomForest inference
 fix(fe): debounce search input on customer table
-docs: update BE_Handoff with v2 PredictResponse schema
+docs: update API contract for PredictResponse schema
 chore(ci): add Maven cache to backend-ci workflow
 ```
 
 ---
 
-## 5. Trackers (the source of truth)
+## 5. Project documents
 
-All in `docs/`:
+Use the current documents below. Earlier iteration trackers and handoffs are in the dated archive and are not active instructions.
 
 | File | Owner | Update when |
 |---|---|---|
-| `BE_Tracker.md` | BE team | Start/finish a BE task |
-| `FE_Tracker.md` | FE team | Start/finish a FE task |
-| `BE_Handoff.md` | BE → FE | API contract changes |
-| `FE_Handoff.md` | FE → BE | New ask from FE |
-| `Project_Roadmap.md` | Lead | Weekly milestone review |
-| `Test_Walkthrough.md` | Whoever ships the feature | New feature ready for E2E |
-| `Feature_Critical.md` | Lead | MVP scope changes |
+| `ACTIVE_STATE.md` | Lead | Delivery state or open submission work changes |
+| `Architecture.md` | Technical team | A system boundary, profile, or artifact contract changes |
+| `docs/API.md` | Backend and frontend teams | An endpoint request or response changes |
+| `docs/PIPELINE.md` | Data mining team | A phase, command, input, output, or recorded run time changes |
+| `docs/Project_Roadmap.md` | Lead | A course milestone changes |
+| `docs/SUBMISSION.md` | Lead | The instructor confirms submission requirements |
 
-**Rule:** every commit that closes a task must update the relevant tracker in the same commit.
+**Rule:** when a change makes a current document inaccurate, update that document in the same commit.
 
 ---
 
@@ -178,7 +177,7 @@ This project allows direct pushes for speed, but for **cross-branch** work or an
 
 1. PR title = commit message subject
 2. Body uses the template (auto-loaded from `.github/pull_request_template.md` if present)
-3. Reviewer checks: tracker updated? tests added? handoff doc current?
+3. Reviewer checks: current documentation updated? tests added? API and pipeline contracts current?
 
 ---
 

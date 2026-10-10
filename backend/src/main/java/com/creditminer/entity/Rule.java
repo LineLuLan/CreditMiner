@@ -41,7 +41,7 @@ public class Rule {
     @Column(name = "lift", precision = 8, scale = 4)
     private BigDecimal lift;
 
-    /** {@code "churn"} or {@code "retention"} — derived from RHS in {@code AssociationService}. */
+    /** {@code "default"} or {@code "non-default"}, derived from the rule consequent. */
     @Column(name = "category", length = 30)
     private String category;
 }

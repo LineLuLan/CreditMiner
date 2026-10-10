@@ -18,67 +18,55 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * {@code GET /api/customers} — paginated list and detail.
- *
- * <p>See {@code docs/BE_Handoff.md §3.5 - §3.6}.</p>
- */
 @RestController
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
-@Tag(name = "Customers", description = "Customer lookup")
+@Tag(name = "Customers", description = "Credit-card client lookup")
 public class CustomerController {
-
     private final CustomerRepository repo;
 
     @GetMapping
-    @Operation(summary = "Paginated list of customers (with optional filter/sort)")
+    @Operation(summary = "Paginated list of clients with optional target or cluster filter")
     public PageResponse<CustomerSummaryResponse> list(
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "20") int size,
-            @RequestParam(value = "attritionFlag", required = false) String attritionFlag,
+            @RequestParam(value = "defaultFlag", required = false) String defaultFlag,
             @RequestParam(value = "clusterId", required = false) Integer clusterId,
-            @RequestParam(value = "sort", defaultValue = "clientNum,asc") String sort) {
-
+            @RequestParam(value = "sort", defaultValue = "clientId,asc") String sort) {
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.min(100, size), parseSort(sort));
-        Page<Customer> result;
-        if (attritionFlag != null) {
-            result = repo.findByAttritionFlag(attritionFlag, pageable);
-        } else if (clusterId != null) {
-            result = repo.findByClusterId(clusterId, pageable);
-        } else {
-            result = repo.findAll(pageable);
-        }
-        return PageResponse.from(result, this::toSummary);
+        Page<Customer> result = defaultFlag != null
+                ? repo.findByDefaultFlag(defaultFlag, pageable)
+                : clusterId != null ? repo.findByClusterId(clusterId, pageable) : repo.findAll(pageable);
+        return PageResponse.from(result, CustomerController::toSummary);
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Single customer detail")
-    public Customer detail(@PathVariable("id") Long clientNum) {
-        return repo.findById(clientNum)
-                .orElseThrow(() -> BusinessException.notFound("Customer", clientNum));
+    @Operation(summary = "Single client detail")
+    public Customer detail(@PathVariable("id") Long clientId) {
+        return repo.findById(clientId)
+                .orElseThrow(() -> BusinessException.notFound("Customer", clientId));
     }
 
-    private CustomerSummaryResponse toSummary(Customer c) {
+    public static CustomerSummaryResponse toSummary(Customer customer) {
         return CustomerSummaryResponse.builder()
-                .clientNum(c.getClientNum())
-                .attritionFlag(c.getAttritionFlag())
-                .customerAge(c.getCustomerAge())
-                .gender(c.getGender())
-                .cardCategory(c.getCardCategory())
-                .customerTier(c.getCustomerTier())
-                .riskScore(c.getRiskScore() == null ? null : c.getRiskScore().doubleValue())
-                .clusterId(c.getClusterId())
-                .isOutlier(c.getIsOutlier())
-                .isAnomaly(c.getIsAnomaly())
+                .clientId(customer.getClientId())
+                .defaultFlag(customer.getDefaultFlag())
+                .age(customer.getAge())
+                .sex(customer.getSex())
+                .education(customer.getEducation())
+                .riskTier(customer.getRiskTier())
+                .payRatio(customer.getPayRatio() == null ? null : customer.getPayRatio().doubleValue())
+                .clusterId(customer.getClusterId())
+                .isOutlier(customer.getIsOutlier())
+                .isAnomaly(customer.getIsAnomaly())
                 .build();
     }
 
-    private Sort parseSort(String sort) {
-        // Format "field,asc|desc"
+    private static Sort parseSort(String sort) {
         String[] parts = sort.split(",");
         if (parts.length != 2) return Sort.unsorted();
-        Sort.Direction dir = "desc".equalsIgnoreCase(parts[1]) ? Sort.Direction.DESC : Sort.Direction.ASC;
-        return Sort.by(dir, parts[0].trim());
+        Sort.Direction direction = "desc".equalsIgnoreCase(parts[1])
+                ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return Sort.by(direction, parts[0].trim());
     }
 }

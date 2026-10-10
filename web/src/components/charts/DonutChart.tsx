@@ -1,8 +1,10 @@
 "use client";
 
+import { formatCount, formatPct1 } from "@/lib/format";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
   CHART_LEGEND_STYLE,
+  CHART_SEMANTIC,
   CHART_TOOLTIP_ITEM_STYLE,
   CHART_TOOLTIP_LABEL_STYLE,
   chartTooltipContentStyle,
@@ -45,7 +47,7 @@ function renderLabel({
       fontSize={13}
       fontWeight={700}
     >
-      {(percent * 100).toFixed(1)}%
+      {formatPct1(percent)}
     </text>
   );
 }
@@ -66,8 +68,15 @@ export function DonutChart({ data, height = 260 }: Props) {
           label={renderLabel}
           isAnimationActive={false}
         >
-          {data.map((_, i) => (
-            <Cell key={i} fill={CLUSTER_COLORS[i % CLUSTER_COLORS.length]} />
+          {data.map((item, i) => (
+            <Cell
+              key={item.name}
+              fill={item.name === "Yes" || item.name === "Default"
+                ? CHART_SEMANTIC.danger
+                : item.name === "No" || item.name === "Non-default"
+                  ? CHART_SEMANTIC.neutral
+                  : CLUSTER_COLORS[i % CLUSTER_COLORS.length]}
+            />
           ))}
         </Pie>
         <Tooltip
@@ -75,7 +84,7 @@ export function DonutChart({ data, height = 260 }: Props) {
           itemStyle={CHART_TOOLTIP_ITEM_STYLE}
           labelStyle={CHART_TOOLTIP_LABEL_STYLE}
           formatter={(value: number, name: string) => [
-            `${value.toLocaleString()} (${((value / total) * 100).toFixed(1)}%)`,
+            `${formatCount(value)} (${formatPct1(total > 0 ? value / total : null)})`,
             name,
           ]}
         />

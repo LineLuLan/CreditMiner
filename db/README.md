@@ -1,51 +1,20 @@
-# Database — CreditMiner
+# CreditMiner database
 
-PostgreSQL 15 schema, seed data, and migration policy.
-
-## Files
+The PostgreSQL schema mirrors UCI dataset id 350 and stores generated Phase 3, 6, and 7 outputs.
 
 | File | Purpose |
 |---|---|
-| `schema.sql` | DDL for the 5 tables. Apply once on fresh DB. |
-| `seed.sql` | Initial data (insights + cluster stubs). Apply after schema. |
-| `reset.sql` | Drop everything (dev only). |
-| `migrations/` | Future schema changes (post-skeleton). |
+| `schema.sql` | Create the five tables in a fresh database. |
+| `seed.sql` | Documents artifact-driven seeding; contains no authored rows. |
+| `reset.sql` | Destructive local-development reset. |
+| `migrations/2026-09-26_uci_credit_default.sql` | Destructive replacement migration for an existing installation. |
 
-## Local setup (Docker)
+For a local database, apply `schema.sql`, run the offline phases, and then run `Phase8Seeder`.
+The demo profile instead creates and seeds an in-memory H2 database.
 
-```bash
-# From repo root
-docker compose up -d postgres
-# Schema + seed are auto-applied via /docker-entrypoint-initdb.d/
-```
+The dated replacement migration is intentionally not automatic. Before applying it to any hosted
+database, obtain Line's written approval, make a backup, and prove the restore procedure.
 
-## Manual setup (any Postgres)
-
-```bash
-export DATABASE_URL=postgresql://creditminer:creditminer@localhost:5432/creditminer_db
-
-psql $DATABASE_URL -f db/schema.sql
-psql $DATABASE_URL -f db/seed.sql
-
-# To reset:
-psql $DATABASE_URL -f db/reset.sql
-```
-
-## Neon (production)
-
-1. Create a project at [neon.tech](https://neon.tech)
-2. Copy the connection string from the dashboard
-3. Set `DATABASE_URL` env var in backend deployment
-4. Apply schema + seed via `psql $NEON_URL -f db/schema.sql && psql $NEON_URL -f db/seed.sql`
-
-## Tables overview
-
-| Table | Rows (target) | Source |
-|---|---|---|
-| `customers` | 10,127 | TrainPipeline seeds from BankChurners.csv |
-| `clusters` | 3-4 | Pre-seeded stubs; refined by TrainPipeline |
-| `rules` | 30-50 | Apriori output via TrainPipeline |
-| `insights` | 5+ | Hand-curated (in `seed.sql`) |
-| `predictions` | (grows) | Logged on every `POST /api/predict` |
-
-See `docs/blueprint_en.md §6` for full DDL rationale.
+Expected generated row counts are approximately 30,000 clients before duplicate removal, a
+pipeline-selected number of clusters, two categories of association rules, zero authored insights,
+and one prediction row per successful prediction request.

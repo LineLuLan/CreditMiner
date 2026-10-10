@@ -11,6 +11,7 @@ import weka.core.Instances;
 
 import java.io.File;
 import java.time.Instant;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,7 +29,7 @@ import java.util.Map;
  * <p>Pipeline:
  * <ol>
  *   <li>Load Phase 2 ARFF ({@code data/processed/clean.arff})</li>
- *   <li>Run {@link FeatureEngineer#run(Instances)} — appends 6 derived columns</li>
+ *   <li>Run {@link FeatureEngineer#run(Instances)} to append seven derived columns</li>
  *   <li>Save {@code data/processed/enriched.arff}</li>
  *   <li>Save {@code data/processed/phase3_report.json} — per-feature summary stats</li>
  *   <li>Print console summary</li>
@@ -43,18 +44,23 @@ public class Phase3Report {
     private static final String DEFAULT_REPORT_JSON = "data/processed/phase3_report.json";
 
     private static final String[] DERIVED_FEATURES = {
-            FeatureEngineer.F_UTILIZATION,
-            FeatureEngineer.F_SPENDING,
-            FeatureEngineer.F_ENGAGEMENT,
-            FeatureEngineer.F_VALUE,
-            FeatureEngineer.F_RISK,
-            FeatureEngineer.F_TIER
+            FeatureEngineer.F_UTILIZATION_1,
+            FeatureEngineer.F_AVG_UTILIZATION,
+            FeatureEngineer.F_PAY_RATIO,
+            FeatureEngineer.F_MONTHS_DELAYED,
+            FeatureEngineer.F_MAX_DELAY,
+            FeatureEngineer.F_BILL_TREND,
+            FeatureEngineer.F_RISK_TIER
     };
 
     public static void main(String[] args) throws Exception {
-        String inputArff = args.length > 0 ? args[0] : DEFAULT_INPUT_ARFF;
-        String outputArff = args.length > 1 ? args[1] : DEFAULT_OUTPUT_ARFF;
-        String reportJson = args.length > 2 ? args[2] : DEFAULT_REPORT_JSON;
+        Path inputArff = Path.of(args.length > 0 ? args[0] : DEFAULT_INPUT_ARFF);
+        Path outputArff = Path.of(args.length > 1 ? args[1] : DEFAULT_OUTPUT_ARFF);
+        Path reportJson = Path.of(args.length > 2 ? args[2] : DEFAULT_REPORT_JSON);
+        run(inputArff, outputArff, reportJson);
+    }
+
+    public static void run(Path inputArff, Path outputArff, Path reportJson) throws Exception {
 
         log.info("=== Phase 3 — Feature Engineering ===");
         log.info("Input  : {}", inputArff);
@@ -62,9 +68,9 @@ public class Phase3Report {
         log.info("Report : {}", reportJson);
 
         DataLoader loader = new DataLoader();
-        Instances clean = loader.loadArff(inputArff);
+        Instances clean = loader.loadArff(inputArff.toString());
         if (clean.classIndex() < 0) {
-            Attribute classAttr = clean.attribute("Attrition_Flag");
+            Attribute classAttr = clean.attribute("Default");
             if (classAttr != null) clean.setClassIndex(classAttr.index());
         }
         log.info("Loaded {} rows × {} cols", clean.numInstances(), clean.numAttributes());
@@ -72,20 +78,28 @@ public class Phase3Report {
         FeatureEngineer fe = new FeatureEngineer();
         Instances enriched = fe.run(clean);
 
-        loader.saveArff(enriched, outputArff);
+        loader.saveArff(enriched, outputArff.toString());
 
         Map<String, Object> reportDoc = new LinkedHashMap<>();
         reportDoc.put("totalRows", enriched.numInstances());
         reportDoc.put("totalColumnsIn", clean.numAttributes());
         reportDoc.put("totalColumnsOut", enriched.numAttributes());
         reportDoc.put("derivedFeatures", buildFeatureStats(enriched));
-        reportDoc.put("outputArff", outputArff);
+        reportDoc.put("riskTierRule",
+                "High if MAX_DELAY>=2 or MONTHS_DELAYED>=2 or AVG_UTILIZATION>=1; "
+                        + "Low if MONTHS_DELAYED=0 and AVG_UTILIZATION<0.5; otherwise Medium");
+        reportDoc.put("clipping", Map.of(
+                "UTILIZATION_1", "[-1,5]",
+                "AVG_UTILIZATION", "[-1,5]",
+                "PAY_RATIO", "[0,5]",
+                "BILL_TREND", "[-5,5]"));
+        reportDoc.put("outputArff", outputArff.toString());
         reportDoc.put("generatedAt", Instant.now().toString());
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.findAndRegisterModules();
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
-        File rf = new File(reportJson);
+        File rf = reportJson.toFile();
         if (rf.getParentFile() != null) rf.getParentFile().mkdirs();
         mapper.writeValue(rf, reportDoc);
         log.info("Wrote {}", reportJson);

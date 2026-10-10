@@ -1,4 +1,21 @@
 import type * as React from "react";
+import { CHART_SEMANTIC as SEMANTIC, CLUSTER_COLORS } from "@/lib/chart-theme";
+
+export { CLUSTER_COLORS, clusterColor } from "@/lib/chart-theme";
+
+/** Theme-aware categorical palette (light/dark via CSS vars). */
+export const CHART_COLORS = CLUSTER_COLORS;
+
+/** Semantic chart colors backed by the design tokens. */
+export const CHART_SEMANTIC = {
+  ...SEMANTIC,
+  warning: "hsl(var(--warning))",
+  destructive: SEMANTIC.danger,
+  info: "hsl(var(--info))",
+} as const;
+
+/** Standard chart margin so axes/labels align across the dashboard. */
+export const CHART_MARGIN = { top: 8, right: 16, left: 0, bottom: 8 } as const;
 
 export const CHART_AXIS_TICK = {
   fill: "hsl(var(--muted-foreground))",

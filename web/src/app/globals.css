@@ -12,12 +12,16 @@
     --popover-foreground: 222.2 84% 4.9%;
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
+    --secondary: 214 32% 92.5%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 192 75% 92%;
+    --muted: 214 32% 92.5%;
+    --muted-foreground: 215 19% 38%;
+    --accent: 192 60% 86%;
     --accent-foreground: 196 80% 22%;
+    --danger: 0 72% 50%;
+    --danger-foreground: 0 0% 100%;
+    --chart-neutral: 215 16% 57%;
+    --chart-baseline: var(--foreground) / 0.6;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --success: 152 60% 36%;
@@ -26,10 +30,15 @@
     --warning-foreground: 30 80% 12%;
     --info: 199 89% 48%;
     --info-foreground: 200 95% 96%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 214 26% 84%;
+    --input: 214 26% 84%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+    --chart-1: 221 83% 53%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 25 95% 53%;
+    --chart-4: 271 81% 56%;
+    --chart-5: 199 89% 48%;
   }
 
   .dark {
@@ -47,6 +56,10 @@
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 192 55% 22%;
     --accent-foreground: 192 80% 88%;
+    --danger: 0 84% 62%;
+    --danger-foreground: 222.2 84% 4.9%;
+    --chart-neutral: 215 15% 40%;
+    --chart-baseline: var(--foreground) / 0.6;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --success: 152 55% 45%;
@@ -58,6 +71,11 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 160 70% 50%;
+    --chart-3: 25 95% 60%;
+    --chart-4: 271 81% 68%;
+    --chart-5: 199 85% 60%;
   }
 }
 
@@ -68,10 +86,18 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
+/* Recharts generates this class at runtime; keep it outside Tailwind layers. */
+.recharts-legend-item-text {
+  color: hsl(var(--foreground)) !important;
+}
+
 @layer components {
+
   .h1 {
     @apply text-4xl font-bold tracking-tight md:text-5xl;
   }
@@ -89,5 +115,254 @@
   }
   .eyebrow {
     @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
+  }
+  /** Tabular figures so numeric columns/KPIs stay aligned. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+  /** Subtle full-width divider between page sections. */
+  .section-divider {
+    @apply h-px w-full bg-border;
+  }
+}
+
+@layer utilities {
+  /** Thin, theme-aware scrollbar for scrollable panels. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  :root,
+  .dark {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 35%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 35%;
+    --border: 214.3 31.8% 78%;
+    --input: 214.3 31.8% 78%;
+    --danger: 0 72% 50%;
+    --danger-foreground: 0 0% 100%;
+    --chart-neutral: 215 16% 57%;
+    --chart-baseline: var(--foreground) / 0.6;
+    --ring: 221.2 83.2% 35%;
+    --chart-1: 221 83% 45%;
+    --chart-2: 160 70% 34%;
+    --chart-3: 25 85% 43%;
+    --chart-4: 271 70% 48%;
+    --chart-5: 199 80% 38%;
+  }
+
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body,
+  body > div,
+  .app-shell,
+  .app-main,
+  .report-shell,
+  .report-shell > div,
+  .report-shell > div > .grid,
+  .report-document {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  .app-shell > aside,
+  header,
+  button,
+  .report-toc,
+  .report-action,
+  [data-sonner-toaster],
+  .fixed {
+    display: none !important;
+  }
+
+  main,
+  .app-main {
+    padding-left: 0 !important;
+  }
+
+  .sticky,
+  .report-shell .sticky {
+    position: static !important;
+    inset: auto !important;
+  }
+
+  .report-shell > div,
+  .report-document {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .report-page-break {
+    break-before: auto !important;
+    page-break-before: auto !important;
+  }
+
+  .report-appendix-start {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .report-chart-grid,
+  .report-insight-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .report-chart,
+  .report-figure .recharts-responsive-container,
+  .report-insight-source .recharts-responsive-container {
+    width: 175mm !important;
+    max-width: 100% !important;
+    height: 68mm !important;
+  }
+
+  .report-shell .recharts-wrapper,
+  .report-shell .recharts-surface {
+    max-width: 100% !important;
+  }
+
+  .report-shell .overflow-x-auto,
+  .report-shell .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  .report-figure,
+  .report-table:not(.report-table-long),
+  .report-insight-source,
+  .report-document .shadow-card,
+  .report-heading,
+  .report-takeaway,
+  tr,
+  .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-table-long {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .report-caption {
+    break-before: avoid;
+    page-break-before: avoid;
+  }
+
+  .report-document h1,
+  .report-document h2,
+  .report-document h3,
+  .report-document h4,
+  .report-document h5,
+  .report-document h6 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .report-table > div {
+    overflow: visible !important;
+  }
+
+  .report-document table {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 8px !important;
+  }
+
+  .report-document th,
+  .report-document td {
+    padding: 4px !important;
+  }
+
+  .report-print-only {
+    display: block !important;
+  }
+
+  .report-detail-source:not(.report-detail-print) {
+    display: none !important;
+  }
+
+  .report-detail-print > summary {
+    display: none !important;
+  }
+
+  .report-detail-print > .report-details-body {
+    display: block !important;
+    height: auto !important;
+  }
+
+  .report-insight-source .insight-action,
+  .report-insight-source .insight-details {
+    display: none !important;
+  }
+
+  .report-evidence-notes > summary {
+    display: none !important;
+  }
+
+  .report-evidence-notes > .report-evidence-body {
+    display: block !important;
+    height: auto !important;
+  }
+
+  .insights-page,
+  .methodology-page {
+    background: white !important;
+  }
+
+  .paper-report-shell main,
+  .paper-document,
+  .paper-cover {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .paper-cover {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .paper-numbered-section {
+    break-before: page;
+    page-break-before: always;
   }
 }

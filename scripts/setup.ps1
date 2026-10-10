@@ -1,49 +1,49 @@
-# =============================================================================
-# CreditMiner — one-shot setup (Windows / PowerShell)
-# Usage:  .\scripts\setup.ps1
-# =============================================================================
-
+# Prepare the CreditMiner development environment on Windows.
 $ErrorActionPreference = "Stop"
 
-Write-Host "==> Checking prerequisites..." -ForegroundColor Cyan
-function Require-Cmd($name) {
+function Require-Command($name) {
   if (-not (Get-Command $name -ErrorAction SilentlyContinue)) {
-    Write-Host "MISSING: $name — install it before continuing." -ForegroundColor Red
-    exit 1
+    throw "MISSING: $name is required."
   }
   Write-Host "  OK  $name" -ForegroundColor Green
 }
-Require-Cmd "java"
-Require-Cmd "mvn"
-Require-Cmd "node"
-Require-Cmd "pnpm"
-Require-Cmd "git"
-Require-Cmd "docker"
 
-Write-Host ""
-Write-Host "==> Starting Postgres via docker compose..." -ForegroundColor Cyan
-docker compose up -d postgres
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$raw = Join-Path $root "backend\data\raw\default_credit_card_clients.csv"
 
-Write-Host ""
-Write-Host "==> Building backend (mvn compile, no tests)..." -ForegroundColor Cyan
-Push-Location backend
-mvn -q clean compile -DskipTests
-Pop-Location
+Write-Host "==> Checking prerequisites" -ForegroundColor Cyan
+@("java", "mvn", "node", "corepack", "docker") | ForEach-Object { Require-Command $_ }
 
-Write-Host ""
-Write-Host "==> Installing frontend dependencies..." -ForegroundColor Cyan
-Push-Location web
-if (-not (Test-Path ".env.local")) {
-  Copy-Item ".env.local.example" ".env.local"
-  Write-Host "    Created web/.env.local from example." -ForegroundColor Yellow
+Write-Host "==> Starting local PostgreSQL for the dev profile" -ForegroundColor Cyan
+Push-Location $root
+try {
+  & docker compose up -d postgres
+  if ($LASTEXITCODE -ne 0) { throw "docker compose failed." }
 }
-pnpm install --silent
-Pop-Location
+finally {
+  Pop-Location
+}
 
-Write-Host ""
-Write-Host "==> Setup complete." -ForegroundColor Green
-Write-Host "    Next steps:"
-Write-Host "      1. Place BankChurners.csv at backend/data/raw/"
-Write-Host "      2. Run training:  .\scripts\train.ps1"
-Write-Host "      3. Start backend: cd backend; mvn spring-boot:run"
-Write-Host "      4. Start frontend: cd web; pnpm dev"
+Write-Host "==> Installing frontend dependencies" -ForegroundColor Cyan
+Push-Location (Join-Path $root "web")
+try {
+  if (-not (Test-Path -LiteralPath ".env.local")) {
+    Copy-Item -LiteralPath ".env.local.example" -Destination ".env.local"
+    Write-Host "  Created web/.env.local from the example." -ForegroundColor Yellow
+  }
+  & corepack pnpm install --frozen-lockfile
+  if ($LASTEXITCODE -ne 0) { throw "pnpm install failed." }
+}
+finally {
+  Pop-Location
+}
+
+if (-not (Test-Path -LiteralPath $raw -PathType Leaf)) {
+  Write-Host "MISSING DATASET: $raw" -ForegroundColor Yellow
+}
+
+Write-Host "Setup complete." -ForegroundColor Green
+Write-Host "  Artifacts: .\scripts\train.ps1"
+Write-Host "  Dev API:   `$env:SPRING_PROFILES_ACTIVE='dev'; `$env:SERVER_PORT='8080'; cd backend; mvn spring-boot:run"
+Write-Host "  Demo API:  `$env:SPRING_PROFILES_ACTIVE='demo'; `$env:SERVER_PORT='8091'; cd backend; mvn spring-boot:run"
+Write-Host "  Web:       cd web; corepack pnpm dev  # http://localhost:3000"

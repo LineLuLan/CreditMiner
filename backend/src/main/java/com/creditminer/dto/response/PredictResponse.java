@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Response for {@code POST /api/predict}.
  *
- * <p>See {@code docs/BE_Handoff.md §3.10} for the contract.</p>
+ * <p>See {@code docs/BE_Handoff.md \u00a73.10} for the contract.</p>
  */
 @Data
 @Builder
@@ -19,13 +19,13 @@ import java.util.List;
 public class PredictResponse {
 
     /** Probability in {@code [0, 1]}. */
-    private double churnProb;
+    private double defaultProb;
 
-    /** {@code "Existing"} or {@code "Attrited"}. */
+    /** {@code "No"} or {@code "Yes"}. */
     private String label;
 
-    /** Composite risk score in {@code [0, 1]}. */
-    private double riskScore;
+    /** Deterministic Phase 3 tier: {@code Low}, {@code Medium}, or {@code High}. */
+    private String riskTier;
 
     private int cluster;
 
@@ -33,9 +33,12 @@ public class PredictResponse {
 
     private List<FeatureContribution> topFeatures;
 
+    /** Method behind the global feature ranking; not a per-client attribution. */
+    private String importanceMethod;
+
     private String recommendation;
 
-    /** Identifier of the model used (e.g. {@code "RandomForest_v1"}). */
+    /** Actual model-file stem (e.g. {@code "RANDOMFOREST_COST"}). */
     private String modelUsed;
 
     @Data

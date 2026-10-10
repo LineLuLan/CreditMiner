@@ -1,81 +1,254 @@
 {
   "model" : "RandomForest",
-  "metric" : "MeanDecreaseImpurity",
+  "variant" : "cost",
+  "metric" : "PermutationImportance",
+  "method" : "mean ROC AUC drop over 5 column shuffles on the 5,993-row holdout, seed 42; impurity fields from Weka for reference",
+  "aucDropStdDefinition" : "population standard deviation across the five AUC drops",
+  "baseline" : {
+    "f1Default" : 0.5332842956969474,
+    "rocAuc" : 0.7773025100663462
+  },
   "ranking" : [ {
-    "name" : "Total_Trans_Amt",
-    "importance" : 3242.0
+    "name" : "PAY_1",
+    "aucDrop" : 0.023521833120517165,
+    "aucDropStd" : 9.726944598489418E-4,
+    "f1Drop" : 0.05002686431383878,
+    "impurityAvgPerSplit" : 0.315353067520703,
+    "impuritySplitCount" : 3847.0,
+    "importance" : 0.4365961079214716
   }, {
-    "name" : "Customer_Age",
-    "importance" : 2677.0
+    "name" : "RISK_TIER",
+    "aucDrop" : 0.006693073959487661,
+    "aucDropStd" : 0.0028909843953214523,
+    "f1Drop" : -0.0014159962513621061,
+    "impurityAvgPerSplit" : 0.15238395438122082,
+    "impuritySplitCount" : 497.0,
+    "importance" : 0.12423224098949892
   }, {
-    "name" : "Total_Trans_Ct",
-    "importance" : 2532.0
+    "name" : "MONTHS_DELAYED",
+    "aucDrop" : 0.005881221800252701,
+    "aucDropStd" : 0.0012099461544280762,
+    "f1Drop" : 0.01458259552776473,
+    "impurityAvgPerSplit" : 0.19138015591135737,
+    "impuritySplitCount" : 1354.0,
+    "importance" : 0.10916319891639399
   }, {
-    "name" : "Total_Amt_Chng_Q4_Q1",
-    "importance" : 2475.0
+    "name" : "MAX_DELAY",
+    "aucDrop" : 0.0041256749275503605,
+    "aucDropStd" : 0.0013614536839233148,
+    "f1Drop" : 0.002498396435186545,
+    "impurityAvgPerSplit" : 0.20232919601002836,
+    "impuritySplitCount" : 1459.0,
+    "importance" : 0.07657794384853978
   }, {
-    "name" : "Spending_Intensity",
-    "importance" : 2339.0
+    "name" : "LIMIT_BAL",
+    "aucDrop" : 0.002827416011978423,
+    "aucDropStd" : 0.0010272725987866952,
+    "f1Drop" : -0.0017238695938819326,
+    "impurityAvgPerSplit" : 0.3948425848923891,
+    "impuritySplitCount" : 24755.0,
+    "importance" : 0.052480553704289154
   }, {
-    "name" : "Total_Ct_Chng_Q4_Q1",
-    "importance" : 2255.0
+    "name" : "PAY_AMT1",
+    "aucDrop" : 0.0027863555964489526,
+    "aucDropStd" : 0.0016205121387604323,
+    "f1Drop" : 0.003288783032166909,
+    "impurityAvgPerSplit" : 0.3021792358039955,
+    "impuritySplitCount" : 12657.0,
+    "importance" : 0.051718418477925
   }, {
-    "name" : "Total_Relationship_Count",
-    "importance" : 2227.0
+    "name" : "PAY_AMT2",
+    "aucDrop" : 0.002268858623866832,
+    "aucDropStd" : 8.985216293641278E-4,
+    "f1Drop" : -0.0036789399033159364,
+    "impurityAvgPerSplit" : 0.28608299510639074,
+    "impuritySplitCount" : 12080.0,
+    "importance" : 0.04211299517044382
   }, {
-    "name" : "Credit_Limit",
-    "importance" : 2058.0
+    "name" : "PAY_AMT3",
+    "aucDrop" : 0.0017472249073352542,
+    "aucDropStd" : 0.0016893857872838233,
+    "f1Drop" : 0.0019041079592214461,
+    "impurityAvgPerSplit" : 0.28218676360798456,
+    "impuritySplitCount" : 11557.0,
+    "importance" : 0.032430788463533394
   }, {
-    "name" : "Months_on_book",
-    "importance" : 2042.0
+    "name" : "BILL_AMT1",
+    "aucDrop" : 0.001316001668917588,
+    "aucDropStd" : 8.300825386787546E-4,
+    "f1Drop" : -0.001388420247144828,
+    "impurityAvgPerSplit" : 0.35586785621289946,
+    "impuritySplitCount" : 18789.0,
+    "importance" : 0.024426718943363856
   }, {
-    "name" : "Engagement_Score",
-    "importance" : 1765.0
+    "name" : "BILL_AMT3",
+    "aucDrop" : 0.0012161865619811473,
+    "aucDropStd" : 5.171853466248963E-4,
+    "f1Drop" : 2.5937706653078596E-4,
+    "impurityAvgPerSplit" : 0.33962638211017654,
+    "impuritySplitCount" : 15948.0,
+    "importance" : 0.022574019496984257
   }, {
-    "name" : "Education_Level",
-    "importance" : 1761.0
+    "name" : "SEX",
+    "aucDrop" : 7.582199202965211E-4,
+    "aucDropStd" : 6.687674884876494E-4,
+    "f1Drop" : -0.0036505205959056044,
+    "impurityAvgPerSplit" : 0.4120078406830158,
+    "impuritySplitCount" : 7103.0,
+    "importance" : 0.014073557296911525
   }, {
-    "name" : "Avg_Open_To_Buy",
-    "importance" : 1677.0
+    "name" : "MARRIAGE",
+    "aucDrop" : 6.197197937703569E-4,
+    "aucDropStd" : 8.054578745131009E-4,
+    "f1Drop" : 0.0017346168365021564,
+    "impurityAvgPerSplit" : 0.3814447750933774,
+    "impuritySplitCount" : 6899.0,
+    "importance" : 0.011502813091809146
   }, {
-    "name" : "Dependent_count",
-    "importance" : 1656.0
+    "name" : "PAY_AMT6",
+    "aucDrop" : 1.1371198114156212E-4,
+    "aucDropStd" : 3.5838846316840387E-4,
+    "f1Drop" : -0.0033664823491212693,
+    "impurityAvgPerSplit" : 0.2677797111751895,
+    "impuritySplitCount" : 11651.0,
+    "importance" : 0.0021106436788356163
   }, {
-    "name" : "Total_Revolving_Bal",
-    "importance" : 1655.0
+    "name" : "EDUCATION",
+    "aucDrop" : -8.931165550238874E-5,
+    "aucDropStd" : 0.0013074792628366611,
+    "f1Drop" : -0.0049013018035344745,
+    "impurityAvgPerSplit" : 0.3635314145804172,
+    "impuritySplitCount" : 8662.0,
+    "importance" : 0.0
   }, {
-    "name" : "Income_Category",
-    "importance" : 1520.0
+    "name" : "BILL_AMT5",
+    "aucDrop" : -1.6159156052530932E-4,
+    "aucDropStd" : 5.067280668083279E-4,
+    "f1Drop" : -0.004848995328222361,
+    "impurityAvgPerSplit" : 0.31138133510175586,
+    "impuritySplitCount" : 14647.0,
+    "importance" : 0.0
   }, {
-    "name" : "Months_Inactive_12_mon",
-    "importance" : 1482.0
+    "name" : "PAY_5",
+    "aucDrop" : -1.6673017215000917E-4,
+    "aucDropStd" : 5.730032375165491E-4,
+    "f1Drop" : 0.0012146926603907372,
+    "impurityAvgPerSplit" : 0.3418108921108882,
+    "impuritySplitCount" : 2932.0,
+    "importance" : 0.0
   }, {
-    "name" : "Contacts_Count_12_mon",
-    "importance" : 1470.0
+    "name" : "AGE",
+    "aucDrop" : -5.102899889827262E-4,
+    "aucDropStd" : 0.001534750701575101,
+    "f1Drop" : -0.002281567267107287,
+    "impurityAvgPerSplit" : 0.3897377877035235,
+    "impuritySplitCount" : 27238.0,
+    "importance" : 0.0
   }, {
-    "name" : "Customer_Value_Score",
-    "importance" : 1402.0
+    "name" : "PAY_2",
+    "aucDrop" : -6.974130160710024E-4,
+    "aucDropStd" : 7.93536662030102E-4,
+    "f1Drop" : 0.004154058172831032,
+    "impurityAvgPerSplit" : 0.3497542538294654,
+    "impuritySplitCount" : 2818.0,
+    "importance" : 0.0
   }, {
-    "name" : "Risk_Score",
-    "importance" : 1284.0
+    "name" : "PAY_4",
+    "aucDrop" : -8.047421305718671E-4,
+    "aucDropStd" : 2.938856626342303E-4,
+    "f1Drop" : 0.0012961497889541595,
+    "impurityAvgPerSplit" : 0.3578475298520113,
+    "impuritySplitCount" : 3018.0,
+    "importance" : 0.0
   }, {
-    "name" : "Avg_Utilization_Ratio",
-    "importance" : 985.0
+    "name" : "PAY_AMT5",
+    "aucDrop" : -9.190358413313504E-4,
+    "aucDropStd" : 8.478810138697724E-4,
+    "f1Drop" : -0.0011119723562254213,
+    "impurityAvgPerSplit" : 0.2711317508895388,
+    "impuritySplitCount" : 10889.0,
+    "importance" : 0.0
   }, {
-    "name" : "Marital_Status",
-    "importance" : 876.0
+    "name" : "PAY_AMT4",
+    "aucDrop" : -9.696139997757535E-4,
+    "aucDropStd" : 0.0015641802668904291,
+    "f1Drop" : -0.0017408286722347954,
+    "impurityAvgPerSplit" : 0.27645784405625495,
+    "impuritySplitCount" : 11181.0,
+    "importance" : 0.0
   }, {
-    "name" : "Utilization_Score",
-    "importance" : 739.0
+    "name" : "UTILIZATION_1",
+    "aucDrop" : -9.832038500159346E-4,
+    "aucDropStd" : 7.980354352418524E-4,
+    "f1Drop" : -1.2612214655607356E-4,
+    "impurityAvgPerSplit" : 0.26372409395814056,
+    "impuritySplitCount" : 14254.0,
+    "importance" : 0.0
   }, {
-    "name" : "Customer_Tier",
-    "importance" : 612.0
+    "name" : "PAY_3",
+    "aucDrop" : -0.001165301379571848,
+    "aucDropStd" : 3.968455096124679E-4,
+    "f1Drop" : -0.0041620722600399064,
+    "impurityAvgPerSplit" : 0.35189563975937127,
+    "impuritySplitCount" : 2861.0,
+    "importance" : 0.0
   }, {
-    "name" : "Gender",
-    "importance" : 606.0
+    "name" : "PAY_6",
+    "aucDrop" : -0.001444870938436571,
+    "aucDropStd" : 5.170008732359006E-4,
+    "f1Drop" : 5.806764498028638E-4,
+    "impurityAvgPerSplit" : 0.35253274366030035,
+    "impuritySplitCount" : 3360.0,
+    "importance" : 0.0
   }, {
-    "name" : "Card_Category",
-    "importance" : 196.0
+    "name" : "BILL_TREND",
+    "aucDrop" : -0.001640752228105291,
+    "aucDropStd" : 8.499208139480172E-4,
+    "f1Drop" : -0.0014143597119378182,
+    "impurityAvgPerSplit" : 0.2499082467741446,
+    "impuritySplitCount" : 13149.0,
+    "importance" : 0.0
+  }, {
+    "name" : "BILL_AMT6",
+    "aucDrop" : -0.0018010187378342036,
+    "aucDropStd" : 6.022939851592547E-4,
+    "f1Drop" : -0.003591655955753037,
+    "impurityAvgPerSplit" : 0.30591772334244893,
+    "impuritySplitCount" : 13485.0,
+    "importance" : 0.0
+  }, {
+    "name" : "PAY_RATIO",
+    "aucDrop" : -0.001992714806085316,
+    "aucDropStd" : 0.0013652110129496432,
+    "f1Drop" : -0.0033381733352719546,
+    "impurityAvgPerSplit" : 0.2488801258199567,
+    "impuritySplitCount" : 13507.0,
+    "importance" : 0.0
+  }, {
+    "name" : "AVG_UTILIZATION",
+    "aucDrop" : -0.0020489971466162602,
+    "aucDropStd" : 4.0743218868566984E-4,
+    "f1Drop" : -0.008932277933429166,
+    "impurityAvgPerSplit" : 0.2592330035164218,
+    "impuritySplitCount" : 14688.0,
+    "importance" : 0.0
+  }, {
+    "name" : "BILL_AMT4",
+    "aucDrop" : -0.0027389123142788074,
+    "aucDropStd" : 0.0012228565617611177,
+    "f1Drop" : -0.005346407925071151,
+    "impurityAvgPerSplit" : 0.32287045380633345,
+    "impuritySplitCount" : 15105.0,
+    "importance" : 0.0
+  }, {
+    "name" : "BILL_AMT2",
+    "aucDrop" : -0.0029988000210716013,
+    "aucDropStd" : 7.908470662257073E-4,
+    "f1Drop" : -0.0031357454673940134,
+    "impurityAvgPerSplit" : 0.34479460398129214,
+    "impuritySplitCount" : 17134.0,
+    "importance" : 0.0
   } ],
-  "generatedAt" : "2026-05-08T16:18:08.837302800Z"
+  "generatedAt" : "2026-10-10T16:07:53.535989700Z",
+  "runtimeMs" : 83177
 }

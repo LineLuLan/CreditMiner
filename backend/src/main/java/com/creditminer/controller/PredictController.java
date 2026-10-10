@@ -13,25 +13,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * {@code POST /api/predict} — single-customer churn prediction.
- *
- * <p>The most demo-critical endpoint. See {@code docs/BE_Handoff.md §3.10}.</p>
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/predict")
 @RequiredArgsConstructor
-@Tag(name = "Predict", description = "Single-customer churn prediction")
+@Tag(name = "Predict", description = "Single-client payment-default prediction")
 public class PredictController {
-
     private final ClassificationService classificationService;
 
     @PostMapping
-    @Operation(summary = "Predict churn for a single customer")
+    @Operation(summary = "Predict whether a client will default next month")
     public PredictResponse predict(@Valid @RequestBody PredictRequest request) {
-        log.info("Predict request: age={}, gender={}, util={}",
-                request.getCustomerAge(), request.getGender(), request.getAvgUtilizationRatio());
+        log.info("Predict request: age={}, sex={}, limit={}",
+                request.getAge(), request.getSex(), request.getLimitBal());
         return classificationService.predict(request);
     }
 }
