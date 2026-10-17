@@ -37,8 +37,9 @@ public class EdaController {
     public DistributionResponse distribution(
             @RequestParam("col") String column,
             @RequestParam(value = "bins", required = false) Integer bins,
-            @RequestParam(value = "split", required = false) String split) {
-        return edaService.distribution(column, bins, split);
+            @RequestParam(value = "split", required = false) String split,
+            @RequestParam(value = "binning", required = false) String binning) {
+        return edaService.distribution(column, bins, split, binning);
     }
 
     @GetMapping("/correlation")

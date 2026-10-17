@@ -81,6 +81,18 @@ export function selectSequenceStories<T>(artifact: {
   };
 }
 
+/** Preserve all API patterns; legacy lists are combined without duplicate exact patterns. */
+export function selectAllSequencePatterns<T extends { pattern: string }>(artifact: {
+  patterns?: T[];
+  topDefaultPatterns: T[];
+  topNonDefaultPatterns: T[];
+}): T[] {
+  return artifact.patterns ?? Array.from(new Map(
+    [...artifact.topDefaultPatterns, ...artifact.topNonDefaultPatterns]
+      .map((pattern) => [pattern.pattern, pattern]),
+  ).values());
+}
+
 export function deduplicatePatterns<
   T extends PatternInput & { ratio: number; groupPrevalenceRatio?: number },
 >(patterns: T[], limit: number): T[] {

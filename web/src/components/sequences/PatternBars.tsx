@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CHART_SEMANTIC } from "@/lib/chart-theme";
-import { formatCount, formatPct } from "@/lib/format";
+import { formatCount, formatDecimal, formatPct } from "@/lib/format";
 import { humanisePattern } from "@/lib/sequence-format";
 import type { SequencePattern } from "@/types/api.types";
 
@@ -18,8 +18,14 @@ export function PatternBars({ patterns }: { patterns: SequencePattern[] }) {
         {rows.length ? (
           rows.map((pattern, index) => (
             <div key={`${pattern.pattern}-${index}`} className="min-w-0 space-y-2">
-              <p className="break-words text-sm font-medium leading-6">
+              <p className="break-words text-sm font-semibold leading-6">
+                {pattern.familyStory || humanisePattern(pattern).text}
+              </p>
+              <p className="break-words text-xs leading-5 text-muted-foreground">
                 {humanisePattern(pattern).text}
+              </p>
+              <p className="text-sm tabular-nums">
+                {formatDecimal(pattern.groupPrevalenceRatio ?? pattern.ratio, 1)}x more common among defaulters
               </p>
               <SupportBar
                 label="Default"

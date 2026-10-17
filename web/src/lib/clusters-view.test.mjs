@@ -14,21 +14,22 @@ const { outputText } = ts.transpileModule(source, {
 });
 const loaded = { exports: {} };
 new Function("module", "exports", outputText)(loaded, loaded.exports);
-const { clusterInsight, pcaView, riskAboveBaseline, safeRatio } = loaded.exports;
+const { clusterInsight, pcaView, riskAboveBaseline, safeRatio, sortPersonas, lowestRiskPersonaId, samplePcaPersonas } = loaded.exports;
 
 test("hero selects concentrated risk and computes shares from captured cluster evidence", () => {
   const clusters = JSON.parse(
     readFileSync(new URL("../../.api-samples/clusters.json", import.meta.url), "utf8"),
   );
   const result = clusterInsight(clusters);
-  assert.equal(result.cluster.clusterId, 0);
-  assert.equal(result.clientShare, 5516 / 29965);
-  assert.equal(result.defaultShare, clusters[0].shareOfDefaults);
-  const legacy = clusters.map(({ shareOfClients, shareOfDefaults, ...cluster }) => cluster);
-  assert.equal(
-    clusterInsight(legacy).defaultShare,
-    (5516 * 0.5348) / (5516 * 0.5348 + 24449 * 0.1505),
-  );
+  const above = clusters.filter((cluster) => cluster.defaultRateMultiplier > 1);
+  assert.deepEqual(result.clusters.map((cluster) => cluster.clusterId), [0, 2]);
+  assert.equal(result.names, above.map((cluster) => cluster.displayName).join(" and "));
+  assert.equal(result.clientShare, above.reduce((sum, cluster) => sum + cluster.shareOfClients, 0));
+  assert.equal(result.defaultShare, above.reduce((sum, cluster) => sum + cluster.shareOfDefaults, 0));
+  assert.deepEqual(sortPersonas(clusters).map((cluster) => cluster.clusterId), [0, 2, 1, 3]);
+  assert.equal(lowestRiskPersonaId(clusters), 3);
+  const missing = clusters.map(({ shareOfDefaults, ...cluster }) => cluster);
+  assert.equal(clusterInsight(missing).defaultShare, null);
 });
 
 test("PCA metadata overrides local percentile bounds and counts only in central view", () => {
@@ -57,13 +58,22 @@ test("zero defaults, empty data, and invalid inputs do not invent shares or mult
     ]),
     null,
   );
-  assert.equal(clusterInsight([{ size: 10, defaultRate: 0 }]).defaultShare, null);
+  assert.equal(clusterInsight([{ size: 10, defaultRate: 0 }]), null);
   for (const baseline of [undefined, null, NaN, Infinity, 0])
     assert.equal(safeRatio(0.5, baseline), null);
   assert.equal(safeRatio(0, 0.2), 0);
   assert.equal(riskAboveBaseline(0.2, 0.2), false);
   assert.equal(riskAboveBaseline(0.3, 0.2), true);
   assert.equal(riskAboveBaseline(0.3, NaN), false);
+});
+
+test("PCA samples every named persona at most 150 times without changing bounds", () => {
+  const clusters = [0, 1, 2, 3].map((clusterId) => ({ clusterId }));
+  const points = clusters.flatMap(({ clusterId }) => Array.from({ length: 301 }, (_, x) => ({ x, y: x, clusterId })));
+  const groups = samplePcaPersonas(points, clusters);
+  assert.deepEqual(groups.map(({ id, sample }) => [id, sample.length]), [[0, 150], [1, 150], [2, 150], [3, 150]]);
+  assert.equal(samplePcaPersonas([], clusters).length, 4);
+  assert.equal(points.length, 1204);
 });
 
 test("PCA bounds use all points, count the union outside either axis, and restore full range", () => {

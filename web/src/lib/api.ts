@@ -21,6 +21,7 @@ import {
   PredictRequestSchema,
   PredictResponseSchema,
   RuleSchema,
+  RuleFamiliesResponseSchema,
   SequenceArtifactSchema,
 } from "@/lib/schemas";
 import type {
@@ -84,9 +85,9 @@ export const api = {
       .get<EdaDescribe>("/eda/describe")
       .then((response) => EdaDescribeSchema.parse(response.data)),
 
-  edaDistribution: (col: string, bins = 20, split?: "Default") =>
+  edaDistribution: (col: string, bins = 20, split?: "Default", binning: "quantile" | "equal-width" = "equal-width") =>
     client
-      .get<EdaDistribution>("/eda/distribution", { params: { col, bins, split } })
+      .get<EdaDistribution>("/eda/distribution", { params: { col, bins, split, binning } })
       .then((response) => EdaDistributionSchema.parse(response.data)),
 
   edaCorrelation: () =>
@@ -132,6 +133,11 @@ export const api = {
     client
       .get<Rule[]>("/rules", { params: { minLift, category } })
       .then((response) => z.array(RuleSchema).parse(response.data)),
+
+  ruleFamilies: (category: "default" | "nonDefault") =>
+    client
+      .get("/rules/families", { params: { category } })
+      .then((response) => RuleFamiliesResponseSchema.parse(response.data)),
 
   predict: (body: PredictRequest) => {
     const request = PredictRequestSchema.parse(body);

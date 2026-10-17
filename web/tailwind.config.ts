@@ -21,6 +21,7 @@ const config: Config = {
         "chart-4": "hsl(var(--chart-4))",
         "chart-5": "hsl(var(--chart-5))",
         "chart-neutral": "hsl(var(--chart-neutral))",
+        "chart-neutral-2": "hsl(var(--chart-neutral-2))",
         "chart-baseline": "hsl(var(--chart-baseline))",
         danger: {
           DEFAULT: "hsl(var(--danger))",

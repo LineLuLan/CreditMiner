@@ -1,6 +1,7 @@
 package com.creditminer.controller;
 
 import com.creditminer.dto.response.RuleResponse;
+import com.creditminer.dto.response.RuleFamilyResponse;
 import com.creditminer.service.RuleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +19,12 @@ import java.util.List;
 @Tag(name = "Rules", description = "Association rules")
 public class RuleController {
     private final RuleService service;
+
+    @GetMapping("/families")
+    @Operation(summary = "Rule families with singleton bases and confidence uplift")
+    public RuleFamilyResponse families(@RequestParam(value = "category", defaultValue = "default") String category) {
+        return service.families(category);
+    }
 
     @GetMapping
     @Operation(summary = "Association rules sorted by lift desc")

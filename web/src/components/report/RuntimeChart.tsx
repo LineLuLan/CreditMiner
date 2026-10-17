@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatInt, formatPct } from "@/lib/utils";
 import type { EvaluationVariant } from "@/types/api.types";
 import { EmptyEvidence, ReportDetails, ReportFigure, ReportTable } from "./ReportPrimitives";
+import { modelLabel } from "./model-labels";
 
 export function RuntimeAnalysis({
   variants,
@@ -42,10 +43,10 @@ export function RuntimeAnalysis({
       buildTimeMs: variant.buildTimeMs ?? variant.trainTimeMs ?? 0,
       testF1: variant.test?.f1Default ?? 0,
       predictMicrosPerRecord: variant.predictMicrosPerRecord ?? 0,
-      label: `${variant.algo ?? "Model"} (${variant.variant ?? "variant"})`,
+      label: modelLabel(variant.algo, variant.variant),
       bestLabel:
         variant.algo === best?.algo && variant.variant === best?.variant
-          ? `Best: ${variant.algo} (${variant.variant})`
+          ? `Best: ${modelLabel(variant.algo, variant.variant)}`
           : "",
     }));
 
@@ -70,7 +71,6 @@ export function RuntimeAnalysis({
                       type="number"
                       dataKey="buildTimeMs"
                       name="Build time"
-                      unit=" ms"
                       scale="log"
                       domain={["dataMin", "dataMax"]}
                       tick={CHART_AXIS_TICK}
@@ -124,23 +124,21 @@ export function RuntimeAnalysis({
 export function RuntimeTable({ variants, id, cvFolds }: { variants: EvaluationVariant[]; id: string; cvFolds?: number }) {
   return (
     <ReportTable id={id} caption={`Build and prediction runtime for ${variants.length} variants.`}>
-      <table className="w-full min-w-[820px] text-xs">
+      <table className="w-full table-fixed text-xs">
         <thead>
           <tr className="border-b bg-muted/30">
-            <th className="p-3 text-left">Algorithm</th>
-            <th className="p-3 text-left">Variant</th>
+            <th className="w-[28%] p-3 text-left">Model</th>
             <th className="p-3 text-right">Build</th>
             <th className="p-3 text-right">{cvFolds == null ? "CV" : `${formatInt(cvFolds)}-fold CV`}</th>
-            <th className="p-3 text-right">Predict holdout</th>
+            <th className="p-3 text-right">Predict</th>
             <th className="p-3 text-right">Rows</th>
-            <th className="p-3 text-right">Microseconds / row</th>
+            <th className="p-3 text-right">us / row</th>
           </tr>
         </thead>
         <tbody>
           {variants.map((variant) => (
             <tr key={`${variant.algo}-${variant.variant}`} className="border-b last:border-0">
-              <td className="p-3 font-semibold">{variant.algo ?? "n/a"}</td>
-              <td className="p-3">{variant.variant ?? "n/a"}</td>
+              <td className="break-words p-3 font-semibold">{modelLabel(variant.algo, variant.variant)}</td>
               <td className="p-3 text-right tabular-nums">
                 {formatMaybeMs(variant.buildTimeMs ?? variant.trainTimeMs)}
               </td>
@@ -160,6 +158,7 @@ export function RuntimeTable({ variants, id, cvFolds }: { variants: EvaluationVa
           ))}
         </tbody>
       </table>
+      <p className="p-2 text-xs text-muted-foreground">CV = cross-validation; Predict = total holdout prediction time; us / row = microseconds per holdout row.</p>
     </ReportTable>
   );
 }
@@ -174,6 +173,6 @@ function compactTime(value: number): string {
 
 function formatRuntimeValue(value: number, name: string): string {
   if (name === "Holdout F1") return formatPct(value);
-  if (name === "Build time") return `${formatInt(value)} ms`;
+  if (name === "Build time") return compactTime(value);
   return value.toFixed(2);
 }

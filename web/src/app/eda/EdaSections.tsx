@@ -13,32 +13,30 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOverview } from "@/hooks/useOverview";
-import { hasCompleteClassSeries, regroupDistribution, type BinningMode } from "./distribution-bins";
+import { hasCompleteClassSeries } from "./distribution-bins";
 import { useEdaDistribution } from "@/hooks/useEda";
 import { EDA_FIELD_LABELS, EDA_FIELD_UNITS, EDA_NUMERIC_COLS } from "@/lib/constants";
-import { formatDecimal, formatInt, formatNt, formatRatio } from "@/lib/format";
+import { formatDecimal, formatNt, formatRatio } from "@/lib/format";
 import type { EdaDistributionSeries, EdaDistributionStats } from "@/types/api.types";
 
 export function DistributionPanel() {
   const [col, setCol] = React.useState<string>(EDA_NUMERIC_COLS[0]);
-  const [mode, setMode] = React.useState<BinningMode>(EDA_FIELD_UNITS[EDA_NUMERIC_COLS[0]] === "NT$" ? "quantile" : "equal");
+  const [mode, setMode] = React.useState<"quantile" | "equal-width">(EDA_FIELD_UNITS[EDA_NUMERIC_COLS[0]] === "NT$" ? "quantile" : "equal-width");
   const [splitByDefault, setSplitByDefault] = React.useState(true);
-  const initial = useEdaDistribution(col, 20, "Default");
-  const missingEdges = initial.data?.type === "numeric" && initial.data.binEdges.length !== initial.data.counts.length + 1;
-  const initialGroups = initial.data ? regroupDistribution(initial.data, mode) : undefined;
-  const quantileUnavailable = mode === "quantile" && initialGroups?.type === "numeric" &&
-    initialGroups.counts.length - (initialGroups.tail ? 1 : 0) < 10;
-  const needsFallback = missingEdges || quantileUnavailable;
-  const fallback = useEdaDistribution(needsFallback ? col : null, 10, "Default");
-  const { data, isLoading, error } = needsFallback ? fallback : initial;
+  // Intent: render server-computed bins without approximating quantiles locally.
+  // Status: API owns edges and notes. Next: preserve request/cache parity.
+  // Blockers: none. Confidence: captured-response and request forwarding tests.
+  const { data, isLoading, error } = useEdaDistribution(col, 10, "Default", mode);
   const { data: overview } = useOverview();
   const colId = React.useId();
   const binsId = React.useId();
   const splitId = React.useId();
-  const distribution = data ? regroupDistribution(data, needsFallback ? "equal" : mode) : undefined;
+  const distribution = data;
   const hasObservations = distribution?.counts.some((count) => count > 0) ?? false;
   const hasUsableSplitSeries = !!data && hasCompleteClassSeries(data.counts, data.series);
   const splitSeries = hasUsableSplitSeries ? (data?.series ?? null) : null;
+  const defaultMedian = col === "LIMIT_BAL" ? splitSeries?.find((item) => item.label === "Yes")?.stats?.median : undefined;
+  const currentMedian = col === "LIMIT_BAL" ? splitSeries?.find((item) => item.label === "No")?.stats?.median : undefined;
   const chartSeries = hasUsableSplitSeries ? distribution?.series?.map((item) => ({
     label: displayDefaultClass(item.label),
     counts: item.counts,
@@ -55,7 +53,7 @@ export function DistributionPanel() {
             <Label htmlFor={colId} className="text-xs text-muted-foreground">
               Column
             </Label>
-            <Select value={col} onValueChange={(next) => { setCol(next); setMode(EDA_FIELD_UNITS[next] === "NT$" ? "quantile" : "equal"); }}>
+            <Select value={col} onValueChange={(next) => { setCol(next); setMode(EDA_FIELD_UNITS[next] === "NT$" ? "quantile" : "equal-width"); }}>
               <SelectTrigger id={colId} className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -72,12 +70,11 @@ export function DistributionPanel() {
             <Label htmlFor={binsId} className="text-xs text-muted-foreground">
               Binning
             </Label>
-            <Select value={mode} onValueChange={(value) => setMode(value as BinningMode)}>
+            <Select value={mode} onValueChange={(value) => setMode(value as "quantile" | "equal-width")}>
               <SelectTrigger id={binsId}><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="equal">Equal width</SelectItem>
+                <SelectItem value="equal-width">Equal width</SelectItem>
                 <SelectItem value="quantile">Quantile (10)</SelectItem>
-                <SelectItem value="log">Log</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -120,6 +117,11 @@ export function DistributionPanel() {
           </div>
         ) : distribution ? (
           <div className="space-y-4">
+            {defaultMedian != null && currentMedian != null ? (
+              <p className="rounded-md border-l-4 border-primary bg-muted/30 p-3 text-sm font-medium">
+                Defaulters&apos; median credit limit is {formatNt(defaultMedian)} vs {formatNt(currentMedian)} for non-defaulters.
+              </p>
+            ) : null}
             <div role="img" aria-label={`Client distribution for ${EDA_FIELD_LABELS[col] ?? col}`}>
               <HistogramChart
                 binEdges={distribution.binEdges}
@@ -128,18 +130,17 @@ export function DistributionPanel() {
                 series={chartSeries}
                 column={col}
                 baseline={overview?.defaultRate}
-                tailStart={distribution.tail?.start}
                 showSplit={splitByDefault}
                 height={300}
               />
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
               {EDA_FIELD_UNITS[col] === "NT$" ? "Amounts in NT$. " : EDA_FIELD_UNITS[col] === "years" ? "Age in years. " : ""}
-              {distribution.approximate ? `Approximate ${mode === "log" ? "signed log" : "quantile"} groups from whole source bins; ${formatInt(distribution.counts.length)} bins shown. ` : ""}
-              {distribution.tail ? `${formatInt(distribution.tail.count)} clients above ${formatMetric(distribution.tail.start, col)}; tail bins below 0.1% of clients are merged. ` : ""}
-              {needsFallback ? "Quantile boundaries cannot be recovered from these source bins; showing the requested 10 equal-width bins with sparse tails merged. " : ""}
               {hasUsableSplitSeries ? "Bars count clients; the line shows the default rate within each bin." : "Default rate per bin is unavailable without class counts."}
             </p>
+            {!!distribution.notes?.length && (
+              <p className="text-xs leading-5 text-muted-foreground">{distribution.notes.join(" ")}</p>
+            )}
             {splitByDefault && !hasUsableSplitSeries ? (
               <p className="text-xs text-muted-foreground">
                 Class split is unavailable, so the aggregate distribution is shown.

@@ -10,6 +10,7 @@ import { formatInt, formatPct } from "@/lib/utils";
 import type { EvaluationVariant, MiningReport } from "@/types/api.types";
 import { ReportDetails, ReportSection } from "./ReportPrimitives";
 import { DEFAULT_SELECTION_RULE } from "./report-copy";
+import { modelLabel } from "./model-labels";
 
 export function findBestVariant(report: MiningReport): EvaluationVariant | undefined {
   const selected = report.classification.evaluation?.bestVariant;
@@ -35,26 +36,26 @@ export function findDeployedVariant(report: MiningReport): EvaluationVariant | u
   );
 }
 
-export function modelDeploymentStatement(report: MiningReport): string {
+export function modelDeploymentStatement(report: MiningReport, includeSelectionRule = true): string {
   const best = findBestVariant(report);
   const deployed = findDeployedVariant(report);
-  const bestName = `${best?.algo ?? report.classification.bestModel} (${best?.variant ?? report.classification.bestVariant})`;
+  const bestName = modelLabel(best?.algo ?? report.classification.bestModel, best?.variant ?? report.classification.bestVariant);
   const selectionRule = report.classification.evaluation?.bestVariant?.selectionRule ?? DEFAULT_SELECTION_RULE;
-  const deployedName = modelName(
+  const deployedName = modelLabel(
     deployed?.algo ?? report.classification.bestModel,
     deployed?.variant ?? "canonical",
   );
-  return `${bestName} is the selected model under the rule: ${selectionRule}. The prediction API uses ${deployedName}.`;
+  return `${bestName} is the selected model${includeSelectionRule ? ` under the rule: ${selectionRule}` : ""}. The prediction API uses ${deployedName}.`;
 }
 
 export function ExecutiveSummary({ report }: { report: MiningReport }) {
-  const { getFact } = useFacts({ report });
   const { data: enrichedClusters } = useClusters();
+  const personas = enrichedClusters ?? report.clustering.clusters;
+  const { getFact } = useFacts({ report, clusters: personas });
   const defaultRate = getFact("default-rate").value ?? report.dataset.defaultRate;
   const totalClients = getFact("total-clients").value ?? report.dataset.totalRows;
   const defaultCount = getFact("default-count").value ?? report.dataset.defaultCustomers;
-  const highestRisk = report.clustering.clusters
-    .map((cluster) => ({ ...cluster, ...(enrichedClusters?.find((item) => item.clusterId === cluster.clusterId) ?? {}) }))
+  const highestRisk = [...personas]
     .sort((a, b) =>
       (getFact("default-rate-cluster-" + b.clusterId).value ?? b.defaultRate) -
       (getFact("default-rate-cluster-" + a.clusterId).value ?? a.defaultRate),
@@ -66,7 +67,7 @@ export function ExecutiveSummary({ report }: { report: MiningReport }) {
       <ReportSection
         id="section-2"
         title="2 Executive summary"
-        takeaway={`${formatPct(defaultRate)} of clients defaulted the next month. Behavior, segment, and model results show where to review risk.`}
+        takeaway={`${formatPct(defaultRate)} of clients defaulted the next month. Behavior, persona, and model results show where to review risk.`}
       >
         <Card className="break-inside-avoid overflow-hidden border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card">
           <CardContent className="space-y-5 p-5">
@@ -87,15 +88,15 @@ export function ExecutiveSummary({ report }: { report: MiningReport }) {
               />
               <SummaryMetric
                 icon={Boxes}
-                label="Highest-default segment"
+                label="Highest-default persona"
                 value={highestRisk ? formatPct(getFact("default-rate-cluster-" + highestRisk.clusterId).value ?? highestRisk.defaultRate) : "n/a"}
-                note={highestRisk?.displayName ?? highestRisk?.personaName ?? "No segment"}
+                note={highestRisk ? `${highestRisk.displayName ?? highestRisk.personaName} - ${formatInt(personas.length)} personas` : "No persona"}
               />
               <SummaryMetric
                 icon={TrendingUp}
                 label="Top rule lift"
-                value={`${report.rules.maxLift.toFixed(2)}x`}
-                note={`${formatInt(report.rules.totalRules)} rules`}
+                value={`${(report.summary?.topRuleLift ?? report.rules.maxLift).toFixed(2)}x`}
+                note={`${formatInt(report.summary?.ruleCount ?? report.rules.totalRules)} rules${report.summary?.familyCount == null ? "" : ` in ${formatInt(report.summary.familyCount)} families`}`}
               />
               <SummaryMetric
                 icon={AlertTriangle}
@@ -111,7 +112,7 @@ export function ExecutiveSummary({ report }: { report: MiningReport }) {
                 icon={Users}
                 label="Clients"
                 value={formatInt(totalClients)}
-                note={`${report.clustering.bestK} segments`}
+                note={`${report.clustering.bestK} personas`}
               />
             </div>
 
@@ -146,8 +147,8 @@ function ModelScoreTile({ variant, fallback, f1, rocAuc }: {
     <Card className="break-inside-avoid border-primary/30 shadow-sm">
       <CardContent className="p-4">
         <p className="text-xs font-medium text-muted-foreground">Best model</p>
-        <p className="mt-1 truncate text-lg font-bold" title={variant?.algo ?? fallback}>
-          {variant?.algo ?? fallback}
+        <p className="mt-1 text-lg font-bold" title={modelLabel(variant?.algo ?? fallback, variant?.variant)}>
+          {modelLabel(variant?.algo ?? fallback, variant?.variant)}
         </p>
         <div className="mt-3 flex items-center justify-between gap-2">
           {scores.map(([label, score]) => (
@@ -188,7 +189,7 @@ function ScoreRing({ label, score }: { label: string; score?: number | null }) {
           />
         </svg>
         <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums">
-          {score == null ? "n/a" : Math.round(score * 100)}
+          {score == null ? "n/a" : formatPct(score, 1)}
         </span>
       </div>
       <p className="mt-1 truncate text-[10px] font-medium text-muted-foreground">{label}</p>
@@ -221,10 +222,6 @@ function SummaryMetric({
       </CardContent>
     </Card>
   );
-}
-
-function modelName(model: string, variant: string): string {
-  return `${model} (${variant === "cost" ? "cost-sensitive" : variant})`;
 }
 
 function formatScore(value?: number | null): string {

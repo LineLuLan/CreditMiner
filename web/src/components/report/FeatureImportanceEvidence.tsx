@@ -2,6 +2,7 @@
 
 import { useFacts } from "@/hooks/useFacts";
 import { formatPct } from "@/lib/utils";
+import { featureLabel } from "@/lib/constants";
 import type { MiningReport } from "@/types/api.types";
 
 export function FeatureImportanceEvidence({ report }: { report: MiningReport }) {
@@ -24,13 +25,13 @@ export function FeatureImportanceEvidence({ report }: { report: MiningReport }) 
     <section className="min-w-0 max-w-full space-y-3" aria-label="Feature importance">
       <h3 className="report-heading text-lg font-semibold">Feature importance</h3>
       <p className="text-sm leading-6 text-muted-foreground">
-        permutation importance: mean holdout AUC drop over 5 shuffles.
+        Permutation importance: mean holdout AUC drop over 5 shuffles.
         Normalized share is relative importance; it is not the raw AUC drop.
       </p>
       <figure aria-label="Permutation feature importance ranking" className="space-y-2">
-        {rows.map((row) => <div key={row.name} className="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-center gap-3 text-xs">
-          <span className="break-words">{row.name}</span>
-          <div className="h-3 overflow-hidden rounded bg-muted" title={`${row.name}: ${formatPct(row.share ?? 0)} normalized share`}>
+        {rows.map((row) => <div key={row.name} className="grid min-w-0 grid-cols-[190px_minmax(0,1fr)] items-center gap-3 text-[11px]">
+          <span className="whitespace-nowrap">{featureLabel(row.name)}</span>
+          <div className="h-3 overflow-hidden rounded bg-muted" title={`${featureLabel(row.name)}: ${formatPct(row.share ?? 0)} normalized share`}>
             <div className="h-full bg-chart-neutral" style={{ width: `${Math.max(0, Math.min(1, row.share ?? 0)) * 100}%` }} />
           </div>
         </div>)}
@@ -46,7 +47,7 @@ export function FeatureImportanceEvidence({ report }: { report: MiningReport }) 
           <tbody>
             {rows.map((row) => (
               <tr key={row.name} className="border-b last:border-0">
-                <td className="break-words p-3 font-medium">{row.name}</td>
+                <td className="break-words p-3 font-medium">{featureLabel(row.name)}</td>
                 <td className="p-3 text-right tabular-nums">{row.aucDrop == null ? "n/a" : row.aucDrop.toFixed(4)}</td>
                 <td className="p-3 text-right tabular-nums">{row.share == null ? "n/a" : formatPct(row.share)}</td>
               </tr>

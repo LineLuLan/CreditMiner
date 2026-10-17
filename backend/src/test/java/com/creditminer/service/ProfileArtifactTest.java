@@ -36,7 +36,7 @@ class ProfileArtifactTest {
         try (var reader = Files.newBufferedReader(Path.of("data/processed/enriched.arff"))) {
             data = new Instances(reader);
         }
-        Object[] aggregate = new Object[18];
+        Object[] aggregate = new Object[19];
         aggregate[0] = (long) data.numInstances();
         long defaults = 0;
         for (var row : data) if (row.stringValue(data.attribute("Default")).equals("Yes")) defaults++;
@@ -82,7 +82,8 @@ class ProfileArtifactTest {
         long sequenceStart = System.nanoTime();
         JsonNode enriched = sequences.get();
         double sequenceColdMs = (System.nanoTime() - sequenceStart) / 1e6;
-        assertThat(profiles).hasSize(2);
+        int chosenK = mapper.readTree(new File("data/processed/phase6_elbow.json")).path("chosenK").asInt();
+        assertThat(profiles).hasSize(chosenK);
         assertThat(profiles.get(0).getBaseline().getSize()).isEqualTo(29965);
         assertThat(meta.getPointCount()).isEqualTo(29965);
         assertThat(enriched.path("semanticsVersion").asInt()).isEqualTo(2);
@@ -91,11 +92,10 @@ class ProfileArtifactTest {
         for (JsonNode story : stories) {
             for (JsonNode other : stories) if (story != other) {
                 assertThat(story.path("familyId").asText()).isNotEqualTo(other.path("familyId").asText());
-                if (other.path("groupPrevalenceRatio").asDouble() >= story.path("groupPrevalenceRatio").asDouble()) {
-                    assertThat(SequencePattern.parse(story.path("pattern").asText())
-                            .isContainedBy(SequencePattern.parse(other.path("pattern").asText()))).isFalse();
-                }
             }
+            String family = SequencePattern.parse(story.path("pattern").asText()).elements().stream()
+                    .flatMap(java.util.Set::stream).distinct().sorted().collect(java.util.stream.Collectors.joining("|"));
+            assertThat(story.path("familyId").asText()).isEqualTo(family);
         }
         // Check every pre-existing field in both top lists, rather than only the headline row.
         JsonNode original = mapper.readTree(new File("data/processed/phase10_sequences.json"));

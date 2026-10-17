@@ -5,6 +5,7 @@ export const ClusterSchema = z.object({
   clusterId: z.number().int(),
   personaName: z.string(),
   displayName: z.string().nullish(),
+  tagline: z.string().nullish(),
   size: z.number().int(),
   centroid: z.record(z.number()),
   avgRisk: z.number(),
@@ -13,10 +14,11 @@ export const ClusterSchema = z.object({
   shareOfClients: z.number().nullish(),
   shareOfDefaults: z.number().nullish(),
   defaultRateMultiplier: z.number().nullish(),
-  baseline: z.object({ size: z.number(), defaultRate: z.number(), centroid: z.record(z.number()) }).nullish(),
+  longestDelayMonths: z.number().nullish(),
+  baseline: z.object({ size: z.number(), defaultRate: z.number(), centroid: z.record(z.number()), longestDelayMonths: z.number().nullish() }).passthrough().nullish(),
   centroidDelta: z.record(z.number()).nullish(),
   traits: z.array(z.string()).nullish(),
-  evidence: z.object({ k: z.number(), silhouette: z.number(), method: z.string() }).nullish(),
+  evidence: z.object({ k: z.number(), silhouette: z.number(), method: z.string() }).passthrough().nullish(),
   baselineDelta: z.number().optional(),
   pcaExplainedVariance: z.union([z.number(), z.array(z.number()), z.record(z.number())]).optional(),
   zoomBounds: z
@@ -30,7 +32,7 @@ export const ClusterSchema = z.object({
     })
     .passthrough()
     .optional(),
-});
+}).passthrough();
 
 // ---------- Rules ----------
 export const RuleConditionSchema = z.object({
@@ -39,7 +41,8 @@ export const RuleConditionSchema = z.object({
   operator: z.string().optional(),
   value: z.union([z.string(), z.number()]),
   unit: z.string().optional(),
-});
+  text: z.string().optional(),
+}).passthrough();
 const RuleBaseSchema = z.object({
   ruleId: z.number(),
   lhs: z.string(),
@@ -53,14 +56,51 @@ const RuleBaseSchema = z.object({
   familyId: z.string().optional(),
   familyLabel: z.string().optional(),
   jointCount: z.number().int().nonnegative().optional(),
-  lhsCount: z.number().int().nonnegative().optional(),
+  lhsCount: z.number().int().nonnegative().nullish(),
   baseline: z.number().optional(),
-});
+}).passthrough();
 
 type RuleContract = z.infer<typeof RuleBaseSchema> & { familyMembers?: RuleContract[] };
 export const RuleSchema: z.ZodType<RuleContract> = RuleBaseSchema.extend({
   familyMembers: z.lazy(() => RuleSchema.array()).optional(),
 });
+
+// Intent: retain the API's base/modifier distinction, including synthetic families.
+// Status: wave 6A contract; next: keep captured-sample parity. Blockers: none.
+// Confidence: full response equality and null-base cases are tested.
+export const RuleModifierSchema = z.object({
+  ruleId: z.number(),
+  label: z.string(),
+  conditionText: z.string(),
+  confidence: z.number(),
+  lift: z.number(),
+  support: z.number(),
+  jointCount: z.number().int().nonnegative(),
+  lhsCount: z.number().int().nonnegative().nullish(),
+  upliftPp: z.number().nullable(),
+}).passthrough();
+
+export const RuleFamilySchema = z.object({
+  familyId: z.string(),
+  label: z.string(),
+  attribute: z.string(),
+  attributeLabel: z.string(),
+  baseRule: RuleSchema.nullable(),
+  memberCount: z.number().int().nonnegative(),
+  modifiers: z.array(RuleModifierSchema),
+}).passthrough();
+
+export const RuleFamiliesResponseSchema = z.object({
+  baseline: z.object({ totalRows: z.number().int(), defaultRate: z.number() }).passthrough(),
+  families: z.array(RuleFamilySchema),
+  groups: z.array(z.object({
+    attribute: z.string(), attributeLabel: z.string(), familyIds: z.array(z.string()),
+  }).passthrough()),
+  ungroupedRules: z.array(RuleSchema),
+}).passthrough();
+
+export type RuleFamily = z.infer<typeof RuleFamilySchema>;
+export type RuleFamiliesResponse = z.infer<typeof RuleFamiliesResponseSchema>;
 
 // ---------- Insights ----------
 export const InsightSchema = z.object({
@@ -85,7 +125,8 @@ export const InsightVisualSchema = z.object({
   headline: z.object({
     value: z.string(),
     label: z.string(),
-  }),
+    factId: z.string().optional(),
+  }).passthrough(),
   lift: z.string().nullable(),
   unit: z.string(),
   baseline: z
@@ -315,6 +356,7 @@ export const MethodologySchema = z.object({
       nonDefaultPass: z
         .object({
           minSupport: z.number().optional(),
+          finalSupport: z.number().optional(),
           attemptedSupports: z.array(z.number()).optional(),
           minConfidence: z.number().optional(),
           minLift: z.number().optional(),
@@ -360,6 +402,15 @@ export const ElbowPointSchema = z.object({
 
 export const MiningReportSchema = z.object({
   generatedAt: z.string(),
+  summary: z.object({
+    familyCount: z.number().nullish(),
+    ruleCount: z.number().nullish(),
+    topRuleLift: z.number().nullish(),
+    defaultRuleCount: z.number().int().nonnegative().nullish(),
+    defaultFamilyCount: z.number().int().nonnegative().nullish(),
+    nonDefaultRuleCount: z.number().int().nonnegative().nullish(),
+    nonDefaultFamilyCount: z.number().int().nonnegative().nullish(),
+  }).passthrough().nullish(),
   dataset: z.object({
     totalRows: z.number().int(),
     totalColumns: z.number().int(),
@@ -389,7 +440,18 @@ export const MiningReportSchema = z.object({
     totalClusters: z.number().int(),
     clusters: z.array(ClusterSchema),
     elbowScores: z.array(ElbowPointSchema),
-  }),
+    selection: z.object({
+      bestKBySilhouette: z.number().int(),
+      chosenK: z.number().int(),
+      chosenReason: z.string(),
+      initialization: z.string(),
+      restarts: z.number().int(),
+      chosenSeed: z.number(),
+      chosenWcss: z.number(),
+      finalSilhouette: z.number(),
+      sweepInitialization: z.string(),
+    }).passthrough().optional(),
+  }).passthrough(),
   rules: z.object({
     totalRules: z.number(),
     defaultRules: z.number(),

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME, NAV_ITEMS } from "@/lib/constants";
+import { useClusters } from "@/hooks/useClusters";
 
 const ICON_MAP = {
   LayoutDashboard,
@@ -31,6 +32,8 @@ const ICON_MAP = {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: clusters } = useClusters();
+  const k = clusters?.find((cluster) => cluster.evidence)?.evidence?.k;
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 shrink-0 border-r bg-card md:flex md:flex-col">
       <div className="flex h-16 items-center gap-2.5 border-b px-6">
@@ -77,7 +80,7 @@ export function Sidebar() {
       </nav>
       <div className="border-t p-4 text-xs text-muted-foreground">
         <p className="font-medium text-foreground">Demo build</p>
-        <p>CRISP-DM {"\u00b7"} UCI credit default {"\u00b7"} k=2</p>
+        <p>CRISP-DM {"\u00b7"} UCI credit default{k != null ? ` \u00b7 ${k} personas` : ""}</p>
       </div>
     </aside>
   );

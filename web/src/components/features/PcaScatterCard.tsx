@@ -23,12 +23,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEdaPca2d, usePcaMeta } from "@/hooks/useEda";
-import { CHART_SEMANTIC, clusterColor } from "@/lib/chart-theme";
+import { personaIdentityColor } from "@/lib/chart-theme";
 import { formatDecimal, formatInt, formatPct } from "@/lib/format";
-import { pcaView, riskAboveBaseline } from "@/components/clusters/clusters-view";
+import { pcaView, sortPersonas, personaMultiplier, samplePcaPersonas, PCA_POINTS_PER_PERSONA } from "@/components/clusters/clusters-view";
 import type { Cluster, PcaPoint } from "@/types/api.types";
 
-const TARGET_PER_CLUSTER = 300;
+const TARGET_PER_CLUSTER = PCA_POINTS_PER_PERSONA;
 
 export function PcaScatterCard({
   clusters = [],
@@ -41,25 +41,9 @@ export function PcaScatterCard({
   const { data: meta } = usePcaMeta();
   const [fullRange, setFullRange] = React.useState(false);
   const view = React.useMemo(() => pcaView(data ?? [], fullRange, meta), [data, fullRange, meta]);
-  const grouped = React.useMemo(() => {
-    const buckets = new Map<number, PcaPoint[]>();
-    for (const point of view.points) {
-      const bucket = buckets.get(point.clusterId) ?? [];
-      bucket.push(point);
-      buckets.set(point.clusterId, bucket);
-    }
-    return [...buckets.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([id, points]) => {
-        const count = Math.min(TARGET_PER_CLUSTER, points.length);
-        const sample = Array.from(
-          { length: count },
-          (_, i) => points[Math.floor((i * points.length) / count)],
-        );
-        return { id, sample };
-      });
-  }, [view]);
+  const grouped = React.useMemo(() => samplePcaPersonas(view.points, sortPersonas(clusters, baselineRate)), [view.points, clusters, baselineRate]);
   const sampleCount = grouped.reduce((sum, group) => sum + group.sample.length, 0);
+  const featureCount = new Set(clusters.flatMap((cluster) => Object.keys(cluster.baseline?.centroid ?? cluster.centroid))).size;
 
   return (
     <Card className="min-w-0">
@@ -69,12 +53,15 @@ export function PcaScatterCard({
           <p className="text-sm text-muted-foreground">
             PCA projects scaled features onto the first two principal components.
           </p>
-          {meta?.explainedVariance.length ? (
+          {meta?.explainedVarianceOfTotal?.length ? (
+            <p className="text-xs text-muted-foreground">
+              PC1 and PC2 explain {formatPct(meta.explainedVarianceOfTotal.slice(0, 2).reduce((sum, value) => sum + value, 0))} of the variance of the {featureCount ? `${formatInt(featureCount)} ` : ""}features.
+            </p>
+          ) : meta?.explainedVariance.length ? (
             <p className="text-xs text-muted-foreground">
               PC1 {formatPct(meta.explainedVariance[0])}; PC2 {formatPct(meta.explainedVariance[1])}
               .{" "}
-              {meta.explainedVarianceScope ??
-                "Variance share of the two exported components, not of the original feature space."}
+              Relative shares within the two plotted components; total feature variance is unavailable.
             </p>
           ) : null}
         </div>
@@ -118,22 +105,24 @@ export function PcaScatterCard({
                     type="number"
                     dataKey="x"
                     name="PC1"
-                    domain={view.xDomain}
+                    domain={[Math.floor(view.xDomain[0]), Math.ceil(view.xDomain[1])]}
+                    allowDecimals={false}
                     allowDataOverflow
                     stroke="hsl(var(--muted-foreground))"
                     tick={CHART_AXIS_TICK}
-                    tickFormatter={(value: number) => formatDecimal(value, 1)}
+                    tickFormatter={formatInt}
                     label={{ value: "PC1", position: "insideBottom", offset: -12 }}
                   />
                   <YAxis
                     type="number"
                     dataKey="y"
                     name="PC2"
-                    domain={view.yDomain}
+                    domain={[Math.floor(view.yDomain[0]), Math.ceil(view.yDomain[1])]}
+                    allowDecimals={false}
                     allowDataOverflow
                     stroke="hsl(var(--muted-foreground))"
                     tick={CHART_AXIS_TICK}
-                    tickFormatter={(value: number) => formatDecimal(value, 1)}
+                    tickFormatter={formatInt}
                     label={{ value: "PC2", angle: -90, position: "insideLeft" }}
                   />
                   <ZAxis range={[20, 20]} />
@@ -149,11 +138,7 @@ export function PcaScatterCard({
                         key={id}
                         name={cluster?.displayName ?? cluster?.personaName ?? `Cluster ${id}`}
                         data={sample}
-                        fill={
-                          riskAboveBaseline(cluster?.defaultRate, baselineRate)
-                            ? clusterColor(cluster?.defaultRate, baselineRate)
-                            : CHART_SEMANTIC.neutral
-                        }
+                        fill={personaIdentityColor(cluster?.displayName ?? cluster?.personaName, cluster ? personaMultiplier(cluster, baselineRate) : null)}
                         isAnimationActive={false}
                       />
                     );

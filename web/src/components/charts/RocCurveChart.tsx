@@ -4,6 +4,7 @@ import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContai
 import { CHART_AXIS_TICK, CHART_COLORS, CHART_LEGEND_STYLE, CHART_SEMANTIC, CHART_TOOLTIP_PROPS } from "@/components/charts/chart-theme";
 import { formatPct } from "@/lib/utils";
 import type { EvaluationVariant } from "@/types/api.types";
+import { modelLabel } from "@/components/report/model-labels";
 
 export function RocCurveChart({ variants }: { variants: EvaluationVariant[] }) {
   return (
@@ -17,7 +18,7 @@ export function RocCurveChart({ variants }: { variants: EvaluationVariant[] }) {
           <Legend wrapperStyle={CHART_LEGEND_STYLE} />
           <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }]} stroke={CHART_SEMANTIC.baseline} strokeDasharray="5 4" label="Chance" />
           {variants.map((variant, index) => (
-            <Line key={`${variant.algo}-${variant.variant}`} data={(variant.rocCurve ?? []).filter((point) => point.fpr != null && point.tpr != null)} dataKey="tpr" name={`${variant.algo} (${variant.variant})`} stroke={CHART_COLORS[index % CHART_COLORS.length]} fill={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
+            <Line key={`${variant.algo}-${variant.variant}`} data={(variant.rocCurve ?? []).filter((point) => point.fpr != null && point.tpr != null)} dataKey="tpr" name={modelLabel(variant.algo, variant.variant)} stroke={CHART_COLORS[index % CHART_COLORS.length]} fill={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={2} dot={false} isAnimationActive={false} />
           ))}
         </LineChart>
       </ResponsiveContainer>

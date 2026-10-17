@@ -6,24 +6,25 @@ import { formatInt, formatPct } from "@/lib/utils";
 import type { EvaluationVariant, MiningReport } from "@/types/api.types";
 import { EmptyEvidence, ReportDetails, ReportFigure, ReportTable } from "./ReportPrimitives";
 import { metricText } from "./report-copy";
+import { modelLabel, variantLabel } from "./model-labels";
 
 const ALGORITHMS = ["DECISIONTREE", "RANDOMFOREST", "NAIVEBAYES", "LOGISTIC"] as const;
 
 const COPY: Record<(typeof ALGORITHMS)[number], { name: string; method: string }> = {
   DECISIONTREE: {
-    name: "Decision tree",
+    name: modelLabel("DECISIONTREE"),
     method: "Weka J48 builds a C4.5 decision tree [5]. It selects splits that separate the classes and prunes weak branches.",
   },
   RANDOMFOREST: {
-    name: "Random forest",
+    name: modelLabel("RANDOMFOREST"),
     method: "Random forest combines many randomized decision trees [6]. It averages their votes to reduce variance.",
   },
   NAIVEBAYES: {
-    name: "Naive Bayes",
+    name: modelLabel("NAIVEBAYES"),
     method: "Naive Bayes estimates class probabilities from each feature. It assumes that features are conditionally independent.",
   },
   LOGISTIC: {
-    name: "Logistic regression",
+    name: modelLabel("LOGISTIC"),
     method: "Weka Logistic estimates a linear log-odds model. It converts the score to a default probability.",
   },
 };
@@ -80,7 +81,7 @@ function AlgorithmCard({ algorithm, variants }: { algorithm: (typeof ALGORITHMS)
                   ].map((label) => <th key={label} className="p-2 text-left">{label}</th>)}
                 </tr></thead>
                 <tbody>{variants.map((row) => <tr key={row.variant} className="border-b last:border-0">
-                  <td className="p-2 font-medium">{row.variant ?? "n/a"}</td>
+                  <td className="p-2 font-medium">{variantLabel(row.variant)}</td>
                   <MetricCell value={row.cv?.accuracy} /><MetricCell value={row.cv?.precisionDefault} />
                   <MetricCell value={row.cv?.recallDefault} /><MetricCell value={row.cv?.f1Default} />
                   <MetricCell value={row.cv?.rocAuc} /><MetricCell value={row.test?.f1Default} />
@@ -92,7 +93,7 @@ function AlgorithmCard({ algorithm, variants }: { algorithm: (typeof ALGORITHMS)
                 </tr>)}</tbody>
               </table>
             </ReportTable>
-            <ReportFigure id={`algorithm-${slug}-confusion`} caption={`${copy.name} confusion matrix for its best CV-F1 variant (${best?.variant ?? "n/a"}).`}>
+            <ReportFigure id={`algorithm-${slug}-confusion`} caption={`${copy.name} confusion matrix for its best CV-F1 variant (${variantLabel(best?.variant)}).`}>
               <div className="mx-auto max-w-xl rounded-lg border p-4">
                 <ConfusionMatrix labels={best?.test?.confusionMatrix?.labels} matrix={best?.test?.confusionMatrix?.matrix} compact />
               </div>
@@ -106,15 +107,16 @@ function AlgorithmCard({ algorithm, variants }: { algorithm: (typeof ALGORITHMS)
 }
 
 function MetricCell({ value }: { value?: number | null }) {
-  return <td className="p-2 text-right tabular-nums">{value == null ? "n/a" : formatPct(value, 2)}</td>;
+  return <td className="p-2 text-right tabular-nums">{value == null ? "n/a" : formatPct(value, 1)}</td>;
 }
 
 function ms(value?: number | null): string { return value == null ? "n/a" : `${formatInt(value)} ms`; }
 
 function remark(best?: EvaluationVariant, baseline?: EvaluationVariant): string {
   if (!best) return "No numeric comparison is available.";
-  if (!baseline || best === baseline) return `The baseline has the highest CV F1 at ${metricText(best.cv?.f1Default, 2)}.`;
-  if (best.cv?.recallDefault == null || baseline.cv?.recallDefault == null) return `${best.variant ?? "The best variant"} has the highest CV F1; the CV recall comparison is unavailable.`;
+  const technique = best.variant === "cost" ? "Cost-sensitive learning" : best.variant?.toLowerCase() === "smote" ? "SMOTE" : "The best variant";
+  if (best === baseline) return `The baseline variant has the highest CV F1 (${metricText(best.cv?.f1Default, 1)}).`;
+  if (!baseline || best.cv?.recallDefault == null || baseline.cv?.recallDefault == null) return `${technique} has the highest CV F1; the CV recall comparison is unavailable.`;
   const delta = best.cv.recallDefault - baseline.cv.recallDefault;
-  return `${best.variant ?? "The best variant"} changes CV recall by ${delta >= 0 ? "+" : ""}${(delta * 100).toFixed(2)} percentage points versus baseline.`;
+  return `${technique} ${delta < 0 ? "lowers" : "raises"} CV recall by ${(Math.abs(delta) * 100).toFixed(1)} pp over the baseline.`;
 }

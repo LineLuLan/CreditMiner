@@ -11,6 +11,7 @@ import { findBestVariant, modelDeploymentStatement } from "./ExecutiveSummary";
 import { EmptyEvidence, ReportDetails, ReportFigure, ReportSection } from "./ReportPrimitives";
 import { FeatureImportanceEvidence } from "./FeatureImportanceEvidence";
 import { RuntimeAnalysis } from "./RuntimeChart";
+import { modelLabel } from "./model-labels";
 
 export function EvaluationSection({
   report,
@@ -48,7 +49,7 @@ export function EvaluationSection({
     >
       <Card className="break-inside-avoid border-primary/30 bg-primary/5">
         <CardContent className="p-4 text-sm font-medium leading-6">
-          {modelDeploymentStatement(report)}
+          {modelDeploymentStatement(report, false)}
         </CardContent>
       </Card>
 
@@ -90,7 +91,7 @@ export function EvaluationSection({
 
       <ReportFigure
         id={ids.best}
-        caption={`Confusion matrix for the selected ${best?.algo ?? "best model"} (${best?.variant ?? "variant"}) on the held-out test set.`}
+        caption={`Confusion matrix for the selected ${modelLabel(best?.algo, best?.variant)} on the held-out test set.`}
       >
         <Card className="break-inside-avoid">
           <CardContent className="mx-auto max-w-2xl p-5">
@@ -109,7 +110,7 @@ export function EvaluationSection({
             {others.map((variant) => (
               <ConfusionMatrix
                 key={`${variant.algo}-${variant.variant}`}
-                title={`${variant.algo ?? "Model"} (${variant.variant ?? "variant"})`}
+                title={modelLabel(variant.algo, variant.variant)}
                 labels={variant.test?.confusionMatrix?.labels}
                 matrix={variant.test?.confusionMatrix?.matrix}
                 compact

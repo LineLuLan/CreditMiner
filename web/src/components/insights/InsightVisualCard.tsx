@@ -22,6 +22,7 @@ import { formatCount, formatDecimal, formatPct1 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { INSIGHT_CATEGORY_LABELS } from "@/lib/constants";
 import type { Insight, InsightVisual, InsightVisualBar } from "@/types/api.types";
+import { insightCategoryLabel } from "./insight-label";
 
 interface InsightVisualCardProps {
   insight: Insight;
@@ -38,7 +39,7 @@ export function InsightVisualCard({
   onDetailsToggle,
   className,
 }: InsightVisualCardProps) {
-  const factId = insightFactId(insight);
+  const factId = visual?.headline.factId ?? insightFactId(insight);
   const sources = { insights: [insight], visuals: visual ? [visual] : [] };
   const { getFact } = useFacts(sources);
   const fact = getFact(factId);
@@ -54,10 +55,17 @@ export function InsightVisualCard({
     .filter((bar) => bar.highlight)
     .map((bar) => bar.label)
     .join(", ");
+  // Intent: explain the combined headline using the current visual's cohorts.
+  // Status: complete; next: none; blockers: none; confidence: covered by changed-value tests.
+  const twoMonths = visual?.bars.find((bar) => bar.label === "2 months late");
+  const threePlusMonths = visual?.bars.find((bar) => bar.label === "3+ months late");
+  const combinedNote = factId === "default-rate-pay1-late2plus" && twoMonths && threePlusMonths
+    ? `2+ months combines the 2 months (${formatPct1(twoMonths.value / 100)}) and 3+ months (${formatPct1(threePlusMonths.value / 100)}) bars`
+    : null;
 
   return (
     <FactsProvider sources={sources}>
-    <Card className={cn("insight-card min-w-0 break-inside-avoid overflow-hidden", className)}>
+    <Card className={cn("insight-card flex h-full min-w-0 flex-col break-inside-avoid overflow-hidden", className)}>
       <CardHeader className="space-y-3 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge
@@ -72,11 +80,11 @@ export function InsightVisualCard({
             {INSIGHT_CATEGORY_LABELS[insight.category]}
           </Badge>
           <Badge variant="outline">Priority {insight.priority}</Badge>
-          {visual?.lift ? <Badge className="ml-auto"><FactValue id={factId} format="multiplier" /></Badge> : null}
+          {visual?.lift?.trim() && fact.multiplier !== null ? <Badge className="ml-auto"><FactValue id={factId} format="multiplier" /></Badge> : null}
         </div>
         <CardTitle className="text-lg leading-snug">{insight.title}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-1 flex-col gap-4">
         {visual || fact.value !== null ? (
           <>
             <div className="flex flex-wrap items-end gap-3 border-l-4 border-primary pl-4">
@@ -91,7 +99,8 @@ export function InsightVisualCard({
               <div>
                 <p className="mb-2 text-xs font-medium text-muted-foreground">{axisLabel}</p>
                 <div
-                  className="h-64 min-w-0"
+                  className="min-w-0"
+                  style={{ height: Math.min(320, Math.max(160, visual.bars.length * 24 + 48)) }}
                   role="img"
                   aria-label={[
                     axisLabel,
@@ -113,8 +122,9 @@ export function InsightVisualCard({
                       <YAxis
                         type="category"
                         dataKey="label"
-                        width={104}
-                        tick={{ ...CHART_AXIS_TICK, fontSize: 11 }}
+                        interval={0}
+                        width={150}
+                        tick={<InsightCategoryTick />}
                         axisLine={false}
                         tickLine={false}
                       />
@@ -168,6 +178,7 @@ export function InsightVisualCard({
           </>
         ) : null}
 
+        {combinedNote ? <p className="text-xs text-muted-foreground">{combinedNote}</p> : null}
         <p className="insight-action text-sm leading-6">
           <span className="font-semibold">Action:</span> {insight.recommendation}
         </p>
@@ -175,7 +186,7 @@ export function InsightVisualCard({
         <details
           open={detailsOpen}
           onToggle={(event) => onDetailsToggle?.(event.currentTarget.open)}
-          className="insight-details group"
+          className="insight-details group mt-auto"
         >
           <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-md border px-4 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none">
             Details
@@ -199,6 +210,15 @@ export function InsightVisualCard({
       </CardContent>
     </Card>
     </FactsProvider>
+  );
+}
+
+function InsightCategoryTick({ x = 0, y = 0, payload }: { x?: number; y?: number; payload?: { value: string } }) {
+  const label = insightCategoryLabel(payload?.value ?? "");
+  return (
+    <text x={x} y={y} textAnchor="end" {...CHART_AXIS_TICK} fontSize={11}>
+      <tspan x={x} dy="0.35em">{label}</tspan>
+    </text>
   );
 }
 

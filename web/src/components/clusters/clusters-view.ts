@@ -14,8 +14,27 @@ export function riskAboveBaseline(
   return finiteNumber(rate) && finiteNumber(baseline) && rate > baseline;
 }
 
-// Choose concentrated risk; shares use every nonempty segment, never a partial denominator.
-export function clusterInsight(clusters: Cluster[], portfolioCount?: number) {
+export function personaMultiplier(cluster: Cluster, baseline?: number) {
+  return cluster.defaultRateMultiplier ?? safeRatio(cluster.defaultRate, cluster.baseline?.defaultRate ?? baseline);
+}
+
+export function sortPersonas(clusters: Cluster[], baseline?: number) {
+  return [...clusters].sort((a, b) => (personaMultiplier(b, baseline) ?? -1) - (personaMultiplier(a, baseline) ?? -1));
+}
+
+export function lowestRiskPersonaId(clusters: Cluster[], baseline?: number) {
+  return sortPersonas(clusters, baseline).filter((cluster) => {
+    const multiplier = personaMultiplier(cluster, baseline);
+    return multiplier !== null && multiplier < 1.15;
+  }).at(-1)?.clusterId;
+}
+
+/**
+ * Intent: describe combined above-baseline personas using authoritative API shares.
+ * Status: complete; next: retain missing-share disclosure if API evidence is absent.
+ * Blockers: none; confidence: covered by captured and missing-evidence tests.
+ */
+export function clusterInsight(clusters: Cluster[], baseline?: number) {
   const valid = clusters.filter(
     (cluster) =>
       finiteNumber(cluster.size) &&
@@ -26,17 +45,36 @@ export function clusterInsight(clusters: Cluster[], portfolioCount?: number) {
   );
   if (!valid.length || valid.length !== clusters.filter((cluster) => cluster.size !== 0).length)
     return null;
-  const cluster = valid.reduce((highest, current) =>
-    current.defaultRate > highest.defaultRate ? current : highest,
-  );
-  const totalClients = valid.reduce((sum, current) => sum + current.size, 0);
-  const totalDefaults = valid.reduce((sum, current) => sum + current.size * current.defaultRate, 0);
+  const above = sortPersonas(valid, baseline).filter((cluster) => (personaMultiplier(cluster, baseline) ?? 0) > 1);
+  if (!above.length) return null;
+  const sumShares = (key: "shareOfClients" | "shareOfDefaults") =>
+    above.every((cluster) => finiteNumber(cluster[key]))
+      ? above.reduce((sum, cluster) => sum + cluster[key]!, 0)
+      : null;
   return {
-    cluster,
-    clientShare: cluster.shareOfClients ?? safeRatio(cluster.size, portfolioCount ?? totalClients),
-    defaultShare:
-      cluster.shareOfDefaults ?? safeRatio(cluster.size * cluster.defaultRate, totalDefaults),
+    clusters: above,
+    names: above.map((cluster) => cluster.displayName ?? cluster.personaName).join(" and "),
+    clientShare: sumShares("shareOfClients"),
+    defaultShare: sumShares("shareOfDefaults"),
   };
+}
+
+export const PCA_POINTS_PER_PERSONA = 150;
+
+export function samplePcaPersonas(points: PcaPoint[], clusters: Pick<Cluster, "clusterId">[]) {
+  const buckets = new Map<number, PcaPoint[]>();
+  for (const point of points) {
+    const bucket = buckets.get(point.clusterId) ?? [];
+    bucket.push(point);
+    buckets.set(point.clusterId, bucket);
+  }
+  const ids = clusters.length ? clusters.map((cluster) => cluster.clusterId) : [...buckets.keys()];
+  return ids.map((id) => {
+    const bucket = buckets.get(id) ?? [];
+    const count = Math.min(PCA_POINTS_PER_PERSONA, bucket.length);
+    const sample = Array.from({ length: count }, (_, i) => bucket[Math.floor(i * bucket.length / count)]);
+    return { id, sample };
+  });
 }
 
 /**

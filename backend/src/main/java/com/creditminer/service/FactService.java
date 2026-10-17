@@ -61,6 +61,7 @@ public class FactService {
                     "$.overall.defaults / $.overall.rows", "behaviour"));
             addBuckets(root, facts, base);
             addClusters(root, facts, rows, defaults, base);
+            addLatestLateTail(root, facts, base);
             addCombos(root, facts, base);
             addImportance(root, evaluation, facts);
             addModelMetrics(evaluation, facts);
@@ -101,22 +102,54 @@ public class FactService {
 
     private void addClusters(JsonNode root, List<Fact> facts, int total, int defaults, double base) {
         JsonNode clusters = array(root, "byCluster");
+        int delayingDefaults = 0;
+        int delayingClients = 0;
         for (int i = 0; i < clusters.size(); i++) {
             JsonNode cluster = clusters.get(i);
             int id = count(cluster, "clusterId");
             int size = count(cluster, "size");
             int hits = count(cluster, "defaults");
-            String label = "Cluster " + id;
+            String label = text(cluster, "personaName");
+            if (label.contains("delayers")) {
+                delayingDefaults += hits;
+                delayingClients += size;
+            }
             String path = "$.byCluster[" + i + "]";
-            facts.add(proportion("default-rate-cluster-" + id, label + " default rate", hits, size, base,
+            facts.add(proportion("default-rate-cluster-" + id, label + ": default rate", hits, size, base,
                     "Default=Yes clients divided by all clients assigned to " + label + ".",
                     path + ".defaults / " + path + ".size", "segment"));
-            facts.add(proportion("share-of-clients-cluster-" + id, label + " share of clients", size, total, null,
+            facts.add(proportion("share-of-clients-cluster-" + id, label + ": share of clients", size, total, null,
                     "Clients in " + label + " divided by all cleaned clients.",
                     path + ".size / $.overall.rows", "segment"));
-            facts.add(proportion("share-of-defaults-cluster-" + id, label + " share of defaults", hits, defaults, null,
+            facts.add(proportion("share-of-defaults-cluster-" + id, label + ": share of defaults", hits, defaults, null,
                     "Default=Yes clients in " + label + " divided by all Default=Yes clients.",
                     path + ".defaults / $.overall.defaults", "segment"));
+        }
+        facts.add(proportion("share-of-defaults-delayers", "Delaying personas: share of defaults",
+                delayingDefaults, defaults, null, "Defaults in persistent and occasional delaying personas divided by all defaults.",
+                "$.byCluster[?(@.personaName contains 'delayers')].defaults / $.overall.defaults", "segment"));
+        facts.add(proportion("share-of-clients-delayers", "Delaying personas: share of clients",
+                delayingClients, total, null, "Clients in persistent and occasional delaying personas divided by all clients.",
+                "$.byCluster[?(@.personaName contains 'delayers')].size / $.overall.rows", "segment"));
+    }
+
+    private void addLatestLateTail(JsonNode root, List<Fact> facts, double base) {
+        for (int minimum : List.of(2, 3)) {
+            int size = 0;
+            int hits = 0;
+            for (JsonNode bucket : array(required(root, "defaultByBucket"), "PAY_1")) {
+                if (Integer.parseInt(text(bucket, "bucket")) < minimum) continue;
+                size += count(bucket, "count");
+                hits += count(bucket, "defaults");
+            }
+            String source = "$.defaultByBucket.PAY_1[?(@.bucket >= " + minimum + ")]";
+            String label = minimum + "+ months late on latest statement";
+            facts.add(proportion("default-rate-pay1-late" + minimum + "plus", label + ": default rate",
+                    hits, size, base, "Defaults divided by clients with PAY_1 >= " + minimum + ".",
+                    source + ".defaults / " + source + ".count", "repayment"));
+            facts.add(Fact.builder().factId("count-pay1-late" + minimum + "plus").label(label + ": clients")
+                    .value((double) size).unit("count").n(size).definition("Clients with PAY_1 >= " + minimum + ".")
+                    .source(FACT_SOURCE + "#" + source + ".count").category("repayment").build());
         }
     }
 

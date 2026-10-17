@@ -18,8 +18,15 @@ public class DistributionResponse {
     private String column;
     private String type;
     private List<Double> binEdges;
+    private String binning;
+    private List<String> notes;
     private List<String> categories;
     private List<Integer> counts;
+
+    /** Additive alias; existing clients continue to use binEdges. */
+    public List<Double> getEdges() {
+        return binEdges;
+    }
 
     @JsonInclude(JsonInclude.Include.ALWAYS)
     private SummaryStats stats;

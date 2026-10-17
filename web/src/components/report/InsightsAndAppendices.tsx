@@ -8,22 +8,50 @@ import { comparisonRows, ModelComparisonTable } from "./ClassificationSection";
 import { findBestVariant } from "./ExecutiveSummary";
 import { imputationSentence } from "./report-copy";
 import { ReportDetails, ReportSection, ReportTable } from "./ReportPrimitives";
+import { modelLabel } from "./model-labels";
+import { featureLabel } from "@/lib/constants";
 
 export function InsightsSection({
   report,
   visuals,
+  tableOnly = false,
+  id = "section-7",
+  title = "7 Insights and recommendations",
 }: {
   report: MiningReport;
   visuals?: InsightVisual[];
+  tableOnly?: boolean;
+  id?: string;
+  title?: string;
 }) {
   const visualsByTitle = new Map((visuals ?? []).map((visual) => [visual.title, visual]));
   return (
     <ReportSection
-      id="section-7"
-      title="7 Insights and recommendations"
+      id={id}
+      title={title}
       takeaway="Behavior signals show where default risk increases and which clients need review."
     >
-      <ReportDetails label="Show insight evidence" className="report-detail-print">
+      {report.insights.length ? (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead><tr className="border-b bg-muted/30 text-left">
+              <th className="p-3">Priority</th><th className="p-3">Insight title</th>
+              <th className="p-3">Headline value</th><th className="p-3">Lift vs base</th>
+            </tr></thead>
+            <tbody>{report.insights.map((insight) => {
+              const visual = visualsByTitle.get(insight.title);
+              const liftNotApplicable = insight.insightId === 4 || insight.insightId === 9;
+              return <tr key={insight.insightId} className="border-b last:border-0">
+                <td className="p-3 tabular-nums">{insight.priority}</td>
+                <td className="p-3 font-medium">{insight.title}</td>
+                <td className="p-3 tabular-nums">{visual?.headline.value ?? "n/a"}</td>
+                <td className="p-3 tabular-nums" title={liftNotApplicable ? "not applicable" : undefined}>{liftNotApplicable ? "-" : visual?.lift || "n/a"}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>
+      ) : null}
+      {!tableOnly ? <ReportDetails label="Show insight evidence" className="report-detail-print">
         <div className="report-insight-grid grid gap-4 lg:grid-cols-2">
           {report.insights.map((insight) => (
             <InsightVisualCard
@@ -34,7 +62,7 @@ export function InsightsSection({
             />
           ))}
         </div>
-      </ReportDetails>
+      </ReportDetails> : null}
     </ReportSection>
   );
 }
@@ -51,7 +79,7 @@ export function LimitationsSection({ report }: { report: MiningReport }) {
     "Add an out-of-time test set and monitor F1, PR-AUC, recall, and calibration by monthly cohort.",
     "Evaluate operating thresholds with explicit false-negative and false-positive business costs.",
     "Add local explanation methods for reviewed clients while retaining the global comparison.",
-    "Validate risk interventions with controlled experiments and segment-level uplift metrics.",
+    "Validate risk interventions with controlled experiments and persona-level uplift metrics.",
   ];
   return (
     <ReportSection
@@ -185,17 +213,17 @@ function parameterRows(report: MiningReport): string[][] {
   ];
   for (const variant of evaluation?.variants ?? []) {
     rows.push([
-      `${variant.algo ?? "Model"} (${variant.variant ?? "variant"})`,
+      modelLabel(variant.algo, variant.variant),
       "Hyperparameters",
       variant.hyperparameters?.summary ?? variant.hyperparameters?.options ?? "n/a",
     ]);
     rows.push([
-      `${variant.algo ?? "Model"} (${variant.variant ?? "variant"})`,
+      modelLabel(variant.algo, variant.variant),
       "Build / CV / holdout prediction (ms)",
       `${value(variant.buildTimeMs ?? variant.trainTimeMs)} / ${value(variant.cvTimeMs)} / ${value(variant.testPredictTimeMs)}`,
     ]);
     rows.push([
-      `${variant.algo ?? "Model"} (${variant.variant ?? "variant"})`,
+      modelLabel(variant.algo, variant.variant),
       "Holdout rows / prediction (microseconds per record)",
       `${value(variant.testRows)} / ${value(variant.predictMicrosPerRecord)}`,
     ]);
@@ -216,12 +244,12 @@ function parameterRows(report: MiningReport): string[][] {
       "Seed / max iterations",
       `${value(cluster?.seed)} / ${value(cluster?.maxIterations)}`,
     ],
-    ["Clustering", "Features", (cluster?.featuresUsed ?? []).join(", ") || "n/a"],
+    ["Clustering", "Features", (cluster?.featuresUsed ?? []).map(featureLabel).join(", ") || "n/a"],
     ["Association rules", "Discretization", rules?.discretization ?? "n/a"],
     [
       "Association rules",
       "Attributes",
-      `${formatInt(rules?.attributesUsed?.length ?? 0)}: ${(rules?.attributesUsed ?? []).join(", ") || "n/a"}`,
+      `${formatInt(rules?.attributesUsed?.length ?? 0)}: ${(rules?.attributesUsed ?? []).map(featureLabel).join(", ") || "n/a"}`,
     ],
     [
       "Non-default Apriori",

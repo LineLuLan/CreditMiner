@@ -1,19 +1,23 @@
 [
   {
-    "title": "Two months late now predicts default",
-    "discovery": "Clients two months late on the latest statement defaulted at 69.1%. The portfolio rate is 22.1%.",
-    "evidence": "2,666 clients; 3.1 times the portfolio default rate. This is an observed group rate, not an individual prediction. facts: default-rate-pay1-late2, default-rate-overall.",
+    "title": "Two or more months late now predicts default",
+    "discovery": "Clients two or more months late on the latest statement defaulted at 69.5%. The portfolio rate is 22.1%.",
+    "evidence": "3,129 clients; 2,176 defaults; 3.1 times the portfolio default rate. This is an observed group rate, not an individual prediction. facts: default-rate-pay1-late2plus, count-pay1-late2plus, default-rate-overall.",
     "recommendation": "Review accounts that are two or more months late on the latest statement.",
     "category": "driver",
-    "priority": 1
+    "priority": 1,
+    "headlineFactId": "default-rate-pay1-late2plus",
+    "headlineLabel": "default when two or more months late on the latest statement"
   },
   {
-    "title": "Worst delay of three or more months",
-    "discovery": "Clients whose worst delay was three or more months defaulted at 62.8%, compared with 11.7% when the worst delay was zero or less.",
-    "evidence": "1,192 clients had a worst delay of three or more months; 19,918 had no positive delay across the six statements. facts: default-rate-worst-delay-ge3, default-rate-worst-delay-le0, default-rate-overall.",
-    "recommendation": "Review the worst repayment delay across all six statements.",
+    "title": "Both inactive and over-limit cards default more",
+    "discovery": "Default rates are higher at both ends of average utilization: 34.9% at 0% or below and 34.2% above 100%.",
+    "evidence": "Six-month average utilization bands: 34.9% at 0% or below (n = 1,041), 16.6% at 0-25% (n = 13,310), 19.9% at 25-50% (n = 4,555), 28.1% at 50-100% (n = 10,422), and 34.2% above 100% (n = 637). These are observed group rates. facts: default-rate-avg-utilization-le0, default-rate-avg-utilization-gt0-le0-25, default-rate-avg-utilization-gt0-25-le0-5, default-rate-avg-utilization-gt0-5-le1, default-rate-avg-utilization-gt1, default-rate-overall.",
+    "recommendation": "Review inactive accounts and over-limit accounts separately; both sit well above the portfolio rate.",
     "category": "driver",
-    "priority": 2
+    "priority": 2,
+    "headlineFactId": "default-rate-avg-utilization-le0",
+    "headlineLabel": "default at 0% average utilization (n = 1,041)"
   },
   {
     "title": "Each late month adds risk",
@@ -24,12 +28,14 @@
     "priority": 3
   },
   {
-    "title": "One cluster holds almost half of all defaults",
-    "discovery": "Cluster 0 contains 18.4% of clients and 44.5% of all defaults. Its default rate is 53.5%.",
-    "evidence": "Cluster 0: 5,516 clients and 2,950 defaults; 44.5% of portfolio defaults. Cluster 1: 24,449 clients and 15.1% default. facts: share-of-clients-cluster-0, share-of-defaults-cluster-0, default-rate-cluster-0, default-rate-cluster-1.",
-    "recommendation": "Review repayment histories within the higher-default cluster.",
+    "title": "Delaying personas hold most defaults",
+    "discovery": "Persistent delayers and occasional delayers account for 61.5% of all defaults among 30.5% of clients.",
+    "evidence": "Persistent delayers: 2,589 clients, 1,658 defaults, 64.0% default rate; Transactors: 9,031 clients, 1,125 defaults, 12.5% default rate; Occasional delayers: 6,555 clients, 2,420 defaults, 36.9% default rate; Revolvers, never late: 11,790 clients, 1,427 defaults, 12.1% default rate. The two delaying personas account for 30.5% of clients and 61.5% of defaults; they hold 2.0x their share of defaults. These are descriptive group rates, not individual predictions. facts: share-of-defaults-delayers, share-of-clients-delayers, default-rate-cluster-0, default-rate-cluster-1, default-rate-cluster-2, default-rate-cluster-3.",
+    "recommendation": "Review persistent delayers first, then occasional delayers, using each client's repayment history.",
     "category": "segment",
-    "priority": 4
+    "priority": 4,
+    "headlineFactId": "share-of-defaults-delayers",
+    "headlineLabel": "of defaults come from the 30.5% of clients who delay"
   },
   {
     "title": "Low credit limits carry the most default",
@@ -48,7 +54,7 @@
     "priority": 6
   },
   {
-    "title": "Paying a larger share of the bill lowers risk",
+    "title": "Higher payment ratios go with lower default rates",
     "discovery": "Higher six-month aggregate payment-ratio quartiles had lower observed default rates: 29.2%, 26.2%, 17.9%, 15.3%.",
     "evidence": "The lowest quartile has 7,493 clients; the highest has 7,491. PAY_RATIO divides six-month payments by positive bills (denominator at least 1), capped at 5. This association does not show that increasing payments causes lower default. facts: default-rate-payment-ratio-q1, default-rate-payment-ratio-q2, default-rate-payment-ratio-q3, default-rate-payment-ratio-q4.",
     "recommendation": "Review the six-month aggregate payment ratio with delay history.",
@@ -66,7 +72,7 @@
   {
     "title": "Demographic default rates differ",
     "discovery": "Education default rates span 18.1 percentage points including Other. Married clients defaulted at 23.5%, single clients at 20.9%.",
-    "evidence": "Graduate 19.2% (n=10,563); University 23.7% (n=14,019); HighSchool 25.2% (n=4,915); Other 7.1% (n=468). Married 23.5% (n=13,643); Single 20.9% (n=15,945); Other 23.6% (n=377). Male 24.2% (n=11,874); Female 20.8% (n=18,091). These unadjusted comparisons do not measure causal effects. facts: default-rate-education-graduate, default-rate-education-university, default-rate-education-highschool, default-rate-education-other, default-rate-marriage-married, default-rate-marriage-single, default-rate-marriage-other, default-rate-sex-male, default-rate-sex-female.",
+    "evidence": "Graduate school 19.2% (n=10,563); University 23.7% (n=14,019); High school 25.2% (n=4,915); Other education 7.1% (n=468). Married 23.5% (n=13,643); Single 20.9% (n=15,945); Other status 23.6% (n=377). Male 24.2% (n=11,874); Female 20.8% (n=18,091). These unadjusted comparisons do not measure causal effects. facts: default-rate-education-graduate, default-rate-education-university, default-rate-education-highschool, default-rate-education-other, default-rate-marriage-married, default-rate-marriage-single, default-rate-marriage-other, default-rate-sex-male, default-rate-sex-female.",
     "recommendation": "Use demographic comparisons for fairness checks alongside repayment evidence.",
     "category": "context",
     "priority": 9

@@ -37,6 +37,7 @@ public class DatabaseSeeder {
     private final ClusterRepository clusterRepo;
     private final RuleRepository ruleRepo;
     private final DataLoader dataLoader;
+    private final ClusterService clusterService;
 
     @Value("${creditminer.data.enriched-arff}") private String enrichedArffPath;
     @Value("${creditminer.data.phase6-clusters-json:data/processed/phase6_clusters.json}")
@@ -72,6 +73,7 @@ public class DatabaseSeeder {
         ruleRepo.saveAll(ruleRows);
         log.info("Seeded {} association rules", ruleRows.size());
         seedCustomers(data, idAttribute, clusterAssignments, anomalies);
+        clusterService.invalidate();
     }
 
     private List<Cluster> readClusters() {

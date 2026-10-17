@@ -26,7 +26,7 @@ class ClusterAggregateTest {
             session.beginTransaction();
             for (int i = 1; i <= 4; i++) {
                 session.persist(Customer.builder().clientId((long) i).defaultFlag(i == 1 ? "Yes" : "No")
-                        .monthsDelayed(i == 1 ? 4 : 0).maxDelay(i == 1 ? 2 : 0).age(40)
+                        .monthsDelayed(i == 1 ? 4 : 0).maxDelay(i == 1 ? 2 : -1).age(40).clusterId(0)
                         .limitBal(BigDecimal.valueOf(100000)).payRatio(BigDecimal.valueOf(.4))
                         .avgUtilization(BigDecimal.valueOf(.3)).utilization1(BigDecimal.valueOf(.5))
                         .billTrend(BigDecimal.valueOf(.1)).build());
@@ -39,6 +39,10 @@ class ClusterAggregateTest {
             service.enrich(List.of(cluster));
             assertThat(cluster.getBaseline().getSize()).isEqualTo(4);
             assertThat(cluster.getBaseline().getDefaultRate()).isEqualTo(.25);
+            var json = new ObjectMapper().valueToTree(cluster);
+            assertThat(json.path("longestDelayMonths").asDouble(-1)).isEqualTo(.5);
+            assertThat(json.path("baseline").path("longestDelayMonths").asDouble(-1)).isEqualTo(.5);
+            assertThat(cluster.getBaseline().getCentroid()).containsEntry("MAX_DELAY", -.25);
             assertThat(cluster.getBaseline().getCentroid()).containsEntry("MONTHS_DELAYED", 1.)
                     .containsEntry("PAY_RATIO", .4).containsEntry("LIMIT_BAL", 100000.);
             assertThat(cluster.getCentroidDelta()).containsEntry("MONTHS_DELAYED", 3.);

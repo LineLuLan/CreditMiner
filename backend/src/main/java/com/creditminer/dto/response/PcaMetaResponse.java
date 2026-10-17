@@ -10,6 +10,7 @@ import java.util.List;
 @Builder
 public class PcaMetaResponse {
     private List<Double> explainedVariance;
+    private List<Double> explainedVarianceOfTotal;
     private String explainedVarianceScope;
     private ZoomBounds zoomBounds;
     private long outsideCount;

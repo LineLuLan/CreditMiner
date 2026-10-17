@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.test.util.ReflectionTestUtils;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
@@ -28,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +42,7 @@ class DatabaseSeederTest {
     private ClusterRepository clusterRepo;
     private RuleRepository ruleRepo;
     private DataLoader dataLoader;
+    private ClusterService clusterService;
     private DatabaseSeeder seeder;
 
     @BeforeEach
@@ -48,7 +51,8 @@ class DatabaseSeederTest {
         clusterRepo = mock(ClusterRepository.class);
         ruleRepo = mock(RuleRepository.class);
         dataLoader = mock(DataLoader.class);
-        seeder = new DatabaseSeeder(customerRepo, clusterRepo, ruleRepo, dataLoader);
+        clusterService = mock(ClusterService.class);
+        seeder = new DatabaseSeeder(customerRepo, clusterRepo, ruleRepo, dataLoader, clusterService);
 
         ReflectionTestUtils.setField(seeder, "enrichedArffPath", tempDir.resolve("enriched.arff").toString());
         ReflectionTestUtils.setField(seeder, "clustersJsonPath", write("clusters.json", validClusters()));
@@ -217,6 +221,10 @@ class DatabaseSeederTest {
         assertFalse(saved.get(1).getIsOutlier());
         assertFalse(saved.get(1).getIsAnomaly());
         verify(customerRepo).flush();
+        InOrder order = inOrder(customerRepo, clusterService);
+        order.verify(customerRepo).flush();
+        order.verify(clusterService).invalidate();
+        verify(clusterService).invalidate();
     }
 
     private String write(String fileName, String contents) throws Exception {

@@ -14,15 +14,18 @@ export function SequenceHero({ pattern }: { pattern?: SequencePattern }) {
       </Card>
     );
   return (
-    <Card className="border-danger/30">
+    <Card className="min-w-0 border-danger/30">
       <CardContent className="space-y-3 p-5 sm:p-6">
         <Badge variant="outline">Leading default pattern</Badge>
         <h2 className="max-w-4xl break-words text-xl font-semibold leading-snug sm:text-2xl">
-          {humanisePattern(pattern).text}:{" "}
+          {pattern.familyStory || humanisePattern(pattern).text}:{" "}
           <span className="text-danger">{formatPct(pattern.supportDefault)} of defaulters</span> vs{" "}
           {formatPct(pattern.supportNonDefault)} of non-defaulters (
-          {formatDecimal(pattern.groupPrevalenceRatio ?? pattern.ratio, 1)}x)
+          {formatDecimal(pattern.groupPrevalenceRatio ?? pattern.ratio, 1)}x more common among defaulters)
         </h2>
+        <p className="break-words text-sm leading-6 text-muted-foreground">
+          Exact pattern: {humanisePattern(pattern).text}
+        </p>
         {pattern.ci95 && (pattern.ci95.supportDefault || pattern.ci95.supportNonDefault) ? (
           <p className="break-words text-xs leading-5 text-muted-foreground">
             95% confidence intervals: {[

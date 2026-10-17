@@ -32,6 +32,11 @@ public class ClusterService {
     private static final List<String> PROPERTIES = List.of("utilization1", "avgUtilization",
             "payRatio", "monthsDelayed", "maxDelay", "billTrend", "limitBal", "age");
 
+    // Clip each customer's status code before averaging; clipping a centroid is incorrect.
+    static final String LONGEST_DELAY_BY_CLUSTER_QUERY = "select c.clusterId, "
+            + "avg(case when c.maxDelay < 0 then 0 else c.maxDelay end) "
+            + "from Customer c where c.clusterId is not null group by c.clusterId";
+
     private final EntityManager entityManager;
     private final ObjectMapper mapper;
     @Value("${creditminer.data.phase6-elbow-json:data/processed/phase6_elbow.json}")
@@ -41,6 +46,7 @@ public class ClusterService {
     public List<ClusterResponse> enrich(List<ClusterResponse> clusters) {
         if (clusters.isEmpty()) return clusters;
         ProfileContext context = context();
+        clusters.forEach(cluster -> cluster.setLongestDelayMonths(context.longestDelayByCluster().get(cluster.getClusterId())));
         applyProfiles(clusters, context.baseline(), context.std(), context.evidence());
         return clusters;
     }
@@ -53,7 +59,13 @@ public class ClusterService {
         ProfileContext local = cached;
         if (local != null) return local;
         synchronized (this) {
-            if (cached == null) cached = loadContext();
+            if (cached == null) {
+                ProfileContext loaded = loadContext();
+                // A request during seeding may see an incomplete baseline; retry on the next request.
+                if (loaded.baseline().getSize() > 0 && loaded.baseline().getCentroid().values().stream()
+                        .noneMatch(mean -> mean == null)) cached = loaded;
+                return loaded;
+            }
             return cached;
         }
     }
@@ -65,7 +77,7 @@ public class ClusterService {
             query.append(", avg(c.").append(property).append("), avg(c.")
                     .append(property).append(" * c.").append(property).append(")");
         }
-        query.append(" from Customer c");
+        query.append(", avg(case when c.maxDelay < 0 then 0 else c.maxDelay end) from Customer c");
         Object[] row = entityManager.createQuery(query.toString(), Object[].class).getSingleResult();
         long size = ((Number) row[0]).longValue();
         double defaults = row[1] == null ? 0 : ((Number) row[1]).doubleValue();
@@ -80,21 +92,27 @@ public class ClusterService {
                 std.put(feature, Math.sqrt(Math.max(0, secondMoment - mean * mean)));
             }
         }
-        return new ProfileContext(Baseline.builder().size(size)
-                .defaultRate(size == 0 ? 0 : defaults / size).centroid(means).build(), std, loadEvidence());
+        Map<Integer, Double> longestDelayByCluster = new LinkedHashMap<>();
+        for (Object[] group : entityManager.createQuery(LONGEST_DELAY_BY_CLUSTER_QUERY, Object[].class).getResultList()) {
+            if (group[1] != null) longestDelayByCluster.put(((Number) group[0]).intValue(), ((Number) group[1]).doubleValue());
+        }
+        Double longestDelay = row[18] == null ? null : ((Number) row[18]).doubleValue();
+        return new ProfileContext(Baseline.builder().size(size).longestDelayMonths(longestDelay)
+                .defaultRate(size == 0 ? 0 : defaults / size).centroid(means).build(), std, loadEvidence(), longestDelayByCluster);
     }
 
     private Evidence loadEvidence() {
         try {
             JsonNode root = mapper.readTree(new File(elbowPath));
-            if (!root.path("bestK").canConvertToInt() || !root.path("strategy").isTextual()) return null;
+            if (!root.path("bestK").canConvertToInt()) return null;
             int k = root.path("bestK").asInt();
-            for (JsonNode score : root.path("scores")) {
-                if (score.path("k").asInt() == k && score.path("silhouette").isNumber()) {
-                    return Evidence.builder().k(k).silhouette(score.path("silhouette").asDouble())
-                            .method(root.path("strategy").asText()).build();
-                }
+            if (root.path("finalSilhouette").isNumber()) {
+                return Evidence.builder().k(k).silhouette(root.path("finalSilhouette").asDouble())
+                        .method(root.path("strategy").asText("final-model silhouette")).build();
             }
+            // Sweep models can use a different seed and initialization from the selected model.
+            return Evidence.builder().k(k).silhouette(null)
+                    .method("final-model silhouette unavailable").build();
         } catch (IOException ex) {
             log.warn("Cluster selection evidence unavailable at {}: {}", elbowPath, ex.getMessage());
         }
@@ -104,21 +122,9 @@ public class ClusterService {
     static void applyProfiles(List<ClusterResponse> clusters, Baseline baseline,
                               Map<String, Double> std, Evidence evidence) {
         double defaults = clusters.stream().mapToDouble(c -> c.getSize() * c.getDefaultRate()).sum();
-        List<ClusterResponse> byDelay = clusters.stream()
-                .filter(c -> c.getCentroid().get("MONTHS_DELAYED") != null)
-                .sorted(Comparator.comparingDouble(c -> c.getCentroid().get("MONTHS_DELAYED"))).toList();
-        double min = byDelay.isEmpty() ? 0 : byDelay.get(0).getCentroid().get("MONTHS_DELAYED");
-        double max = byDelay.isEmpty() ? 0 : byDelay.get(byDelay.size() - 1).getCentroid().get("MONTHS_DELAYED");
+        PersonaNaming.apply(clusters);
         for (ClusterResponse cluster : clusters) {
-            Double delay = cluster.getCentroid().get("MONTHS_DELAYED");
-            String name = "Cluster " + cluster.getClusterId();
-            if (delay != null && min < max) {
-                if (delay == max && byDelay.stream().filter(c -> c.getCentroid().get("MONTHS_DELAYED") == max).count() == 1)
-                    name = "Persistent delayers";
-                if (delay == min && byDelay.stream().filter(c -> c.getCentroid().get("MONTHS_DELAYED") == min).count() == 1)
-                    name = "Mostly current";
-            }
-            cluster.setDisplayName(name);
+            Map<String, Double> centroid = cluster.getCentroid() == null ? Map.of() : cluster.getCentroid();
             cluster.setBaseline(baseline);
             cluster.setShareOfClients(divide(cluster.getSize(), baseline.getSize()));
             cluster.setShareOfDefaults(divide(cluster.getSize() * cluster.getDefaultRate(), defaults));
@@ -128,15 +134,20 @@ public class ClusterService {
             Map<String, Double> delta = new LinkedHashMap<>();
             for (String feature : ClusteringService.CLUSTER_FEATURES) {
                 Double mean = baseline.getCentroid().get(feature);
-                Double value = cluster.getCentroid().get(feature);
+                Double value = centroid.get(feature);
                 if (mean != null && value != null) delta.put(feature, value - mean);
             }
             cluster.setCentroidDelta(delta);
+            Map<String, Double> traitValues = new LinkedHashMap<>(centroid);
+            Map<String, Double> traitBaseline = new LinkedHashMap<>(baseline.getCentroid());
+            traitValues.put("MAX_DELAY", cluster.getLongestDelayMonths());
+            traitBaseline.put("MAX_DELAY", baseline.getLongestDelayMonths());
             cluster.setTraits(delta.keySet().stream()
+                    .filter(feature -> traitValues.get(feature) != null && traitBaseline.get(feature) != null)
                     .sorted(Comparator.<String>comparingDouble(feature -> score(feature, delta, baseline, std))
                             .reversed())
-                    .limit(3).map(feature -> trait(feature, cluster.getCentroid().get(feature),
-                            baseline.getCentroid().get(feature))).toList());
+                    .limit(3).map(feature -> trait(feature, traitValues.get(feature),
+                            traitBaseline.get(feature))).toList());
         }
     }
 
@@ -154,17 +165,18 @@ public class ClusterService {
 
     private static String trait(String feature, double value, double baseline) {
         return switch (feature) {
-            case "MONTHS_DELAYED" -> String.format(Locale.ROOT, "%.1f late months vs %.1f", value, baseline);
-            case "MAX_DELAY" -> String.format(Locale.ROOT, "Maximum delay %.1f months vs %.1f", value, baseline);
-            case "LIMIT_BAL" -> String.format(Locale.ROOT, "Limit NT$%.0fk vs NT$%.0fk", value / 1000, baseline / 1000);
-            case "PAY_RATIO" -> String.format(Locale.ROOT, "Pays %.0f%% of bills vs %.0f%%", value * 100, baseline * 100);
-            case "UTILIZATION_1" -> String.format(Locale.ROOT, "Latest utilization %.0f%% vs %.0f%%", value * 100, baseline * 100);
-            case "AVG_UTILIZATION" -> String.format(Locale.ROOT, "Average utilization %.0f%% vs %.0f%%", value * 100, baseline * 100);
-            case "BILL_TREND" -> String.format(Locale.ROOT, "Bill trend %.0f%% vs %.0f%%", value * 100, baseline * 100);
-            case "AGE" -> String.format(Locale.ROOT, "Age %.1f years vs %.1f", value, baseline);
+            case "MONTHS_DELAYED" -> String.format(Locale.ROOT, "Late months (of 6): %.1f vs %.1f", value, baseline);
+            case "MAX_DELAY" -> String.format(Locale.ROOT, "Longest delay: %.1f months vs %.1f", value, baseline);
+            case "LIMIT_BAL" -> String.format(Locale.ROOT, "Credit limit: NT$%.0fk vs NT$%.0fk", value / 1000, baseline / 1000);
+            case "PAY_RATIO" -> String.format(Locale.ROOT, "Payment ratio: %.0f%% vs %.0f%%", value * 100, baseline * 100);
+            case "UTILIZATION_1" -> String.format(Locale.ROOT, "Utilization, Sep: %.0f%% vs %.0f%%", value * 100, baseline * 100);
+            case "AVG_UTILIZATION" -> String.format(Locale.ROOT, "Average utilization: %.0f%% vs %.0f%%", value * 100, baseline * 100);
+            case "BILL_TREND" -> String.format(Locale.ROOT, "Bill trend: %.0f%% vs %.0f%%", value * 100, baseline * 100);
+            case "AGE" -> String.format(Locale.ROOT, "Age: %.1f years vs %.1f", value, baseline);
             default -> throw new IllegalArgumentException("Unknown cluster feature: " + feature);
         };
     }
 
-    private record ProfileContext(Baseline baseline, Map<String, Double> std, Evidence evidence) {}
+    private record ProfileContext(Baseline baseline, Map<String, Double> std, Evidence evidence,
+                                  Map<Integer, Double> longestDelayByCluster) {}
 }

@@ -15,6 +15,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class InsightFactsReportTest {
 
     @Test
+    void derivesCombinedPersonaFactsFromExactCounts() {
+        List<Map<String, Object>> clusters = List.of(
+                Map.of("personaName", "Persistent delayers", "size", 10, "defaults", 7),
+                Map.of("personaName", "Occasional delayers", "size", 20, "defaults", 6),
+                Map.of("personaName", "Transactors", "size", 70, "defaults", 7));
+        var facts = InsightFactsReport.buildPersonaFacts(clusters, 100, 20);
+        assertEquals("share-of-defaults-delayers", facts.get(0).get("factId"));
+        assertEquals(.65, facts.get(0).get("value"));
+        assertEquals(.3, facts.get(1).get("value"));
+        assertEquals(13, facts.get(0).get("successes"));
+    }
+
+    @Test
     void preservesPermutationImportanceEvidenceWithoutRenormalizing() throws Exception {
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         var expected = mapper.readTree(new java.io.File("data/processed/phase5_feature_importance.json"));

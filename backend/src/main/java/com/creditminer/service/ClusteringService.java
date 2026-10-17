@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Phase 6 — KMeans clustering + offline interpretation helpers.
+ * Phase 6 - KMeans clustering + offline interpretation helpers.
  * Online {@link #assign(Instance)} reads the loaded clusterer from {@link ModelConfig}.
  */
 @Slf4j
@@ -35,6 +35,7 @@ public class ClusteringService {
 
     private static final int DEFAULT_MAX_ITERATIONS = 500;
     private static final long DEFAULT_SEED = 42L;
+    public static final List<Integer> RESTART_SEEDS = List.of(42, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     /** Cap both sides of silhouette pairwise computation for predictable runtime. */
     private static final int SILHOUETTE_SAMPLE = 1000;
 
@@ -42,14 +43,43 @@ public class ClusteringService {
 
     /** Train final SimpleKMeans (Euclidean, seed 42, 500 iterations). */
     public SimpleKMeans train(Instances data, int k) throws Exception {
+        return train(data, k, false);
+    }
+
+    public SimpleKMeans train(Instances data, int k, boolean plusPlus) throws Exception {
+        return train(data, k, plusPlus, (int) DEFAULT_SEED);
+    }
+
+    SimpleKMeans train(Instances data, int k, boolean plusPlus, int seed) throws Exception {
         SimpleKMeans km = new SimpleKMeans();
+        if (plusPlus) km.setInitializationMethod(new weka.core.SelectedTag(
+                SimpleKMeans.KMEANS_PLUS_PLUS, SimpleKMeans.TAGS_SELECTION));
         km.setNumClusters(k);
-        km.setSeed((int) DEFAULT_SEED);
+        km.setSeed(seed);
         km.setMaxIterations(DEFAULT_MAX_ITERATIONS);
         km.setPreserveInstancesOrder(true);
         km.setDistanceFunction(new EuclideanDistance());
         km.buildClusterer(data);
         return km;
+    }
+
+    /**
+     * Intent: compare deterministic local optima without selecting by persona labels.
+     * Status: ten k-means++ runs; first seed wins exact WCSS ties. Next: inspect final evidence.
+     * Blockers: none. Confidence: minimum-WCSS and determinism regression tests.
+     */
+    public SimpleKMeans trainBest(Instances data, int k) throws Exception {
+        SimpleKMeans best = null;
+        for (int seed : RESTART_SEEDS) {
+            SimpleKMeans candidate = train(data, k, true, seed);
+            log.info("Restart k={}, seed={}, WCSS={}", k, seed, candidate.getSquaredError());
+            if (best == null || candidate.getSquaredError() < best.getSquaredError()) best = candidate;
+        }
+        return best;
+    }
+
+    public double silhouette(Instances data, SimpleKMeans model) throws Exception {
+        return sampledSilhouette(data, model.getAssignments(), model.numberOfClusters(), SILHOUETTE_SAMPLE);
     }
 
     /**
@@ -66,7 +96,7 @@ public class ClusteringService {
             wcss[i] = km.getSquaredError();
             int[] assignments = km.getAssignments();
             silhouette[i] = sampledSilhouette(data, assignments, k, SILHOUETTE_SAMPLE);
-            log.info("k={} → WCSS={}, silhouette={}", k, round(wcss[i]), round(silhouette[i]));
+            log.info("k={} -> WCSS={}, silhouette={}", k, round(wcss[i]), round(silhouette[i]));
         }
         return new ElbowResult(kMin, kMax, wcss, silhouette);
     }
@@ -194,6 +224,7 @@ public class ClusteringService {
             out.add(ClusterResponse.builder()
                     .clusterId(c)
                     .personaName(personaName(centroid, defaultRate))
+                    .generatedAt(java.time.Instant.now().toString())
                     .size(rows.size())
                     .centroid(centroid)
                     .avgRisk(avgRisk)
@@ -201,18 +232,17 @@ public class ClusteringService {
                     .description(describeCluster(centroid, avgRisk, defaultRate))
                     .build());
         }
+        PersonaNaming.apply(out);
+        for (ClusterResponse cluster : out) {
+            cluster.setPersonaName(cluster.getDisplayName());
+            cluster.setDescription(cluster.getPersonaName() + ": " + cluster.getTagline()
+                    + ". " + cluster.getDescription());
+        }
         return out;
     }
 
     private static String personaName(Map<String, Double> centroid, double defaultRate) {
-        String risk = defaultRate >= 0.30 ? "High-Default"
-                : defaultRate >= 0.18 ? "Elevated-Default" : "Lower-Default";
-        double delayed = centroid.getOrDefault("MONTHS_DELAYED", 0.0);
-        double utilization = centroid.getOrDefault("AVG_UTILIZATION", 0.0);
-        String behaviour = delayed >= 3.0 ? "Persistent Delayers"
-                : delayed >= 1.0 ? "Occasional Delayers"
-                : utilization >= 0.8 ? "High Utilization" : "Current Payers";
-        return risk + " " + behaviour;
+        return PersonaNaming.name(centroid);
     }
 
     /** Description is derived from the cluster's observed centroids and target rate. */

@@ -20,6 +20,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { formatInt, formatPct } from "@/lib/utils";
 import { friendlyRuleValue } from "@/lib/rules-format";
+import { PAY_STATUS_LABELS, featureLabel } from "@/lib/constants";
 import type { EdaDefaultGroup, MiningReport } from "@/types/api.types";
 import { DataPreparationCharts } from "./DataPreparationCharts";
 import { imputationSentence } from "./report-copy";
@@ -52,7 +53,7 @@ export function DataUnderstandingSection({
     .map((row) => {
       const label = friendlyRuleValue(row.group, defaultDimension);
       const group = /^PAY_[1-6]$/.test(defaultDimension)
-        ? label.toLowerCase().replace(/\bmonths?\b/g, "mo")
+        ? (PAY_STATUS_LABELS[Number(row.group)] ?? row.group)
         : label;
       return { ...row, group: `${group} (n=${formatInt(row.count)})` };
     });
@@ -194,6 +195,8 @@ export function DataPreparationSection({ report }: { report: MiningReport }) {
   const negativeBills = Object.entries(preprocessing?.negativeBillByColumn ?? {});
   const outliers = Object.entries(preprocessing?.outlierByColumn ?? {});
   const features = engineering?.derivedFeatures ?? [];
+  const rawDelay = features.find((feature) => feature.name === "MAX_DELAY");
+  const clippedDelay = report.clustering.clusters[0]?.baseline?.longestDelayMonths;
 
   return (
     <ReportSection
@@ -253,7 +256,15 @@ export function DataPreparationSection({ report }: { report: MiningReport }) {
       </ReportDetails>
       <ReportTable
         id="engineered-features"
-        caption={`${features.length} derived features from ${engineering?.columnsIn ?? "?"} input columns.`}
+        caption={<>
+          {`${features.length} derived features from ${engineering?.columnsIn ?? "?"} input columns.`}
+          {rawDelay ? <span className="mt-1 block">
+            Codes below 0 mean paid in full or no card use; the Personas page reports the clipped mean (codes &lt; 0 counted as 0)
+            {clippedDelay != null && rawDelay.mean != null
+              ? `, e.g. portfolio ${clippedDelay.toFixed(1)} months vs raw ${rawDelay.mean.toFixed(2)}.`
+              : "."}
+          </span> : null}
+        </>}
       >
         <table className="w-full min-w-[820px] text-xs">
           <thead>
@@ -268,14 +279,14 @@ export function DataPreparationSection({ report }: { report: MiningReport }) {
           <tbody>
             {features.map((feature) => (
               <tr key={feature.name} className="border-b last:border-0">
-                <td className="break-words p-3 font-semibold">{feature.name ?? "n/a"}</td>
+                <td className="break-words p-3 font-semibold">{featureLabel(feature.name ?? "n/a")}</td>
                 <td className="p-3">{feature.type ?? "n/a"}</td>
                 <td className="max-w-md whitespace-normal break-words p-3 font-mono">
                   {feature.formula ?? "n/a"}
                 </td>
                 {[feature.mean, feature.std, feature.min, feature.max].map((value, index) => (
-                  <td key={index} className="p-3 tabular-nums">
-                    {value == null ? "n/a" : value.toFixed(4)}
+                  <td key={index} className="p-3 tabular-nums" title={feature.type === "nominal" ? "not applicable" : undefined}>
+                    {feature.type === "nominal" ? "-" : value == null ? "n/a" : feature.name === "BILL_TREND" ? formatPct(value) : value.toFixed(4)}
                   </td>
                 ))}
               </tr>
@@ -352,6 +363,5 @@ function tierRank(tier: string): number {
 }
 
 function defaultDimensionLabel(dimension: string): string {
-  if (dimension === "PAY_1") return "September 2005 repayment status";
-  return dimension.replaceAll("_", " ").toLowerCase();
+  return featureLabel(dimension);
 }

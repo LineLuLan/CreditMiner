@@ -21,6 +21,8 @@ export const SequencePatternSchema = z.object({
     repeat: z.number().int().positive().optional(),
   })).optional(),
   familyId: z.string().optional(),
+  familyStory: z.string().optional(),
+  familyItems: z.array(z.string()).optional(),
   groupPrevalenceRatio: z.number().optional(),
   groupPrevalenceRatioStatus: z.string().optional(),
   difference: z.number().optional(),
@@ -28,12 +30,12 @@ export const SequencePatternSchema = z.object({
     supportDefault: SupportIntervalSchema.optional(),
     supportNonDefault: SupportIntervalSchema.optional(),
   }).optional(),
-});
+}).passthrough();
 
 export const SequenceStoriesSchema = z.object({
   defaultStories: z.array(SequencePatternSchema).optional(),
   nonDefaultStories: z.array(SequencePatternSchema).optional(),
-});
+}).passthrough();
 
 const ExperimentMetricsSchema = z.object({
   accuracy: z.number(),
@@ -100,7 +102,7 @@ export const SequenceArtifactViewSchema = z.object({
     gspDefaultMs: z.number(),
     gspNonDefaultMs: z.number(),
   }),
-});
+}).passthrough();
 
 export type SequenceArtifactView = z.infer<typeof SequenceArtifactViewSchema>;
 export type SequencePattern = z.infer<typeof SequencePatternSchema>;

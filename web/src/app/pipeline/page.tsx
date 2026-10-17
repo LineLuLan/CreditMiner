@@ -41,6 +41,7 @@ function Methodology({ report }: { report: MiningReport }) {
   const preprocessing = method?.preprocessing;
   const featureEngineering = method?.featureEngineering;
   const clustering = method?.clustering;
+  const chosenK = report.clustering.selection?.chosenK ?? clustering?.bestK ?? report.clustering.bestK;
   const associationRules = method?.associationRules;
   const variants = evaluation?.variants ?? [];
   const bestModel = evaluation?.bestVariant?.algo ?? report.classification.bestModel;
@@ -58,7 +59,7 @@ function Methodology({ report }: { report: MiningReport }) {
       number: 2,
       icon: SlidersHorizontal,
       title: "Clean data",
-      sentence: "Phase 1 maps category codes. Phase 2 removes duplicates and flags IQR and Z-score outliers.",
+      sentence: "Map category codes, remove duplicates, and flag IQR and Z-score outliers.",
       chips: [["Rows out", value(preprocessing?.rowsOut)], ["Duplicates", value(preprocessing?.duplicatesDropped)]],
     },
     {
@@ -79,15 +80,15 @@ function Methodology({ report }: { report: MiningReport }) {
       number: 6,
       icon: GitBranch,
       title: "Cluster and detect anomalies",
-      sentence: "Run K-means with k=2 and rank anomalies by centroid distance.",
-      chips: [["Chosen k", value(clustering?.bestK ?? report.clustering.bestK)], ["Clusters", formatInt(report.clustering.totalClusters)]],
+      sentence: `Run K-means${chosenK != null ? ` with k=${chosenK}` : ""} and rank anomalies by centroid distance.`,
+      chips: [["Chosen k", value(chosenK)], ["Clusters", formatInt(report.clustering.totalClusters)]],
     },
     {
       number: 7,
       icon: Filter,
       title: "Mine association rules",
       sentence: "Run Apriori passes for default and non-default client outcomes.",
-      chips: [["Default support", formatSupport(associationRules?.defaultPass?.finalSupport)], ["Non-default support", formatSupport(associationRules?.nonDefaultPass?.minSupport)]],
+      chips: [["Min support (default)", formatSupport(associationRules?.defaultPass?.finalSupport ?? associationRules?.defaultPass?.minSupport)], ["Min support (non-default)", formatSupport(associationRules?.nonDefaultPass?.minSupport)]],
     },
     {
       number: 10,
@@ -135,10 +136,10 @@ interface PhaseProps {
   chips: Array<[string, string]>;
 }
 
-function Phase({ number, step, icon: Icon, title, sentence, chips }: PhaseProps & { step: number }) {
+function Phase({ step, icon: Icon, title, sentence, chips }: PhaseProps & { step: number }) {
   return (
     <Card className="min-w-0 break-inside-avoid">
-      <CardHeader className="pb-3"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><Icon className="h-5 w-5" aria-hidden /></span><div className="min-w-0"><div className="mb-1 flex flex-wrap items-center gap-2"><span className="text-xs font-medium text-muted-foreground">Step {formatInt(step)}</span><Badge variant="outline" className="text-[10px]">Phase {formatInt(number)}</Badge></div><CardTitle className="text-base">{title}</CardTitle></div></div></CardHeader>
+      <CardHeader className="pb-3"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><Icon className="h-5 w-5" aria-hidden /></span><div className="min-w-0"><div className="mb-1 flex flex-wrap items-center gap-2"><span className="text-xs font-medium text-muted-foreground">Step {formatInt(step)}</span></div><CardTitle className="text-base">{title}</CardTitle></div></div></CardHeader>
       <CardContent className="space-y-4"><p className="text-sm">{sentence}</p><div className="flex flex-wrap gap-2">{chips.map(([label, chipValue]) => <DataChip key={`${label}-${chipValue}`} label={label} value={chipValue} />)}</div><Link href="/mining-report" className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">View evidence</Link></CardContent>
     </Card>
   );

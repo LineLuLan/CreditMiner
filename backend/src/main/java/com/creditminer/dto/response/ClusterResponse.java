@@ -17,10 +17,13 @@ public class ClusterResponse {
     private int size;
     /** Map: feature name -> centroid value. */
     private Map<String, Double> centroid;
+    private Double longestDelayMonths;
     private double avgRisk;
     private double defaultRate;
     private String description;
     private String displayName;
+    private String tagline;
+    private String generatedAt;
     private Double shareOfClients;
     private Double shareOfDefaults;
     private Double defaultRateMultiplier;
@@ -34,6 +37,7 @@ public class ClusterResponse {
     public static class Baseline {
         private long size;
         private double defaultRate;
+        private Double longestDelayMonths;
         private Map<String, Double> centroid;
     }
 

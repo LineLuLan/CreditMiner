@@ -19,7 +19,7 @@ import { useClusters } from "@/hooks/useClusters";
 import type { Cluster } from "@/types/api.types";
 import { useOverview } from "@/hooks/useOverview";
 import { useCustomer, useCustomers } from "@/hooks/useCustomers";
-import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/lib/constants";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, featureLabel, EDUCATION_LABELS, MARRIAGE_LABELS } from "@/lib/constants";
 import { formatDecimal, formatInt, formatNt, formatPct } from "@/lib/format";
 import { CustomerTable } from "./CustomerTable";
 
@@ -32,8 +32,8 @@ const DEFAULT_OPTIONS = [
 const SORT_OPTIONS = [
   { value: "clientId,asc", label: "ID ascending" },
   { value: "clientId,desc", label: "ID descending" },
-  { value: "payRatio,desc", label: "Pay ratio descending" },
-  { value: "payRatio,asc", label: "Pay ratio ascending" },
+  { value: "payRatio,desc", label: `${featureLabel("PAY_RATIO")} descending` },
+  { value: "payRatio,asc", label: `${featureLabel("PAY_RATIO")} ascending` },
   { value: "age,asc", label: "Age ascending" },
   { value: "age,desc", label: "Age descending" },
 ];
@@ -62,7 +62,7 @@ export default function CustomersPage() {
   const { data: overview } = useOverview();
   const { data: anomalies, error: anomalyError } = useAnomalies();
   const clusterOptions = [
-    { value: "all", label: "All clusters" },
+    { value: "all", label: "All personas" },
     ...(clusters ?? []).map((cluster) => ({
       value: String(cluster.clusterId),
       label: cluster.displayName ?? cluster.personaName,
@@ -74,7 +74,7 @@ export default function CustomersPage() {
 
   return (
     <div className="flex min-w-0 flex-col">
-      <Header title="Clients" />
+      <Header title="Customers" />
       <div className="min-w-0 flex-1 space-y-4 p-4 xl:p-5">
         <Card>
           <CardContent className="space-y-3 pt-6">
@@ -96,10 +96,10 @@ export default function CustomersPage() {
                   </SelectContent>
                 </Select>
               </Filter>
-              <Filter label="Cluster">
+              <Filter label="Persona">
                 <Select value={clusterId} onValueChange={setClusterId}>
                   <SelectTrigger
-                    aria-label="Filter by cluster"
+                    aria-label="Filter by persona"
                     className="w-full min-w-0 [&>span]:truncate"
                   >
                     <SelectValue />
@@ -182,7 +182,7 @@ export default function CustomersPage() {
           </p>
         ) : anomalies ? (
           <p className="text-xs text-muted-foreground">
-            Outlier badges cover {formatInt(anomalies.length)} ranked anomalies returned by the API.
+            Outlier badges mark the {formatInt(anomalies.length)} clients flagged by the anomaly check.
           </p>
         ) : null}
 
@@ -261,11 +261,11 @@ function CustomerDetailDialog({
 
 const HUMANIZE: Record<string, string> = {
   clientId: "Client ID",
-  limitBal: "Credit limit",
+  limitBal: featureLabel("LIMIT_BAL"),
   sex: "Sex",
   education: "Education",
   marriage: "Marriage",
-  age: "Age",
+  age: featureLabel("AGE"),
   pay1: "Repayment status - Sep 2005",
   pay2: "Repayment status - Aug 2005",
   pay3: "Repayment status - Jul 2005",
@@ -285,17 +285,17 @@ const HUMANIZE: Record<string, string> = {
   payAmt5: "Payment amount - May 2005",
   payAmt6: "Payment amount - Apr 2005",
   defaultFlag: "Default next month",
-  utilization1: "Latest utilization",
-  avgUtilization: "Average utilization",
-  payRatio: "Pay ratio",
-  monthsDelayed: "Months delayed",
-  maxDelay: "Maximum delay",
-  billTrend: "Bill trend",
+  utilization1: featureLabel("UTILIZATION_1"),
+  avgUtilization: featureLabel("AVG_UTILIZATION"),
+  payRatio: featureLabel("PAY_RATIO"),
+  monthsDelayed: featureLabel("MONTHS_DELAYED"),
+  maxDelay: featureLabel("MAX_DELAY"),
+  billTrend: featureLabel("BILL_TREND"),
   riskTier: "Risk tier",
   isOutlier: "Outlier",
   isAnomaly: "Anomaly",
   centroidDistance: "Centroid distance",
-  clusterId: "Cluster",
+  clusterId: "Persona",
 };
 
 const NT_KEYS = new Set([
@@ -343,6 +343,8 @@ function formatValue(key: string, value: unknown): string {
     if (Number.isInteger(value)) return formatInt(value);
     return formatDecimal(value, 4);
   }
+  if (key === "education") return EDUCATION_LABELS[String(value)] ?? String(value);
+  if (key === "marriage") return MARRIAGE_LABELS[String(value)] ?? String(value);
   return String(value);
 }
 

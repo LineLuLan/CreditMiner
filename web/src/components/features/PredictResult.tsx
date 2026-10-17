@@ -5,7 +5,7 @@ import { Sparkles, Target, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatPct1 } from "@/lib/format";
-import { EDA_FIELD_LABELS } from "@/lib/constants";
+import { featureLabel } from "@/lib/constants";
 import type { PredictResponse } from "@/types/api.types";
 
 export function PredictResult({
@@ -89,7 +89,7 @@ export function PredictResult({
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Clients in this segment show similar payment and risk behaviour.
+                  Clients in this persona show similar payment and risk behaviour.
                 </p>
               </>
             ) : (
@@ -112,7 +112,7 @@ export function PredictResult({
             <FeatureBar
               key={f.name}
               rank={idx + 1}
-              name={EDA_FIELD_LABELS[f.name] ?? f.name.replaceAll("_", " ")}
+              name={featureLabel(f.name)}
               value={f.contribution}
               max={maxContribution(data.topFeatures)}
             />

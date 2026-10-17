@@ -12,9 +12,9 @@ export function ItemLegend({ mapping }: { mapping: SequenceArtifact["itemMapping
           Items joined by &quot;+&quot; occur in the same month. &quot;Then&quot; marks a later observed month, which
           may have a gap. &quot;x3&quot; means three repeated steps in the pattern.
         </p>
-        <p className="break-words leading-6 text-muted-foreground">Month order: {mapping.order}.</p>
+        <p className="break-words leading-6 text-muted-foreground">Month order: from the April 2005 statement to the September 2005 statement.</p>
         {mapping.oldestMonthReference ? (
-          <p className="break-words leading-6 text-muted-foreground">{mapping.oldestMonthReference}.</p>
+          <p className="break-words leading-6 text-muted-foreground">April has no payment item because March&apos;s bill is unobserved.</p>
         ) : null}
         <div className="grid gap-5 sm:grid-cols-2">
           {(
@@ -29,10 +29,10 @@ export function ItemLegend({ mapping }: { mapping: SequenceArtifact["itemMapping
                 {Object.entries(items).map(([token, definition]) => (
                   <div key={token} className="break-words">
                     <dt className="font-medium">
-                      {Object.prototype.hasOwnProperty.call(SEQUENCE_ITEMS, token)
+                      <span className="font-mono">{token}</span>{" - "}
+                      {token === "NO_BALANCE" ? "Nothing due" : token === "COVERED" ? "Payment covers the bill" : Object.prototype.hasOwnProperty.call(SEQUENCE_ITEMS, token)
                         ? SEQUENCE_ITEMS[token]
-                        : token}{" "}
-                      <span className="text-xs font-normal text-muted-foreground">({token})</span>
+                        : token}
                     </dt>
                     <dd className="mt-1 text-xs leading-5 text-muted-foreground">{definition}</dd>
                   </div>

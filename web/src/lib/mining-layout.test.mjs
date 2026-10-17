@@ -19,8 +19,12 @@ const mocks = {
   "next/navigation": { usePathname: () => route },
   // Responsive PCA rendering needs a hydrated app. Quantiles have separate tests.
   "next/dynamic": () => () => null,
-  "@/hooks/useRules": { useRules: (lift, category) => ({ data: sample("rules").filter((rule) => rule.lift >= lift && (!category || rule.category === category)) }) },
+  "@/hooks/useRules": {
+    useRules: (lift, category) => ({ data: sample("rules").filter((rule) => rule.lift >= lift && (!category || rule.category === category)) }),
+    useRuleFamilies: (category) => ({ data: sample(`rules-families-${category.toLowerCase()}`) }),
+  },
   "@/hooks/useOverview": { useOverview: () => ({ data: sample("overview") }) },
+  "@/hooks/useMiningReport": { useMiningReport: () => ({ data: sample("mining-report") }) },
   "@/hooks/useClusters": { useClusters: () => ({ data: sample("clusters") }), useClusterCustomers: () => ({}) },
   "@/hooks/useSequences": { useSequences: () => ({ data: sample("sequences") }) },
 };
@@ -63,13 +67,13 @@ test("sample-backed static layouts fit 400/1440px; native evidence disclosures w
         assert.ok(dimensions.content <= width, `${name} at ${width}: document width ${dimensions.content}`);
         assert.equal(await page.locator("h1").count(), 1, `${name} has only the topbar H1`);
         if (name === "rules") {
-          await page.getByRole("button", { name: "Metrics", exact: true }).click();
-          assert.equal(await page.locator("[popover]").evaluate((element) => element.matches(":popover-open")), true);
-          const rect = await page.locator("[popover]").boundingBox();
-          assert.ok(rect.width <= width && rect.x >= 0 && rect.x + rect.width <= width, "glossary fits viewport");
-          await page.keyboard.press("Escape");
-          assert.equal(await page.locator("[popover]").evaluate((element) => element.matches(":popover-open")), false);
-          const similar = page.locator("summary").filter({ hasText: /^\+/ }).first();
+          const metrics = page.locator("summary").filter({ hasText: /^Metrics$/ });
+          await metrics.click();
+          assert.equal(await metrics.evaluate((element) => element.parentElement.open), true);
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "glossary fits viewport");
+          await metrics.click();
+          assert.equal(await metrics.evaluate((element) => element.parentElement.open), false);
+          const similar = page.locator("summary").filter({ hasText: /^Show all/ }).first();
           if (await similar.count()) {
             await similar.click();
             assert.equal(await similar.evaluate((element) => element.parentElement.open), true);
@@ -81,13 +85,26 @@ test("sample-backed static layouts fit 400/1440px; native evidence disclosures w
         }
         if (name === "sequences") {
           const story = sample("sequences").stories.defaultStories[0];
-          assert.ok((await page.locator("body").innerText()).includes(`${story.displayText}: ${(story.supportDefault * 100).toFixed(1)}% of defaulters`));
+          assert.ok((await page.locator("body").innerText()).includes(`${story.familyStory}: ${(story.supportDefault * 100).toFixed(1)}% of defaulters`));
+          assert.ok((await page.locator("body").innerText()).includes(`Exact pattern: ${story.displayText}`));
+          await page.getByText("All patterns", { exact: true }).click();
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
           const summary = page.locator("summary", { hasText: "How items are coded" });
           assert.equal(await summary.evaluate((element) => element.parentElement.open), false);
           await summary.click();
           assert.equal(await summary.evaluate((element) => element.parentElement.open), true);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          // The explicitly unchanged technical legend retains API field codes.
+          await summary.click();
         }
+        if (name === "clusters") {
+          for (const persona of sample("clusters")) assert.ok((await page.locator("body").innerText()).includes(persona.displayName));
+          assert.equal(await page.getByRole("button", { name: /^Open clients in / }).count(), 4);
+        }
+        const visibleCopy = await page.locator("body").innerText();
+        assert.doesNotMatch(visibleCopy, /PAY_1|cluster 0|\[3, inf|Mean use|(?<!Utilization, )Sep:/i);
+        await page.locator("details").evaluateAll((elements) => elements.forEach((element) => { element.open = true; }));
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${name} expanded layout fits ${width}px`);
         t.diagnostic(`${name}: ${width}px fits; sample content rendered`);
       }
     }

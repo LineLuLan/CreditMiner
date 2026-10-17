@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { getFact, createFacts, insightFactId, evidenceFactIds } from "./facts.ts";
+import { getFact, createFacts, insightFactId, evidenceFactIds, OVERVIEW_SIGNAL_IDS } from "./facts.ts";
 
 const sample = (name) =>
   JSON.parse(readFileSync(new URL(`../../.api-samples/${name}.json`, import.meta.url), "utf8"));
@@ -13,12 +13,23 @@ const sources = {
   report: sample("mining-report"),
 };
 
+test("latest-statement signal prefers the new inclusive cohort and retains legacy fallback", () => {
+  const captured = sample("facts");
+  const catalogue = { ...captured, facts: captured.facts.filter((fact) => fact.factId !== "default-rate-pay1-late2plus") };
+  const old = catalogue.facts.find((fact) => fact.factId === "default-rate-pay1-late2");
+  const updated = { ...old, factId: "default-rate-pay1-late2plus", value: 0.695, n: 3129 };
+  const both = { ...catalogue, facts: [...catalogue.facts, updated] };
+  assert.equal(getFact("late2-sep-default-rate", { catalogue: both }).value, updated.value);
+  assert.equal(getFact("default-rate-pay1-late2plus", { catalogue: both }).n, updated.n);
+  assert.equal(getFact("default-rate-pay1-late2plus", { catalogue }).value, old.value);
+});
+
 test("three overview signals use exact catalogue values ahead of rounded adapters", () => {
   const catalogue = sample("facts");
   for (const [id, apiId] of [
-    ["late2-sep-default-rate", "default-rate-pay1-late2"],
+    ["late2-sep-default-rate", catalogue.facts.some((fact) => fact.factId === "default-rate-pay1-late2plus") ? "default-rate-pay1-late2plus" : "default-rate-pay1-late2"],
     ["late3plus-6m-default-rate", "default-rate-months-delayed-ge3"],
-    ["cluster-c0-default-rate", "default-rate-cluster-0"],
+    ["share-of-defaults-delayers", "share-of-defaults-delayers"],
   ]) {
     const expected = catalogue.facts.find((fact) => fact.factId === apiId);
     const actual = getFact(id, { ...sources, catalogue });
@@ -53,16 +64,29 @@ test("portfolio facts follow supplied data, including zero, without a global cac
 
 test("published insights normalize percentages and retain cohort metadata", () => {
   const late = getFact("late2-sep-default-rate", sources);
-  assert.ok(Math.abs(late.value - 0.691) < 1e-12);
-  assert.equal(late.n, 2666);
-  assert.equal(late.multiplier, 3.1);
-  assert.ok(Math.abs(late.baseline - 0.221) < 1e-12);
+  const visual = sources.visuals.find((row) => insightFactId({ title: row.title }) === "late2-sep-default-rate");
+  assert.equal(late.value, Number.parseFloat(visual.headline.value) / 100);
+  const cohort = visual.bars.filter((bar) => bar.label === "2 months late" ||
+    (visual.headline.factId === "default-rate-pay1-late2plus" && bar.label === "3+ months late"));
+  assert.equal(late.n, cohort.reduce((sum, bar) => sum + bar.n, 0));
+  assert.equal(late.multiplier, Number.parseFloat(visual.lift));
+  assert.equal(late.baseline, visual.baseline.value / 100);
   assert.equal(late.unit, "ratio");
   assert.match(late.source, /insights\/visuals/);
   assert.equal(getFact("late3plus-6m-default-rate", sources).value, 0.6);
   assert.equal(getFact("late3plus-6m-default-rate", sources).n, 3743);
-  assert.equal(getFact("cluster-c0-default-rate", sources).value, 0.535);
-  assert.equal(getFact("cluster-c0-share-of-defaults", sources).value, 0.445);
+  assert.equal(getFact("cluster-c0-default-rate", sources).value, sources.clusters[0].defaultRate);
+  assert.equal(getFact("share-of-defaults-delayers", sources).value, 0.615);
+});
+
+test("overview third signal and demographic headline follow wave 6A cohorts", () => {
+  const personaInsight = sources.insights.find((row) => row.insightId === 4);
+  assert.equal(OVERVIEW_SIGNAL_IDS[2], "share-of-defaults-delayers");
+  assert.equal(insightFactId(personaInsight), OVERVIEW_SIGNAL_IDS[2]);
+  const educationInsight = sources.insights.find((row) => row.insightId === 9);
+  assert.equal(insightFactId(educationInsight), "default-rate-education-highschool");
+  const fact = getFact(insightFactId(educationInsight), { ...sources, catalogue: sample("facts") });
+  assert.equal((fact.value * 100).toFixed(1), "25.2");
 });
 
 test("cohort headlines stay authoritative and cannot be confused with rounded bar averages", () => {

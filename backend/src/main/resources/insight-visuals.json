@@ -1,9 +1,10 @@
 [
   {
-    "title": "Two months late now predicts default",
+    "title": "Two or more months late now predicts default",
     "headline": {
-      "value": "69.1%",
-      "label": "default when two months late"
+      "value": "69.5%",
+      "label": "default when two or more months late on the latest statement",
+      "factId": "default-rate-pay1-late2plus"
     },
     "lift": "3.1x",
     "unit": "% default",
@@ -11,7 +12,7 @@
       "value": 22.1,
       "label": "Portfolio 22.1%"
     },
-    "axis": "Latest statement status (PAY_1)",
+    "axis": "Repayment status on the latest statement (September 2005)",
     "bars": [
       {
         "label": "No use",
@@ -44,79 +45,56 @@
         "highlight": true
       },
       {
-        "label": "3 months late",
-        "value": 75.8,
-        "n": 322,
-        "highlight": true
-      },
-      {
-        "label": "4 months late",
-        "value": 68.4,
-        "n": 76,
-        "highlight": true
-      },
-      {
-        "label": "5 months late",
-        "value": 50.0,
-        "n": 26,
-        "highlight": true
-      },
-      {
-        "label": "6 months late",
-        "value": 54.5,
-        "n": 11,
-        "highlight": true
-      },
-      {
-        "label": "7 months late",
-        "value": 77.8,
-        "n": 9,
-        "highlight": true
-      },
-      {
-        "label": "8 months late",
-        "value": 57.9,
-        "n": 19,
+        "label": "3+ months late",
+        "value": 71.9,
+        "n": 463,
         "highlight": true
       }
     ]
   },
   {
-    "title": "Worst delay of three or more months",
+    "title": "Both inactive and over-limit cards default more",
     "headline": {
-      "value": "62.8%",
-      "label": "default with worst delay of three or more months"
+      "value": "34.9%",
+      "label": "default at 0% average utilization (n = 1,041)",
+      "factId": "default-rate-avg-utilization-le0"
     },
-    "lift": "2.8x",
+    "lift": "1.6x",
     "unit": "% default",
     "baseline": {
       "value": 22.1,
       "label": "Portfolio 22.1%"
     },
-    "axis": "Worst delay across six statements (months)",
+    "axis": "Six-month average utilization (bill / limit)",
     "bars": [
       {
-        "label": "<= 0",
-        "value": 11.7,
-        "n": 19918,
+        "label": "0% or below (no balance)",
+        "value": 34.9,
+        "n": 1041,
+        "highlight": true
+      },
+      {
+        "label": "0-25%",
+        "value": 16.6,
+        "n": 13310,
         "highlight": false
       },
       {
-        "label": "1",
-        "value": 25.1,
-        "n": 1668,
+        "label": "25-50%",
+        "value": 19.9,
+        "n": 4555,
+        "highlight": false
+      },
+      {
+        "label": "50-100%",
+        "value": 28.1,
+        "n": 10422,
         "highlight": true
       },
       {
-        "label": "2",
-        "value": 43.6,
-        "n": 7187,
-        "highlight": true
-      },
-      {
-        "label": "3+",
-        "value": 62.8,
-        "n": 1192,
+        "label": "> 100%",
+        "value": 34.2,
+        "n": 637,
         "highlight": true
       }
     ]
@@ -142,6 +120,18 @@
         "highlight": false
       },
       {
+        "label": "1 late month",
+        "value": 29.9,
+        "n": 4405,
+        "highlight": true
+      },
+      {
+        "label": "2 late months",
+        "value": 38.8,
+        "n": 1899,
+        "highlight": true
+      },
+      {
         "label": "3+ late months",
         "value": 60.0,
         "n": 3743,
@@ -150,29 +140,42 @@
     ]
   },
   {
-    "title": "One cluster holds almost half of all defaults",
+    "title": "Delaying personas hold most defaults",
     "headline": {
-      "value": "53.5%",
-      "label": "default in cluster 0"
+      "value": "61.5%",
+      "label": "of defaults come from the 30.5% of clients who delay",
+      "factId": "share-of-defaults-delayers"
     },
-    "lift": "2.4x",
+    "lift": "",
     "unit": "% default",
     "baseline": {
       "value": 22.1,
       "label": "Portfolio 22.1%"
     },
-    "axis": "K-means cluster",
+    "axis": "K-means persona (k = 4)",
     "bars": [
       {
-        "label": "High-Default Persistent Delayers",
-        "value": 53.5,
-        "n": 5516,
+        "label": "Persistent delayers",
+        "value": 64.0,
+        "n": 2589,
         "highlight": true
       },
       {
-        "label": "Lower-Default Current Payers",
-        "value": 15.1,
-        "n": 24449,
+        "label": "Transactors",
+        "value": 12.5,
+        "n": 9031,
+        "highlight": false
+      },
+      {
+        "label": "Occasional delayers",
+        "value": 36.9,
+        "n": 6555,
+        "highlight": true
+      },
+      {
+        "label": "Revolvers, never late",
+        "value": 12.1,
+        "n": 11790,
         "highlight": false
       }
     ]
@@ -192,25 +195,25 @@
     "axis": "Credit-limit quartiles",
     "bars": [
       {
-        "label": "Q1",
+        "label": "Q1: <= NT$50,000",
         "value": 31.8,
         "n": 7673,
         "highlight": true
       },
       {
-        "label": "Q2",
+        "label": "Q2: NT$50,000-140,000",
         "value": 24.7,
         "n": 7607,
-        "highlight": true
+        "highlight": false
       },
       {
-        "label": "Q3",
+        "label": "Q3: NT$140,000-240,000",
         "value": 17.4,
         "n": 7627,
         "highlight": false
       },
       {
-        "label": "Q4",
+        "label": "Q4: > NT$240,000",
         "value": 14.0,
         "n": 7058,
         "highlight": false
@@ -232,25 +235,25 @@
     "axis": "Latest-payment amount quartiles",
     "bars": [
       {
-        "label": "Q1",
+        "label": "Q1: <= NT$1,000",
         "value": 31.7,
         "n": 7805,
         "highlight": true
       },
       {
-        "label": "Q2",
+        "label": "Q2: NT$1,000-2,102",
         "value": 22.1,
         "n": 7179,
         "highlight": false
       },
       {
-        "label": "Q3",
+        "label": "Q3: NT$2,102-5,008",
         "value": 20.5,
         "n": 7492,
         "highlight": false
       },
       {
-        "label": "Q4",
+        "label": "Q4: > NT$5,008",
         "value": 13.8,
         "n": 7489,
         "highlight": false
@@ -258,7 +261,7 @@
     ]
   },
   {
-    "title": "Paying a larger share of the bill lowers risk",
+    "title": "Higher payment ratios go with lower default rates",
     "headline": {
       "value": "29.2%",
       "label": "default in the lowest payment-ratio quarter"
@@ -272,25 +275,25 @@
     "axis": "Six-month aggregate payment-ratio quartiles",
     "bars": [
       {
-        "label": "Q1",
+        "label": "Q1: pays <= 4.1%",
         "value": 29.2,
         "n": 7493,
         "highlight": true
       },
       {
-        "label": "Q2",
+        "label": "Q2: 4.1-8.8%",
         "value": 26.2,
         "n": 7490,
         "highlight": true
       },
       {
-        "label": "Q3",
+        "label": "Q3: 8.8-61.1%",
         "value": 17.9,
         "n": 7491,
         "highlight": false
       },
       {
-        "label": "Q4",
+        "label": "Q4: > 61.1%",
         "value": 15.3,
         "n": 7491,
         "highlight": false
@@ -315,7 +318,7 @@
         "label": "<= 29",
         "value": 22.9,
         "n": 9603,
-        "highlight": true
+        "highlight": false
       },
       {
         "label": "30-39",
@@ -327,13 +330,13 @@
         "label": "40-49",
         "value": 22.9,
         "n": 6456,
-        "highlight": true
+        "highlight": false
       },
       {
         "label": "50-59",
         "value": 24.9,
         "n": 2341,
-        "highlight": true
+        "highlight": false
       },
       {
         "label": "60+",
@@ -346,8 +349,8 @@
   {
     "title": "Demographic default rates differ",
     "headline": {
-      "value": "18.1 pts",
-      "label": "education spread including Other"
+      "value": "25.2%",
+      "label": "default for high-school clients vs 19.2% graduate school"
     },
     "lift": "",
     "unit": "% default",
@@ -358,55 +361,55 @@
     "axis": "Education, marital status and sex",
     "bars": [
       {
-        "label": "Education: Graduate",
+        "label": "Graduate school",
         "value": 19.2,
         "n": 10563,
         "highlight": false
       },
       {
-        "label": "Education: University",
+        "label": "University",
         "value": 23.7,
         "n": 14019,
-        "highlight": true
+        "highlight": false
       },
       {
-        "label": "Education: HighSchool",
+        "label": "High school",
         "value": 25.2,
         "n": 4915,
-        "highlight": true
+        "highlight": false
       },
       {
-        "label": "Education: Other",
+        "label": "Other education",
         "value": 7.1,
         "n": 468,
         "highlight": false
       },
       {
-        "label": "Marriage: Married",
+        "label": "Married",
         "value": 23.5,
         "n": 13643,
-        "highlight": true
+        "highlight": false
       },
       {
-        "label": "Marriage: Single",
+        "label": "Single",
         "value": 20.9,
         "n": 15945,
         "highlight": false
       },
       {
-        "label": "Marriage: Other",
+        "label": "Other status",
         "value": 23.6,
         "n": 377,
-        "highlight": true
+        "highlight": false
       },
       {
-        "label": "Sex: Male",
+        "label": "Male",
         "value": 24.2,
         "n": 11874,
-        "highlight": true
+        "highlight": false
       },
       {
-        "label": "Sex: Female",
+        "label": "Female",
         "value": 20.8,
         "n": 18091,
         "highlight": false

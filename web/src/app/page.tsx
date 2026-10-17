@@ -15,7 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import { FactsProvider, FactValue } from "@/components/charts/FactValue";
-import { insightFactId, OVERVIEW_SIGNAL_IDS } from "@/lib/facts";
+import { OVERVIEW_SIGNAL_IDS, OVERVIEW_SIGNAL_LABELS } from "@/lib/facts";
 import { DonutChart } from "@/components/charts/DonutChart";
 import { KPICard } from "@/components/charts/KPICard";
 import { CHART_AXIS_TICK, CHART_SEMANTIC, CHART_TOOLTIP_PROPS } from "@/components/charts/chart-theme";
@@ -28,9 +28,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useEdaDefaultBy } from "@/hooks/useEda";
 import { useInsights, useInsightVisuals } from "@/hooks/useInsights";
 import { useOverview } from "@/hooks/useOverview";
+import { useFacts } from "@/hooks/useFacts";
 import { friendlyRuleValue } from "@/lib/rules-format";
 import { CATEGORY_LABELS, EDA_FIELD_LABELS } from "@/lib/constants";
-import { formatInt, formatPct } from "@/lib/format";
+import { formatDecimal, formatInt, formatPct } from "@/lib/format";
 
 const DIMENSIONS = ["PAY_1", "RISK_TIER", "AGE"] as const;
 type Dimension = (typeof DIMENSIONS)[number];
@@ -40,15 +41,16 @@ export default function OverviewPage() {
   const { data, isLoading, error } = useOverview();
   const { data: insights } = useInsights();
   const { data: insightVisuals } = useInsightVisuals();
+  const { getFact } = useFacts({ overview: data, insights, visuals: insightVisuals });
   const { data: defaultBy, isLoading: isDefaultByLoading, error: defaultByError } = useEdaDefaultBy(dimension);
 
   const isPreparingData = isLoading || data?.totalCustomers === 0;
   const nonDefaultCount = data ? data.totalCustomers - data.defaultCount : 0;
-  const prioritySignals = OVERVIEW_SIGNAL_IDS.flatMap((id) => {
-    const insight = insights?.find((item) => insightFactId(item) === id);
-    if (!insight) return [];
-    return [{ insight, visual: insightVisuals?.find((item) => item.title === insight.title) }];
-  });
+  const prioritySignals = OVERVIEW_SIGNAL_IDS.map((id) => ({ id, fact: getFact(id) }));
+  const clientShare = getFact("share-of-clients-delayers").value;
+  const defaultShare = getFact("share-of-defaults-delayers").value;
+  const concentration = clientShare != null && clientShare > 0 && defaultShare != null
+    ? defaultShare / clientShare : null;
   const chartData = (defaultBy ?? []).filter((group) => group.count > 0).map((group) => ({
     ...group, group: friendlyRuleValue(group.group, dimension),
   }));
@@ -77,7 +79,7 @@ export default function OverviewPage() {
                     Which clients are most likely to default next month?
                   </h2>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                    Use repayment behaviour, segments, and rules to find high-risk clients.
+                    Use repayment behaviour, personas, and rules to find high-risk clients.
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row lg:w-56 lg:flex-col">
@@ -90,12 +92,12 @@ export default function OverviewPage() {
             <section aria-label="Portfolio summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <KPICard label="Total clients" value={<FactValue id="total-clients" animate />} hint="UCI dataset clients" />
               <KPICard label="Default count" value={<FactValue id="default-count" animate />} hint={<><FactValue id="default-rate" /> default rate</>} />
-              <KPICard label="Avg pay ratio" value={<FactValue id="avg-pay-ratio" animate />} hint="Payments divided by bills" />
-              <KPICard label="Avg utilization" value={<FactValue id="avg-utilization" animate />} hint="Bill divided by credit limit" />
+              <KPICard label="Average payment ratio" value={<FactValue id="avg-pay-ratio" animate />} hint="Payments divided by bills" />
+              <KPICard label="Average utilization" value={<FactValue id="avg-utilization" animate />} hint="Bill divided by credit limit" />
               <KPICard
                 label="High-risk tier"
                 value={<FactValue id="risk-tier-high-count" />}
-                hint={<>{formatPct(data.totalCustomers > 0 ? data.riskTierBreakdown.High / data.totalCustomers : null)} of clients<br />Low <FactValue id="risk-tier-low-count" /> / Medium <FactValue id="risk-tier-medium-count" /></>}
+                hint="Late 2+ months or utilization 100%+"
               />
             </section>
 
@@ -103,10 +105,16 @@ export default function OverviewPage() {
               <section aria-labelledby="top-signals-title" className="overflow-hidden rounded-xl border bg-card">
                 <div className="border-b px-4 py-3"><h2 id="top-signals-title" className="text-sm font-semibold">Priority default signals</h2></div>
                 <div className="grid sm:grid-cols-3">
-                  {prioritySignals.map(({ insight, visual }) => (
-                    <Link key={insight.insightId} href="/insights" className="group min-w-0 border-b p-4 transition-colors last:border-b-0 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none sm:border-b-0 sm:border-r sm:last:border-r-0">
-                      <div className="flex items-center gap-2"><p className="text-3xl font-bold tracking-tight tabular-nums"><FactValue id={insightFactId(insight)} /></p>{visual?.lift ? <Badge><FactValue id={insightFactId(insight)} format="multiplier" /></Badge> : null}</div>
-                      <div className="mt-2 flex items-start justify-between gap-3"><p className="text-sm leading-5 text-muted-foreground">{visual?.headline.label ?? insight.title}</p><ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /></div>
+                  {prioritySignals.map(({ id, fact }) => (
+                    <Link key={id} href="/insights" className="group min-w-0 border-b p-4 transition-colors last:border-b-0 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none sm:border-b-0 sm:border-r sm:last:border-r-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-3xl font-bold tracking-tight tabular-nums"><FactValue id={id} /></p>
+                        {id === "share-of-defaults-delayers" ? concentration != null ? <Badge>{formatDecimal(concentration, 1)}x their client share</Badge> : null
+                          : fact.multiplier !== null ? <Badge><FactValue id={id} format="multiplier" /></Badge> : null}
+                      </div>
+                      <div className="mt-2 flex items-start justify-between gap-3"><p className="text-sm leading-5 text-muted-foreground">
+                        {OVERVIEW_SIGNAL_LABELS[id]}
+                      </p><ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden /></div>
                     </Link>
                   ))}
                 </div>

@@ -1,246 +1,340 @@
 "use client";
 
 import * as React from "react";
-import { Info } from "lucide-react";
-import { Bar, BarChart, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CHART_SEMANTIC } from "@/lib/chart-theme";
 import { formatInt, formatMultiplier, formatPct1 } from "@/lib/format";
-import {
-  conditionText,
-  RULE_ATTRIBUTE_LABELS,
-  ruleConditions,
-  shortRuleName,
-  type RuleFamilyGroup,
-} from "@/lib/rules-format";
-import type { Rule } from "@/types/api.types";
+import { ruleLadders, shortRuleName } from "@/lib/rules-format";
+import type { RuleFamily, RuleFamiliesResponse } from "@/lib/schemas";
+import type { MiningReport } from "@/types/api.types";
+
+type Outcome = "default" | "nonDefault";
+type RulesMethodology = NonNullable<MiningReport["methodology"]>["associationRules"];
+
+/**
+ * Intent: every ranked view follows base lift, independent of API support order.
+ * Status: shared by charts, cards and report tables; synthetic families stay last.
+ * Next: retain this order if the API changes. Blockers: none.
+ * Confidence: rendering regressions cover both outcomes and cached-data immutability.
+ */
+export function rankRuleFamilies(families: RuleFamily[]): RuleFamily[] {
+  return [...families].sort((a, b) => {
+    if (!a.baseRule) return b.baseRule ? 1 : 0;
+    if (!b.baseRule) return -1;
+    return b.baseRule.lift - a.baseRule.lift;
+  });
+}
 
 export function RuleGlossary() {
-  const id = React.useId();
   return (
-    <>
-      <button
-        type="button"
-        {...{ popovertarget: id }}
-        className="inline-flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <Info className="h-4 w-4" aria-hidden /> Metrics
-      </button>
-      <div
-        id={id}
-        {...{ popover: "auto" as const }}
-        aria-label="Rule metrics"
-        className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border bg-card p-5 text-card-foreground shadow-lg"
-      >
-        <h2 className="font-semibold">How to read the rules</h2>
-        <dl className="mt-4 space-y-4 text-sm">
-          {[
-            ["Support", "Share of all clients matching both the conditions and outcome."],
-            ["Confidence", "Outcome rate among clients matching the conditions."],
-            ["Lift", "Confidence divided by the portfolio rate for that outcome."],
-          ].map(([term, definition]) => (
-            <div key={term}>
-              <dt>
-                <Badge variant="secondary">{term}</Badge>
-              </dt>
-              <dd className="mt-1 text-muted-foreground">{definition}</dd>
-            </div>
-          ))}
-        </dl>
-        <button
-          type="button"
-          {...{ popovertarget: id, popovertargetaction: "hide" }}
-          className="mt-4 min-h-11 rounded-md border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Close
-        </button>
-      </div>
-    </>
+    <details className="text-sm">
+      <summary className="cursor-pointer rounded-md border px-3 py-2">Metrics</summary>
+      <dl className="mt-2 space-y-2">
+        <div>
+          <dt className="font-medium">Support</dt>
+          <dd>Share of all clients matching both the conditions and outcome.</dd>
+        </div>
+        <div>
+          <dt className="font-medium">Confidence</dt>
+          <dd>Outcome rate among clients matching the conditions.</dd>
+        </div>
+        <div>
+          <dt className="font-medium">Counts</dt>
+          <dd>Clients match the conditions; Defaults or Non-defaults also match the outcome. A dash means the client count is unavailable.</dd>
+        </div>
+        <div>
+          <dt className="font-medium">Lift</dt>
+          <dd>Confidence divided by the portfolio rate for that outcome.</dd>
+        </div>
+      </dl>
+    </details>
   );
 }
 
-function outcomeBaseline(rule: Rule, baseline: number | null): number | null {
+export function RuleFootnote({ methodology }: { methodology?: RulesMethodology }) {
+  const defaultSupport = methodology?.defaultPass?.finalSupport;
+  const nonDefaultSupport = methodology?.nonDefaultPass?.finalSupport;
   return (
-    rule.baseline ??
-    (baseline === null ? null : rule.category === "default" ? baseline : 1 - baseline)
+    <div className="space-y-1 text-xs text-muted-foreground">
+      <p>Confidence is the outcome rate among clients matching the condition.</p>
+      <p>Lift compares it with the portfolio rate.</p>
+      <p>
+        Modifiers are mined together with the base condition (Apriori{defaultSupport != null && nonDefaultSupport != null
+          ? `, minimum support ${formatPct1(defaultSupport)} default / ${formatPct1(nonDefaultSupport)} non-default`
+          : ""}).
+      </p>
+    </div>
   );
+}
+
+export function upliftText(value: number | null): string {
+  return value === null ? "n/a" : `${value >= 0 ? "+" : ""}${value.toFixed(1)} pp`;
+}
+
+function ladderLevel(family: RuleFamily): string {
+  const name = shortRuleName(family.baseRule!);
+  const level = name.includes(": ") ? name.slice(name.indexOf(": ") + 2) : name;
+  const lateMonths = level.match(/^Late in (\d+\+?) of 6 months$/);
+  if (lateMonths) return `${lateMonths[1]} ${lateMonths[1] === "1" ? "month" : "months"} late`;
+  return /^\d+\+? months?$/.test(level) ? `${level} late` : level;
 }
 
 export function FamilyChart({
   families,
   baseline,
+  outcome,
 }: {
-  families: RuleFamilyGroup[];
-  baseline: number | null;
+  families: RuleFamily[];
+  baseline: number;
+  outcome: Outcome;
 }) {
+  const bases = rankRuleFamilies(families).filter((family) => family.baseRule);
+  const rate = outcome === "default" ? baseline : 1 - baseline;
+  const color = outcome === "default" ? CHART_SEMANTIC.danger : CHART_SEMANTIC.neutral;
   return (
     <Card className="min-w-0">
       <CardHeader>
-        <CardTitle>Top families by lift</CardTitle>
+        <CardTitle>Base conditions ranked</CardTitle>
         <CardDescription>
-          Shortest rule per family, ranked by lift. Bars show confidence; dashed lines show the
-          portfolio rate for each outcome.
+          Ranked by lift over the portfolio rate. Bars show confidence; the dashed line shows the portfolio outcome rate (
+          {formatPct1(rate)}).
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {families.slice(0, 8).map((family) => {
-          const rule = family.rules[0];
-          const rate = outcomeBaseline(rule, baseline);
-          const color =
-            rule.category === "default" ? CHART_SEMANTIC.danger : CHART_SEMANTIC.neutral;
-          return (
-            <div
-              key={family.id}
-              className="grid min-w-0 gap-2 border-b pb-4 last:border-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-5"
-            >
-              <div className="min-w-0">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="block max-w-full truncate rounded-sm text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:whitespace-normal md:break-words"
+      <CardContent>
+        {bases.length ? (
+          <div className="min-w-0">
+            <div className="space-y-4 sm:space-y-1">
+              {bases.map((family) => {
+                const rule = family.baseRule!;
+                return (
+                  <div
+                    key={family.familyId}
+                    className="grid grid-cols-[minmax(0,1fr)_4rem] items-center gap-x-3 gap-y-2 sm:min-h-7 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_4rem]"
+                  >
+                    <span className="col-span-2 break-words text-xs sm:col-span-1" title={shortRuleName(rule)}>
+                      {shortRuleName(rule)}
+                    </span>
+                    <div
+                      role="img"
+                      aria-label={`${shortRuleName(rule)}: ${formatPct1(rule.confidence)} confidence, ${formatPct1(rate)} baseline`}
+                      className="relative h-4 bg-muted"
                     >
-                      {family.label}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="break-words">{family.label}</TooltipContent>
-                </Tooltip>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {rule.category === "default" ? "Default" : "Non-default"} {"\u00b7"}{" "}
-                  {formatMultiplier(rule.lift)}
-                </p>
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap justify-between gap-x-3 text-xs tabular-nums">
-                  <span>Confidence {formatPct1(rule.confidence)}</span>
-                  <span className="text-muted-foreground">Base {formatPct1(rate)}</span>
-                </div>
-                <div
-                  role="img"
-                  aria-label={`${family.label}: ${formatPct1(rule.confidence)} confidence, ${formatPct1(rate)} baseline`}
-                >
-                  <ResponsiveContainer width="100%" height={32}>
-                    <BarChart
-                      data={[rule]}
-                      layout="vertical"
-                      margin={{ top: 4, right: 1, bottom: 4, left: 1 }}
-                    >
-                      <XAxis hide type="number" domain={[0, 1]} />
-                      <YAxis hide type="category" dataKey="ruleId" />
-                      <Bar
-                        dataKey="confidence"
-                        name="Confidence"
-                        fill={color}
-                        background={{ fill: "hsl(var(--muted))" }}
-                        radius={[0, 3, 3, 0]}
-                        isAnimationActive={false}
+                      <div
+                        className="h-full rounded-r-sm"
+                        style={{ width: `${rule.confidence * 100}%`, backgroundColor: color }}
                       />
-                      {rate !== null && (
-                        <ReferenceLine
-                          x={rate}
-                          stroke={CHART_SEMANTIC.baseline}
-                          strokeWidth={2}
-                          strokeDasharray="4 3"
-                        />
-                      )}
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+                      <span
+                        className="absolute -top-1 h-6 border-l-2 border-dashed"
+                        style={{ left: `${rate * 100}%`, borderColor: CHART_SEMANTIC.baseline }}
+                      />
+                    </div>
+                    <span className="text-right text-xs tabular-nums">
+                      {formatPct1(rule.confidence)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No standalone base conditions meet this filter.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-export function RuleFamilies({
+export function FamilyLadders({
   families,
-  baseline,
+  groups,
+  outcome,
 }: {
-  families: RuleFamilyGroup[];
-  baseline: number | null;
+  families: RuleFamily[];
+  groups: RuleFamiliesResponse["groups"];
+  outcome: Outcome;
 }) {
+  const ladders = ruleLadders(families, groups);
+  if (!ladders.length) return null;
   return (
-    <section className="min-w-0 space-y-3" aria-label="Rule families">
-      <h2 className="text-lg font-semibold">Rule families</h2>
-      {families.map((family) => (
-        <details
-          key={family.id}
-          open
-          className="min-w-0 rounded-lg border bg-card text-card-foreground"
-        >
-          <summary className="cursor-pointer break-words rounded-lg p-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            {family.label}{" "}
-            <span className="font-normal text-muted-foreground">
-              ({formatInt(family.rules.length)} rules)
-            </span>
-          </summary>
-          <div className="space-y-3 px-4 pb-4">
-            <RuleCard rule={family.rules[0]} baseline={baseline} />
-            {family.rules.length > 1 && (
-              <details className="min-w-0">
-                <summary className="w-fit cursor-pointer rounded-full border bg-secondary px-3 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  +{formatInt(family.rules.length - 1)} similar
-                </summary>
-                <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-2">
-                  {family.rules.slice(1).map((rule) => (
-                    <RuleCard key={rule.ruleId} rule={rule} baseline={baseline} />
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
-        </details>
+    <section aria-label="Condition ladders" className="grid gap-4 xl:grid-cols-3">
+      {ladders.map((group) => (
+        <Card key={group.attribute}>
+          <CardHeader>
+            <CardTitle>{group.attributeLabel}</CardTitle>
+            <CardDescription>Condition levels in ascending order</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className="grid gap-3" style={{ gridTemplateColumns: `repeat(${group.families.length}, minmax(0, 1fr))` }}>
+              {group.families.map((family) => {
+                const rule = family.baseRule!;
+                return (
+                  <li
+                    key={family.familyId}
+                    className="min-w-0 space-y-2 border-l-2 pl-3"
+                  >
+                    <span className="block break-words text-xs">{ladderLevel(family)}</span>
+                    <span className="block text-sm tabular-nums">
+                      <span
+                        className="text-xl font-semibold"
+                        style={{
+                          color:
+                            outcome === "default" ? CHART_SEMANTIC.danger : CHART_SEMANTIC.neutral,
+                        }}
+                      >
+                        {formatPct1(rule.confidence)}
+                      </span>{" "}
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        n = {rule.lhsCount == null ? "-" : formatInt(rule.lhsCount)} clients
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {outcome === "default" ? "Defaults" : "Non-defaults"}: {rule.jointCount == null ? "-" : formatInt(rule.jointCount)}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </CardContent>
+        </Card>
       ))}
     </section>
   );
 }
 
-function RuleCard({ rule, baseline }: { rule: Rule; baseline: number | null }) {
-  const conditions = ruleConditions(rule);
-  const exact = rule.conditions?.length
-    ? conditions
-        .map((condition) =>
-          `${condition.label ?? RULE_ATTRIBUTE_LABELS[condition.attribute] ?? condition.attribute.replaceAll("_", " ")} ${condition.operator ?? "="} ${condition.value}`,
-        )
-        .join(", ")
-    : conditions.map(conditionText).join("; ");
+export function RuleFamilies({ families, outcome, methodology }: { families: RuleFamily[]; outcome: Outcome; methodology?: RulesMethodology }) {
+  const ranked = rankRuleFamilies(families);
+  const singleConditions = ranked.filter((family) => family.baseRule && !family.modifiers.length);
+  const combined = ranked.filter((family) => family.baseRule && family.modifiers.length);
+  const synthetic = ranked.filter((family) => !family.baseRule);
   return (
-    <article className="min-w-0 rounded-md border p-4">
-      <div className="flex flex-wrap items-start gap-2">
-        <h3 className="min-w-0 flex-1 break-words font-semibold leading-6">
-          {shortRuleName(rule)}
-        </h3>
-        <Badge variant={rule.category === "default" ? "danger" : "secondary"}>
-          {rule.category === "default" ? "Default" : "Non-default"}
-        </Badge>
-      </div>
-      <p
-        className="mt-2 break-words text-xs leading-5 text-muted-foreground"
-        title={conditions.map(conditionText).join("; ")}
-      >
-        {exact}
-      </p>
-      <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
-        {[
-          ["Confidence", formatPct1(rule.confidence)],
-          ["Portfolio rate", formatPct1(outcomeBaseline(rule, baseline))],
-          ["Lift", formatMultiplier(rule.lift)],
-          ["Support", formatPct1(rule.support)],
-          ...(rule.jointCount === undefined
-            ? []
-            : [["Matching clients", formatInt(rule.jointCount)]]),
-        ].map(([label, value]) => (
-          <div key={label}>
-            <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="mt-1 font-medium tabular-nums">{value}</dd>
-          </div>
+    <section aria-label="Rule families" className="space-y-3">
+      <h2 className="text-lg font-semibold">Rule families</h2>
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+        {combined.map((family) => (
+          <FamilyCard key={family.familyId} family={family} outcome={outcome} />
         ))}
-      </dl>
-    </article>
+      </div>
+      {singleConditions.length ? (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Single-condition families</CardTitle></CardHeader>
+          <CardContent>
+            <ul className="divide-y">
+              {singleConditions.map((family) => {
+                const base = family.baseRule!;
+                return (
+                  <li key={family.familyId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
+                    <span className="text-sm font-medium">{shortRuleName(base)}</span>
+                    <span className="flex flex-wrap items-center gap-3 text-sm tabular-nums">
+                      <span className={outcome === "default" ? "text-danger" : "text-foreground"}>{formatPct1(base.confidence)} {outcome === "default" ? "default" : "non-default"}</span>
+                      <Badge variant="secondary">{formatMultiplier(base.lift)} lift</Badge>
+                      <span className="text-muted-foreground">n = {base.lhsCount == null ? "-" : formatInt(base.lhsCount)} clients</span>
+                      <span className="text-muted-foreground">{outcome === "default" ? "Defaults" : "Non-defaults"}: {base.jointCount == null ? "-" : formatInt(base.jointCount)}</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+      {synthetic.length ? (
+        <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+          {synthetic.map((family) => <FamilyCard key={family.familyId} family={family} outcome={outcome} />)}
+        </div>
+      ) : null}
+      <RuleFootnote methodology={methodology} />
+    </section>
+  );
+}
+
+function FamilyCard({ family, outcome }: { family: RuleFamily; outcome: Outcome }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const base = family.baseRule;
+  const modifiers = expanded ? family.modifiers : family.modifiers.slice(0, 3);
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle className="break-words text-base">
+          {base ? shortRuleName(base) : family.label}
+        </CardTitle>
+        {base ? (
+          <div className="flex flex-wrap items-center gap-3 tabular-nums">
+            <span className={`text-3xl font-semibold ${outcome === "default" ? "text-danger" : "text-foreground"}`}>
+              {formatPct1(base.confidence)}
+            </span>
+            <Badge variant="secondary">{formatMultiplier(base.lift)} lift</Badge>
+            <span className="text-sm text-muted-foreground">n = {base.lhsCount == null ? "-" : formatInt(base.lhsCount)} clients</span>
+            <span className="text-sm text-muted-foreground">{outcome === "default" ? "Defaults" : "Non-defaults"}: {base.jointCount == null ? "-" : formatInt(base.jointCount)}</span>
+          </div>
+        ) : (
+          <CardDescription>Combined rules only; no standalone base rate was mined.</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {modifiers.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b">
+                  <th className="py-2 text-left">Modifier</th>
+                  <th className="p-2 text-right">
+                    {outcome === "default" ? "Default rate" : "Non-default rate"}
+                  </th>
+                  <th className="p-2 text-right">vs family</th>
+                  <th className="p-2 text-right">Clients</th>
+                  <th className="py-2 text-right">{outcome === "default" ? "Defaults" : "Non-defaults"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {modifiers.map((modifier) => (
+                  <tr key={modifier.ruleId} className="border-b last:border-0">
+                    <td className="py-2 pr-2" title={modifier.conditionText}>
+                      {modifier.label}
+                    </td>
+                    <td className="p-2 text-right tabular-nums">
+                      {formatPct1(modifier.confidence)}
+                    </td>
+                    <td
+                      className="whitespace-nowrap p-2 text-right tabular-nums"
+                      style={{
+                        color:
+                          outcome === "default" && base && (modifier.upliftPp ?? 0) > 0
+                            ? CHART_SEMANTIC.danger
+                            : CHART_SEMANTIC.neutral,
+                      }}
+                    >
+                      {upliftText(base ? modifier.upliftPp : null)}
+                    </td>
+                    <td className="p-2 text-right tabular-nums">
+                      {modifier.lhsCount == null ? "-" : formatInt(modifier.lhsCount)}
+                    </td>
+                    <td className="py-2 text-right tabular-nums">
+                      {formatInt(modifier.jointCount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No modifier changes this rate at the mining thresholds.
+          </p>
+        )}
+        {family.modifiers.length > 3 && (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            onClick={() => setExpanded(!expanded)}
+            className="min-h-11 rounded-md border px-3 text-xs font-medium"
+          >
+            {expanded ? "Show top 3" : `Show all ${family.modifiers.length}`}
+          </button>
+        )}
+      </CardContent>
+    </Card>
   );
 }
