@@ -49,21 +49,26 @@ export function MiningReportDocument({
           <ReportSection
             id="section-5"
             title="5 Modelling"
-            takeaway="Classification, segments, rules, anomalies, and sequences show different parts of default risk."
+            takeaway="Classification, personas, rules, anomalies, and sequences show different parts of default risk."
           >
-            <AlgorithmCards report={report} />
-            <div className="section-divider" />
-            <ClassificationSection report={report} />
+            <section aria-label="Algorithms and improvements" className="space-y-5">
+              <AlgorithmCards report={report} />
+              <div className="section-divider" />
+              <ClassificationSection report={report} />
+            </section>
             <div className="section-divider" />
             <ClusteringSection report={report} />
             <div className="section-divider" />
-            <RulesSection
-              report={report}
-              defaultRules={defaultRules}
-              nonDefaultRules={nonDefaultRules}
-            />
-            <div className="section-divider" />
-            <AnomalySection report={report} />
+            <section id="section-5-3" className="scroll-mt-20 space-y-5">
+              <h3 className="report-heading text-xl font-semibold">5.3 Association rules and anomalies</h3>
+              <RulesSection
+                report={report}
+                defaultRules={defaultRules}
+                nonDefaultRules={nonDefaultRules}
+              />
+              <div className="section-divider" />
+              <AnomalySection report={report} />
+            </section>
             <div className="section-divider" />
             <SequenceSection value={report.sequences} />
           </ReportSection>

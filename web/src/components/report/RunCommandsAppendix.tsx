@@ -4,35 +4,35 @@ import { ReportDetails, ReportSection } from "./ReportPrimitives";
 
 export const MAVEN_PHASE_COMMANDS = [
   {
-    description: "Phase 1 \u2014 describe the source data and write the data-understanding evidence.",
+    description: "Step 1 (Phase 1) - load and profile the source data; write the data-understanding evidence.",
     command: "mvn -q compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase1Report",
   },
   {
-    description: "Phase 2 \u2014 preprocess the data and write the outlier and cleaning evidence.",
+    description: "Step 2 (Phase 2) - clean the data and write the outlier and cleaning evidence.",
     command: "mvn -q compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase2Report",
   },
   {
-    description: "Phase 3 \u2014 engineer features and write the derived-feature evidence.",
+    description: "Step 3 (Phase 3) - engineer features and write the derived-feature evidence.",
     command: "mvn -q compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase3Report",
   },
   {
-    description: "Phase 5 \u2014 train and evaluate the classification variants.",
+    description: "Step 4 (Phase 5) - classify: train and evaluate the classification variants.",
     command: "mvn -q compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase5Pipeline",
   },
   {
-    description: "Phase 6 \u2014 build clusters, anomaly evidence, and PCA outputs.",
+    description: "Step 5 (Phase 6) - cluster clients into personas and detect anomalies; write PCA outputs.",
     command: "mvn -q compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase6Pipeline",
   },
   {
-    description: "Phase 7 \u2014 mine the default and non-default association rules.",
+    description: "Step 6 (Phase 7) - mine the default and non-default association rules.",
     command: "mvn -q compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase7Pipeline",
   },
   {
-    description: "Phase 9 \u2014 assemble the numerical facts used by the insight report.",
+    description: "After Step 6 (Phase 9) - assemble insight-report facts from Steps 1-6; this is a supporting task.",
     command: "mvn -q compile exec:java -Dexec.mainClass=com.creditminer.pipeline.InsightFactsReport",
   },
   {
-    description: "Phase 10 \u2014 mine repayment sequences and evaluate sequence features.",
+    description: "Step 7 (Phase 10) - mine repayment sequences and evaluate sequence features.",
     command: "mvn -q compile exec:java -Dexec.mainClass=com.creditminer.pipeline.Phase10Pipeline",
   },
 ] as const;
@@ -54,12 +54,13 @@ export function RunCommandsAppendix({ id = "appendix-d", title = "Appendix D Run
   const commands = (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        Run the Maven phase mains, CLI, and demo backend from <code>backend/</code>. Run the web
+        Steps 1-7 match the Methodology page; parentheses map the legacy phase names to those steps.
+        Run the Maven main classes, CLI, and demo backend from <code>backend/</code>. Run the web
         commands from <code>web/</code>. Paths can be absolute or relative to those working
         directories.
       </p>
       <section className="space-y-3">
-        <h3 className="font-semibold">Maven phase mains</h3>
+        <h3 className="font-semibold">Methodology steps and Maven commands</h3>
         {MAVEN_PHASE_COMMANDS.map(({ description, command }) => (
           <div key={command} className="space-y-1 break-inside-avoid">
             <p className="text-sm text-muted-foreground">{description}</p>

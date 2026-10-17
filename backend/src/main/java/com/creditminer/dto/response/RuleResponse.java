@@ -21,6 +21,7 @@ public class RuleResponse {
     private String familyId;
     private String familyLabel;
     private Long jointCount;
+    private Long lhsCount;
     private Double baseline;
     @Builder.Default
     private List<RuleResponse> familyMembers = List.of();

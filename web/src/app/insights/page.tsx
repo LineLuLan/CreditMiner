@@ -61,7 +61,7 @@ export default function InsightsPage() {
         ) : insights?.length ? (
           <section
             aria-label="All insights"
-            className="grid min-w-0 gap-4 lg:grid-cols-2 print:grid-cols-1"
+            className="grid min-w-0 items-stretch gap-4 lg:grid-cols-2 print:grid-cols-1"
           >
             {insights.map((insight) => (
               <InsightVisualCard

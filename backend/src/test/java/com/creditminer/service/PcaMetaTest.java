@@ -18,6 +18,21 @@ class PcaMetaTest {
     @TempDir Path temporaryDirectory;
 
     @Test
+    void readsTotalVarianceSharesFromTheArtifact() throws Exception {
+        Path artifact = temporaryDirectory.resolve("total-variance.json");
+        Files.writeString(artifact, """
+                {"meta":{"explainedVarianceOfTotal":[0.45,0.25]},
+                 "points":[{"x":0,"y":0},{"x":10,"y":20}]}
+                """);
+        EdaService service = new EdaService(mock(EdaDataCache.class));
+        ReflectionTestUtils.setField(service, "pcaJsonPath", artifact.toString());
+        var meta = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(service.pcaMeta());
+        assertThat(meta.path("explainedVarianceOfTotal").size()).isEqualTo(2);
+        assertThat(meta.path("explainedVarianceOfTotal").get(0).asDouble()).isEqualTo(.45);
+        assertThat(service.pcaMeta().getExplainedVariance()).containsExactly(.2, .8);
+    }
+
+    @Test
     void computesCenteredVarianceSharesQuantilesAndOutsideUnion() {
         var points = IntStream.rangeClosed(0, 100)
                 .mapToObj(i -> new PcaPointResponse(i, 0, 100 + i, 200 + 2 * i)).toList();

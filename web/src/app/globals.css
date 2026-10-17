@@ -21,12 +21,13 @@
     --danger: 0 72% 50%;
     --danger-foreground: 0 0% 100%;
     --chart-neutral: 215 16% 57%;
+    --chart-neutral-2: 215 16% 70%;
     --chart-baseline: var(--foreground) / 0.6;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --success: 152 60% 36%;
     --success-foreground: 152 70% 96%;
-    --warning: 35 92% 50%;
+    --warning: 32 90% 44%;
     --warning-foreground: 30 80% 12%;
     --info: 199 89% 48%;
     --info-foreground: 200 95% 96%;
@@ -59,6 +60,7 @@
     --danger: 0 84% 62%;
     --danger-foreground: 222.2 84% 4.9%;
     --chart-neutral: 215 15% 40%;
+    --chart-neutral-2: 215 15% 55%;
     --chart-baseline: var(--foreground) / 0.6;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;

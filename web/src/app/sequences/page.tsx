@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { SequenceHero } from "@/components/sequences/SequenceHero";
 import { PatternBars } from "@/components/sequences/PatternBars";
 import { PatternTable } from "@/components/sequences/PatternTable";
+import { AllPatterns } from "@/components/sequences/AllPatterns";
 import { ItemLegend } from "@/components/sequences/ItemLegend";
 import { MethodNotes } from "@/components/sequences/MethodNotes";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSequences } from "@/hooks/useSequences";
 import { formatCount } from "@/lib/format";
 import { SequenceArtifactSchema } from "@/lib/schemas";
-import { selectSequenceStories } from "@/lib/sequence-format";
+import { selectAllSequencePatterns, selectSequenceStories } from "@/lib/sequence-format";
 
 export default function SequencesPage() {
   const { data, isLoading, error } = useSequences();
@@ -61,6 +62,7 @@ export default function SequencesPage() {
               <PatternBars patterns={stories?.defaultStories ?? []} />
               <PatternTable patterns={stories?.nonDefaultStories ?? []} />
             </div>
+            <AllPatterns patterns={selectAllSequencePatterns(artifact)} />
             <ItemLegend mapping={artifact.itemMapping} />
             <MethodNotes artifact={artifact} />
           </>

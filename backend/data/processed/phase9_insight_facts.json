@@ -1,5 +1,5 @@
 {
-  "generatedAt" : "2026-10-10T16:58:05.053050300Z",
+  "generatedAt" : "2026-10-16T07:45:04.276429100Z",
   "sourceFiles" : [ "data/processed/enriched.arff", "data/processed/phase6_pca_2d.json", "data/processed/phase6_clusters.json", "data/processed/phase5_feature_importance.json", "models/rules.json" ],
   "overall" : {
     "rows" : 29965,
@@ -803,119 +803,188 @@
       "liftVsBase" : 4.5196
     } ]
   },
+  "repaymentFacts" : [ {
+    "factId" : "default-rate-pay1-late2plus",
+    "n" : 3129,
+    "successes" : 2176,
+    "value" : 0.6954298497922659
+  }, {
+    "n" : 3129,
+    "value" : 3129,
+    "factId" : "count-pay1-late2plus"
+  } ],
   "byCluster" : [ {
     "clusterId" : 0,
-    "personaName" : "High-Default Persistent Delayers",
-    "size" : 5516,
-    "defaults" : 2950,
-    "defaultRate" : 0.5348,
-    "liftVsBase" : 2.4171,
-    "shareOfClients" : 0.1841,
-    "shareOfDefaults" : 0.4449,
-    "avgLIMIT_BAL" : 99448.1508,
-    "avgAGE" : 34.9971,
-    "avgUTILIZATION_1" : 0.5831,
-    "avgAVG_UTILIZATION" : 0.5628,
-    "avgPAY_RATIO" : 0.1309,
-    "avgMONTHS_DELAYED" : 3.6875,
-    "avgMAX_DELAY" : 2.3597,
-    "avgBILL_TREND" : 0.0557
+    "personaName" : "Persistent delayers",
+    "defaultRateLabel" : "Persistent delayers: default rate",
+    "shareOfClientsLabel" : "Persistent delayers: share of clients",
+    "shareOfDefaultsLabel" : "Persistent delayers: share of defaults",
+    "size" : 2589,
+    "defaults" : 1658,
+    "defaultRate" : 0.6404,
+    "liftVsBase" : 2.8944,
+    "shareOfClients" : 0.0864,
+    "shareOfDefaults" : 0.2501,
+    "avgLIMIT_BAL" : 91560.448,
+    "avgAGE" : 35.1924,
+    "avgUTILIZATION_1" : 0.6022,
+    "avgAVG_UTILIZATION" : 0.6163,
+    "avgPAY_RATIO" : 0.0822,
+    "avgMONTHS_DELAYED" : 5.1503,
+    "avgMAX_DELAY" : 2.6261,
+    "avgBILL_TREND" : -0.0103
   }, {
     "clusterId" : 1,
-    "personaName" : "Lower-Default Current Payers",
-    "size" : 24449,
-    "defaults" : 3680,
-    "defaultRate" : 0.1505,
-    "liftVsBase" : 0.6803,
-    "shareOfClients" : 0.8159,
-    "shareOfDefaults" : 0.5551,
-    "avgLIMIT_BAL" : 182782.2684,
-    "avgAGE" : 35.5987,
-    "avgUTILIZATION_1" : 0.3884,
-    "avgAVG_UTILIZATION" : 0.3307,
-    "avgPAY_RATIO" : 0.4488,
-    "avgMONTHS_DELAYED" : 0.1906,
-    "avgMAX_DELAY" : 0.0058,
-    "avgBILL_TREND" : 0.1165
+    "personaName" : "Transactors",
+    "defaultRateLabel" : "Transactors: default rate",
+    "shareOfClientsLabel" : "Transactors: share of clients",
+    "shareOfDefaultsLabel" : "Transactors: share of defaults",
+    "size" : 9031,
+    "defaults" : 1125,
+    "defaultRate" : 0.1246,
+    "liftVsBase" : 0.563,
+    "shareOfClients" : 0.3014,
+    "shareOfDefaults" : 0.1697,
+    "avgLIMIT_BAL" : 291642.1216,
+    "avgAGE" : 38.8409,
+    "avgUTILIZATION_1" : 0.0997,
+    "avgAVG_UTILIZATION" : 0.0934,
+    "avgPAY_RATIO" : 0.8771,
+    "avgMONTHS_DELAYED" : 0.1018,
+    "avgMAX_DELAY" : -0.5667,
+    "avgBILL_TREND" : 0.0133
+  }, {
+    "clusterId" : 2,
+    "personaName" : "Occasional delayers",
+    "defaultRateLabel" : "Occasional delayers: default rate",
+    "shareOfClientsLabel" : "Occasional delayers: share of clients",
+    "shareOfDefaultsLabel" : "Occasional delayers: share of defaults",
+    "size" : 6555,
+    "defaults" : 2420,
+    "defaultRate" : 0.3692,
+    "liftVsBase" : 1.6686,
+    "shareOfClients" : 0.2188,
+    "shareOfDefaults" : 0.365,
+    "avgLIMIT_BAL" : 119759.2677,
+    "avgAGE" : 34.5184,
+    "avgUTILIZATION_1" : 0.4616,
+    "avgAVG_UTILIZATION" : 0.4282,
+    "avgPAY_RATIO" : 0.2525,
+    "avgMONTHS_DELAYED" : 1.6394,
+    "avgMAX_DELAY" : 1.9211,
+    "avgBILL_TREND" : 0.085
+  }, {
+    "clusterId" : 3,
+    "personaName" : "Revolvers, never late",
+    "defaultRateLabel" : "Revolvers, never late: default rate",
+    "shareOfClientsLabel" : "Revolvers, never late: share of clients",
+    "shareOfDefaultsLabel" : "Revolvers, never late: share of defaults",
+    "size" : 11790,
+    "defaults" : 1427,
+    "defaultRate" : 0.121,
+    "liftVsBase" : 0.547,
+    "shareOfClients" : 0.3935,
+    "shareOfDefaults" : 0.2152,
+    "avgLIMIT_BAL" : 115479.8711,
+    "avgAGE" : 33.5237,
+    "avgUTILIZATION_1" : 0.6129,
+    "avgAVG_UTILIZATION" : 0.5043,
+    "avgPAY_RATIO" : 0.1616,
+    "avgMONTHS_DELAYED" : 0.0,
+    "avgMAX_DELAY" : -0.0946,
+    "avgBILL_TREND" : 0.2124
+  } ],
+  "personaFacts" : [ {
+    "successes" : 4078,
+    "value" : 0.6150829562594269,
+    "label" : "Delaying personas: share of defaults",
+    "factId" : "share-of-defaults-delayers",
+    "n" : 6630
+  }, {
+    "successes" : 9144,
+    "value" : 0.3051560153512431,
+    "label" : "Delaying personas: share of clients",
+    "factId" : "share-of-clients-delayers",
+    "n" : 29965
   } ],
   "pointBiserial" : [ {
-    "feature" : "MONTHS_DELAYED",
-    "r" : 0.3984
+    "r" : 0.3984,
+    "feature" : "MONTHS_DELAYED"
   }, {
-    "feature" : "MAX_DELAY",
-    "r" : 0.3311
+    "r" : 0.3311,
+    "feature" : "MAX_DELAY"
   }, {
-    "feature" : "PAY_1",
-    "r" : 0.325
+    "r" : 0.325,
+    "feature" : "PAY_1"
   }, {
-    "feature" : "PAY_2",
-    "r" : 0.2637
+    "r" : 0.2637,
+    "feature" : "PAY_2"
   }, {
-    "feature" : "PAY_3",
-    "r" : 0.2352
+    "r" : 0.2352,
+    "feature" : "PAY_3"
   }, {
-    "feature" : "PAY_4",
-    "r" : 0.2166
+    "r" : 0.2166,
+    "feature" : "PAY_4"
   }, {
-    "feature" : "PAY_5",
-    "r" : 0.2041
+    "r" : 0.2041,
+    "feature" : "PAY_5"
   }, {
-    "feature" : "PAY_6",
-    "r" : 0.1867
+    "r" : 0.1867,
+    "feature" : "PAY_6"
   }, {
-    "feature" : "LIMIT_BAL",
-    "r" : -0.1539
+    "r" : -0.1539,
+    "feature" : "LIMIT_BAL"
   }, {
-    "feature" : "AVG_UTILIZATION",
-    "r" : 0.1155
+    "r" : 0.1155,
+    "feature" : "AVG_UTILIZATION"
   }, {
-    "feature" : "UTILIZATION_1",
-    "r" : 0.0863
+    "r" : 0.0863,
+    "feature" : "UTILIZATION_1"
   }, {
-    "feature" : "PAY_RATIO",
-    "r" : -0.0779
+    "r" : -0.0779,
+    "feature" : "PAY_RATIO"
   }, {
-    "feature" : "PAY_AMT1",
-    "r" : -0.073
+    "r" : -0.073,
+    "feature" : "PAY_AMT1"
   }, {
-    "feature" : "PAY_AMT2",
-    "r" : -0.0586
+    "r" : -0.0586,
+    "feature" : "PAY_AMT2"
   }, {
-    "feature" : "PAY_AMT4",
-    "r" : -0.0569
+    "r" : -0.0569,
+    "feature" : "PAY_AMT4"
   }, {
-    "feature" : "PAY_AMT3",
-    "r" : -0.0563
+    "r" : -0.0563,
+    "feature" : "PAY_AMT3"
   }, {
-    "feature" : "PAY_AMT5",
-    "r" : -0.0552
+    "r" : -0.0552,
+    "feature" : "PAY_AMT5"
   }, {
-    "feature" : "PAY_AMT6",
-    "r" : -0.0533
+    "r" : -0.0533,
+    "feature" : "PAY_AMT6"
   }, {
-    "feature" : "BILL_TREND",
-    "r" : -0.0238
+    "r" : -0.0238,
+    "feature" : "BILL_TREND"
   }, {
-    "feature" : "BILL_AMT1",
-    "r" : -0.0198
+    "r" : -0.0198,
+    "feature" : "BILL_AMT1"
   }, {
-    "feature" : "BILL_AMT2",
-    "r" : -0.0143
+    "r" : -0.0143,
+    "feature" : "BILL_AMT2"
   }, {
-    "feature" : "BILL_AMT3",
-    "r" : -0.0142
+    "r" : -0.0142,
+    "feature" : "BILL_AMT3"
   }, {
-    "feature" : "AGE",
-    "r" : 0.0136
+    "r" : 0.0136,
+    "feature" : "AGE"
   }, {
-    "feature" : "BILL_AMT4",
-    "r" : -0.0103
+    "r" : -0.0103,
+    "feature" : "BILL_AMT4"
   }, {
-    "feature" : "BILL_AMT5",
-    "r" : -0.0069
+    "r" : -0.0069,
+    "feature" : "BILL_AMT5"
   }, {
-    "feature" : "BILL_AMT6",
-    "r" : -0.0055
+    "r" : -0.0055,
+    "feature" : "BILL_AMT6"
   } ],
   "classMeans" : [ {
     "feature" : "MAX_DELAY",
@@ -1546,6 +1615,12 @@
     "defaults" : 2176,
     "defaultRate" : 0.6954,
     "liftVsBase" : 3.1431
+  }, {
+    "label" : "PAY_1 >= 3",
+    "count" : 463,
+    "defaults" : 333,
+    "defaultRate" : 0.7192,
+    "liftVsBase" : 3.2506
   }, {
     "label" : "RISK_TIER == High",
     "count" : 8713,

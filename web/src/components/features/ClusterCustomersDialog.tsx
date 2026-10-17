@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/table";
 import { useClusterCustomers } from "@/hooks/useClusters";
 import { formatInt, formatPct, formatMultiplier } from "@/lib/format";
-import { finiteNumber, riskAboveBaseline, safeRatio } from "@/components/clusters/clusters-view";
+import { featureLabel } from "@/lib/constants";
+import { finiteNumber, safeRatio } from "@/components/clusters/clusters-view";
+
+import { CHART_SEMANTIC, personaColor, personaIdentityColor } from "@/lib/chart-theme";
 
 const PAGE_SIZE = 20;
 
@@ -25,6 +28,7 @@ interface Props {
   defaultRate?: number;
   defaultRateMultiplier?: number;
   baselineRate?: number;
+  lowest?: boolean;
   onClose: () => void;
 }
 
@@ -34,6 +38,7 @@ export function ClusterCustomersDialog({
   defaultRate,
   defaultRateMultiplier,
   baselineRate,
+  lowest = false,
   onClose,
 }: Props) {
   const [page, setPage] = React.useState(1);
@@ -45,14 +50,16 @@ export function ClusterCustomersDialog({
     setPage(1);
   }, [clusterId]);
 
+  const color = personaColor(defaultRateMultiplier ?? safeRatio(defaultRate, baselineRate), lowest);
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[85vh] min-w-0 overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>
-            {personaName ? `${personaName} (Cluster ${clusterId})` : `Cluster ${clusterId}`}
+          <DialogTitle className="flex items-center gap-2">
+            <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: personaIdentityColor(personaName, defaultRateMultiplier ?? safeRatio(defaultRate, baselineRate)) }} />
+            {personaName ? personaName : `Cluster ${clusterId}`}
             {data ? (
               <span className="ml-2 text-sm font-normal text-muted-foreground">
                 {formatInt(data.total)} clients
@@ -61,8 +68,9 @@ export function ClusterCustomersDialog({
           </DialogTitle>
           {finiteNumber(defaultRate) ? (
             <Badge
-              variant={riskAboveBaseline(defaultRate, baselineRate) ? "danger" : "secondary"}
-              className="w-fit"
+              variant={color === CHART_SEMANTIC.danger ? "danger" : color === CHART_SEMANTIC.warning ? "warning" : "secondary"}
+              style={{ borderColor: color }}
+              className={color === CHART_SEMANTIC.warning ? "w-fit bg-warning/15 text-foreground hover:bg-warning/15" : "w-fit"}
             >
               {formatPct(defaultRate)} default {"\u00b7"}{" "}
               {formatMultiplier(defaultRateMultiplier ?? safeRatio(defaultRate, baselineRate))}
@@ -81,9 +89,9 @@ export function ClusterCustomersDialog({
                 <TableRow>
                   <TableHead>Client #</TableHead>
                   <TableHead>Default</TableHead>
-                  <TableHead className="text-right">Age</TableHead>
+                  <TableHead className="text-right">{featureLabel("AGE")}</TableHead>
                   <TableHead>Risk tier</TableHead>
-                  <TableHead className="text-right">Pay ratio</TableHead>
+                  <TableHead className="text-right">{featureLabel("PAY_RATIO")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

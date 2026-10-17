@@ -115,6 +115,17 @@ test("rendered PCA marks and legend text preserve token contrast", () => {
   );
 });
 
+test("persona warning chips exceed 4.5 contrast over warning at 15 percent", (t) => {
+  for (const [theme, tokens] of Object.entries(themes)) {
+    const foreground = luminance(rgb(tokens, "foreground"));
+    const card = rgb(tokens, "card");
+    const background = luminance(rgb(tokens, "warning").map((value, i) => value * 0.15 + card[i] * 0.85));
+    const ratio = (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+    t.diagnostic(`${theme} warning chip: ${ratio.toFixed(2)}:1`);
+    assert.ok(ratio >= 4.5);
+  }
+});
+
 test("legend text contrast survives the production Tailwind content scan", async () => {
   const result = await postcss([
     tailwindcss({ config: fileURLToPath(new URL("../../tailwind.config.ts", import.meta.url)) }),

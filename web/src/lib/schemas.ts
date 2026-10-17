@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { EDUCATION_VALUES } from "@/lib/constants";
 import { SequenceArtifactViewSchema } from "@/components/report/sequence-data";
 
 /** Runtime schemas for the backend API contract. */
 
 // ---------- Shared enums ----------
 export const Sex = z.enum(["Male", "Female"]);
-export const Education = z.enum(["Graduate", "University", "HighSchool", "Other"]);
+export const Education = z.enum(EDUCATION_VALUES);
 export const Marriage = z.enum(["Married", "Single", "Other"]);
 export const DefaultFlag = z.enum(["No", "Yes"]);
 export const RiskTier = z.enum(["Low", "Medium", "High"]);
@@ -130,6 +131,9 @@ export const EdaDistributionSchema = z
     column: z.string(),
     type: z.enum(["numeric", "nominal"]),
     binEdges: z.array(z.number()),
+    edges: z.array(z.number()).optional(),
+    binning: z.enum(["equal-width", "quantile"]).optional(),
+    notes: z.array(z.string()).optional(),
     categories: z.array(z.string()).optional(),
     counts: z.array(z.number()),
     stats: EdaDistributionStatsSchema.nullable().optional(),
@@ -242,6 +246,7 @@ export const ApiErrorSchema = z
 
 export const PcaMetaSchema = z.object({
   explainedVariance: z.array(z.number()),
+  explainedVarianceOfTotal: z.array(z.number()).nullish(),
   explainedVarianceScope: z.string().optional(),
   zoomBounds: z.object({ xMin: z.number(), xMax: z.number(), yMin: z.number(), yMax: z.number() }),
   outsideCount: z.number().int().nonnegative(),

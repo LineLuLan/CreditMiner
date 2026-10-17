@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import type { PredictRequest } from "@/types/api.types";
 import { PredictMoneyInput } from "./PredictMoneyInput";
-import { PAY_STATUS_OPTIONS } from "@/lib/constants";
+import { EDUCATION_LABELS, EDUCATION_VALUES, MARRIAGE_LABELS, PAY_STATUS_OPTIONS } from "@/lib/constants";
 
 export const SAMPLE_PROFILE: PredictRequest = {
   limitBal: 200000,
@@ -46,13 +46,6 @@ export const SAMPLE_PROFILE: PredictRequest = {
   payAmt5: 5000,
   payAmt6: 5000,
 };
-
-const EDUCATION_OPTIONS: PredictRequest["education"][] = [
-  "Graduate",
-  "University",
-  "HighSchool",
-  "Other",
-];
 
 const MARRIAGE_OPTIONS: PredictRequest["marriage"][] = ["Married", "Single", "Other"];
 
@@ -113,13 +106,13 @@ export function PredictFields({
           <Field label="Education" error={errors.education?.message}>
             <Select value={watch("education")} onValueChange={(value) => setValue("education", value as PredictRequest["education"], { shouldValidate: true })}>
               <SelectTrigger aria-label="Education"><SelectValue /></SelectTrigger>
-              <SelectContent>{EDUCATION_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option === "HighSchool" ? "High school" : option}</SelectItem>)}</SelectContent>
+              <SelectContent>{EDUCATION_VALUES.map((option) => <SelectItem key={option} value={option}>{EDUCATION_LABELS[option]}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
           <Field label="Marriage" error={errors.marriage?.message}>
             <Select value={watch("marriage")} onValueChange={(value) => setValue("marriage", value as PredictRequest["marriage"], { shouldValidate: true })}>
               <SelectTrigger aria-label="Marriage"><SelectValue /></SelectTrigger>
-              <SelectContent>{MARRIAGE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
+              <SelectContent>{MARRIAGE_OPTIONS.map((option) => <SelectItem key={option} value={option}>{MARRIAGE_LABELS[option]}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
           <Field label="Age" error={errors.age?.message}>

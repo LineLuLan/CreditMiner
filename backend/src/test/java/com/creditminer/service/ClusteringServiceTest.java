@@ -24,6 +24,31 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ClusteringServiceTest {
 
     @Test
+    void deterministicRestartsSelectMinimumSquaredErrorAndFinalSilhouette() throws Exception {
+        Instances data = new Instances("restart-fixture", new ArrayList<>(List.of(
+                new Attribute("x"), new Attribute("y"))), 0);
+        for (double[] row : new double[][]{{0, 0}, {.1, .2}, {.2, .1}, {1, 1},
+                {1.1, 1.2}, {1.2, 1.1}, {2, 0}, {2.1, .1}, {2.2, .2}}) {
+            data.add(new DenseInstance(1, row));
+        }
+        var service = new ClusteringService(null);
+        var chosen = service.trainBest(data, 3);
+        double minimum = Double.POSITIVE_INFINITY;
+        int expectedSeed = -1;
+        for (int seed : ClusteringService.RESTART_SEEDS) {
+            var candidate = service.train(data, 3, true, seed);
+            if (candidate.getSquaredError() < minimum) {
+                minimum = candidate.getSquaredError();
+                expectedSeed = seed;
+            }
+        }
+        assertEquals(minimum, chosen.getSquaredError());
+        assertEquals(expectedSeed, chosen.getSeed());
+        assertEquals(chosen.getSquaredError(), service.trainBest(data, 3).getSquaredError());
+        assertTrue(service.silhouette(data, chosen) > .7);
+    }
+
+    @Test
     void contextLoads() {
         ModelConfig cfg = Mockito.mock(ModelConfig.class);
         ClusteringService svc = new ClusteringService(cfg);
@@ -67,7 +92,7 @@ class ClusteringServiceTest {
         assertEquals(1.0, clusters.get(1).getDefaultRate(), 0.0001);
         assertEquals(ClusteringService.CLUSTER_FEATURES,
                 new ArrayList<>(clusters.get(0).getCentroid().keySet()));
-        assertTrue(clusters.get(1).getPersonaName().contains("Default"));
+        assertEquals("Persistent delayers", clusters.get(1).getPersonaName());
         assertTrue(clusters.get(1).getDescription().contains("months delayed"));
     }
 

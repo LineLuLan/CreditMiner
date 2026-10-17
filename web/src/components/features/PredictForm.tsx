@@ -67,7 +67,7 @@ export function PredictForm() {
               <div>
                 <p className="text-sm font-medium">Use the reference client profile</p>
                 <p className="text-xs text-muted-foreground">
-                  This profile matches the API contract example.
+                  A 35-year-old client with a NT$200,000 limit who revolves the balance every month.
                 </p>
               </div>
             </div>
@@ -91,7 +91,7 @@ export function PredictForm() {
                 type="submit"
                 form={formId}
                 disabled={predict.isPending}
-                className="w-full gap-2 text-white"
+                className="w-full gap-2 text-white lg:hidden"
               >
                 {predict.isPending ? (
                   <><Loader2 className="h-4 w-4 animate-spin" aria-hidden />Predicting...</>
@@ -111,7 +111,19 @@ export function PredictForm() {
         ) : null}
 
       </div>
-      <aside className="min-w-0 lg:sticky lg:top-4" aria-label="Prediction result">
+      <aside className="min-w-0 space-y-4 lg:sticky lg:top-20" aria-label="Prediction result">
+        <Button
+          type="submit"
+          form={formId}
+          disabled={predict.isPending}
+          className="hidden w-full gap-2 text-white lg:inline-flex"
+        >
+          {predict.isPending ? (
+            <><Loader2 className="h-4 w-4 animate-spin" aria-hidden />Predicting...</>
+          ) : (
+            <><Sparkles className="h-4 w-4" aria-hidden />Predict</>
+          )}
+        </Button>
         {result ? (
           <PredictResult
             data={result}
@@ -125,7 +137,7 @@ export function PredictForm() {
               <h2 className="font-semibold">Your prediction appears here</h2>
               <p className="text-sm leading-6 text-muted-foreground">
                 Enter a client profile and select Predict to see the probability of default,
-                risk tier, nearest segment, and model guidance.
+                risk tier, nearest persona, and model guidance.
               </p>
             </CardContent>
           </Card>

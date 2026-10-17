@@ -23,6 +23,24 @@ class FactServiceTest {
     @TempDir Path temporaryDirectory;
 
     @Test
+    void aggregatesLatestLateTailAndDelayingPersonaSharesFromCounts() throws Exception {
+        ObjectNode artifact = fixture();
+        var buckets = artifact.withObject("/defaultByBucket").withArray("PAY_1");
+        buckets.addObject().put("bucket", "3").put("count", 5).put("defaults", 4);
+        buckets.addObject().put("bucket", "8").put("count", 3).put("defaults", 2);
+        ((ObjectNode) artifact.path("byCluster").get(0)).put("personaName", "Persistent delayers");
+        var result = service(artifact, evaluation()).get();
+        assertThat(find(result, "default-rate-pay1-late3plus").getN()).isEqualTo(8);
+        assertThat(find(result, "default-rate-pay1-late3plus").getValue()).isEqualTo(.75);
+        assertThat(find(result, "count-pay1-late3plus").getValue()).isEqualTo(8.);
+        assertThat(find(result, "default-rate-pay1-late2plus").getN()).isEqualTo(18);
+        assertThat(find(result, "default-rate-pay1-late2plus").getValue()).isEqualTo(13. / 18);
+        assertThat(find(result, "count-pay1-late2plus").getValue()).isEqualTo(18.);
+        assertThat(find(result, "share-of-defaults-delayers").getValue()).isEqualTo(.35);
+        assertThat(find(result, "default-rate-cluster-0").getLabel()).isEqualTo("Persistent delayers: default rate");
+    }
+
+    @Test
     void derivesExactRatesWilsonIntervalsAndCachesTheCatalogue() throws Exception {
         ObjectNode artifact = fixture();
         FactService service = service(artifact, evaluation());
@@ -111,7 +129,7 @@ class FactServiceTest {
         FactResponse result = service.get();
         JsonNode raw = mapper.readTree(Path.of("data/processed/phase9_insight_facts.json").toFile());
         int buckets = dimensions().stream().mapToInt(key -> raw.path("defaultByBucket").path(key).size()).sum();
-        assertThat(result.getFacts().stream().filter(f -> f.getSource().contains("$.defaultByBucket."))).hasSize(buckets);
+        assertThat(result.getFacts().stream().filter(f -> f.getSource().contains("$.defaultByBucket."))).hasSize(buckets + 4);
         assertThat(result.getFacts()).extracting(Fact::getFactId).doesNotHaveDuplicates();
         assertThat(result.getFacts()).allSatisfy(f -> {
             assertThat(f.getFactId()).matches("[a-z0-9]+(?:-[a-z0-9]+)*");

@@ -11,10 +11,10 @@ export function useEdaDescribe() {
   });
 }
 
-export function useEdaDistribution(col: string | null, bins = 20, split?: "Default") {
+export function useEdaDistribution(col: string | null, bins = 20, split?: "Default", binning: "quantile" | "equal-width" = "equal-width") {
   return useQuery({
-    queryKey: ["eda", "distribution", col, bins, split],
-    queryFn: () => api.edaDistribution(col!, bins, split),
+    queryKey: ["eda", "distribution", col, bins, split, binning],
+    queryFn: () => api.edaDistribution(col!, bins, split, binning),
     enabled: !!col,
   });
 }

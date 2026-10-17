@@ -1,65 +1,8 @@
-import type { Rule } from "@/types/api.types";
-import { EDA_FIELD_LABELS, EDA_FIELD_UNITS, PAY_STATUS_LABELS } from "@/lib/constants";
+import type { RuleFamily, RuleFamiliesResponse } from "@/lib/schemas";
+import { EDA_FIELD_UNITS, PAY_STATUS_LABELS, FEATURE_LABELS, CATEGORY_LABELS } from "@/lib/constants";
 import { formatDecimal, formatInt, formatNt, formatPct } from "@/lib/format";
 
 const STATUS_FIELDS = new Set(["PAY_1", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6", "MAX_DELAY"]);
-
-export interface ParsedRuleCondition {
-  raw: string;
-  label: string;
-  value: string;
-}
-
-export function describeRule(rule: { lhs: string; rhs: string }) {
-  const conditions = parseRuleSide(rule.lhs);
-  const outcome = parseRuleSide(rule.rhs)[0];
-  const outcomeValue = outcome ? outcome.value : friendlyRuleValue(rule.rhs);
-
-  return {
-    headline: `${conditions.map((condition) => condition.value).join(" + ")} -> ${outcomeValue}`,
-    conditions,
-  };
-}
-
-export function formatRuleAntecedent(value: string): string {
-  return parseRuleSide(value)
-    .map((condition) =>
-      condition.label === "Sex" || condition.label === "Condition"
-        ? condition.value
-        : `${condition.label}: ${condition.value}`,
-    )
-    .join(", ");
-}
-
-export function formatRuleOutcome(value: string): string {
-  return parseRuleSide(value)[0]?.value ?? friendlyRuleValue(value);
-}
-
-export function parseRuleSide(value: string): ParsedRuleCondition[] {
-  return value
-    .split(/\s*,\s*/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => {
-      const separatorIndex = part.indexOf("=");
-      if (separatorIndex === -1) {
-        return {
-          raw: part,
-          label: "Condition",
-          value: friendlyRuleValue(part),
-        };
-      }
-
-      const field = part.slice(0, separatorIndex).trim();
-      const rawValue = part.slice(separatorIndex + 1).trim();
-
-      return {
-        raw: part,
-        label: EDA_FIELD_LABELS[field] ?? field.replaceAll("_", " "),
-        value: friendlyRuleValue(rawValue, field),
-      };
-    });
-}
 
 export function friendlyRuleValue(value: string, field?: string): string {
   const cleanValue = value.trim().replace(/^['"]|['"]$/g, "");
@@ -101,7 +44,8 @@ export function friendlyRuleValue(value: string, field?: string): string {
   }
   if (field === "AGE" && /^\d+(?:\.\d+)?-\d+(?:\.\d+)?$/.test(cleanValue))
     return `${cleanValue} years`;
-  return cleanValue.replaceAll("_", " ");
+  const labels = CATEGORY_LABELS[field as keyof typeof CATEGORY_LABELS] as Record<string, string> | undefined;
+  return labels?.[cleanValue] ?? cleanValue.replaceAll("_", " ");
 }
 
 function formatRuleNumber(value: string, field?: string, suppliedUnit?: string): string {
@@ -114,28 +58,7 @@ function formatRuleNumber(value: string, field?: string, suppliedUnit?: string):
   return formatDecimal(numericValue, numericValue >= 100 ? 0 : digits);
 }
 
-export const RULE_ATTRIBUTE_LABELS: Record<string, string> = {
-  PAY_1: "Sep status",
-  PAY_2: "Aug status",
-  PAY_3: "Jul status",
-  PAY_4: "Jun status",
-  PAY_5: "May status",
-  PAY_6: "Apr status",
-  LIMIT_BAL: "Limit",
-  AGE: "Age",
-  AVG_UTILIZATION: "Mean use",
-  UTILIZATION_1: "Sep use",
-  PAY_RATIO: "Payment ratio",
-  MAX_DELAY: "Worst delay",
-  MONTHS_DELAYED: "Late months",
-  BILL_AMT1: "Sep bill",
-  PAY_AMT1: "Sep payment",
-  BILL_TREND: "Balance change",
-  SEX: "Sex",
-  EDUCATION: "Education",
-  MARRIAGE: "Marital status",
-  RISK_TIER: "Derived tier",
-};
+export const RULE_ATTRIBUTE_LABELS: Record<string, string> = FEATURE_LABELS;
 
 export interface RuleCondition {
   attribute: string;
@@ -214,10 +137,10 @@ export function conditionText(condition: RuleCondition): string {
       "-2": "no use",
       "-1": "paid in full",
       "0": "revolving",
-      "1": "1 mo late",
-      "2": "2 mo late",
+      "1": "1 month late",
+      "2": "2 months late",
     };
-    value = numeric >= 3 ? "3+ mo late" : (statuses[raw] ?? raw);
+    value = numeric >= 3 ? "3+ months late" : (statuses[raw] ?? raw);
   } else if (numeric !== null && attribute !== "MONTHS_DELAYED") {
     value = formatRuleNumber(raw, attribute, unit);
   } else {
@@ -230,11 +153,11 @@ export function conditionText(condition: RuleCondition): string {
 }
 
 export function shortRuleName(rule: NameableRule): string {
-  return (
-    rule.shortName?.trim() ||
-    orderedConditions(rule).slice(0, 2).map(compactConditionText).join("; ") ||
-    "Unspecified conditions"
-  );
+  if (rule.shortName?.trim()) return rule.shortName.trim();
+  let name = orderedConditions(rule).slice(0, 2).map(compactConditionText).join("; ");
+  if (name.length > 48) name = name.replace("Latest statement:", "Latest:");
+  if (name.length > 48) name = name.replace("Credit limit", "Limit");
+  return name || "Unspecified conditions";
 }
 
 // Intent: keep API and fallback short names identical for captured conditions.
@@ -243,7 +166,12 @@ export function shortRuleName(rule: NameableRule): string {
 function compactConditionText(condition: RuleCondition): string {
   const { attribute, operator = "=", unit } = condition;
   const fullLabel = RULE_ATTRIBUTE_LABELS[attribute] ?? condition.label ?? attribute;
-  const label = /^PAY_[1-6]$/.test(attribute) ? fullLabel.replace(/ status$/, "") : fullLabel;
+  const label =
+    attribute === "PAY_1"
+      ? "Latest statement"
+      : /^PAY_[1-6]$/.test(attribute)
+        ? fullLabel.replace(/ status$/, "")
+        : fullLabel;
   let value = String(condition.value)
     .trim()
     .replace(/^[\'"]|[\'"]$/g, "");
@@ -253,73 +181,72 @@ function compactConditionText(condition: RuleCondition): string {
     value = interval[2] === "inf" ? `>=${interval[1]}` : `${interval[1]}-${interval[2]}`;
   if (STATUS_FIELDS.has(attribute)) {
     if (value === "<=0") value = "no delay";
-    else if (value === ">=3" || value === "3+") value = "3+ mo late";
+    else if (value === ">=3" || value === "3+")
+      value = attribute === "MAX_DELAY" ? "3+ months" : "3+ months late";
     else if (/^-?\d+$/.test(value)) {
       const statuses: Record<string, string> = {
         "-2": "no use",
         "-1": "paid in full",
         "0": "revolving",
       };
-      value = statuses[value] ?? `${Number(value) >= 3 ? "3+" : value} mo late`;
+      value =
+        statuses[value] ??
+        `${Number(value) >= 3 ? "3+" : value} ${value === "1" ? "month" : "months"}${attribute === "MAX_DELAY" ? "" : " late"}`;
     } else return conditionText(condition);
+    return `${attribute === "MAX_DELAY" ? "Longest delay" : label}: ${value}`;
   } else if (attribute === "MONTHS_DELAYED") {
-    value = `${value.replace(/^>=/, "")}${value.startsWith(">=") ? "+" : ""} mo`;
+    return `Late in ${value.replace(/^>=/, "")}${value.startsWith(">=") ? "+" : ""} of 6 months`;
   } else if (attribute === "LIMIT_BAL" && !value.includes("inf")) {
-    const compactNt = (amount: string) => `NT$${formatInt(Number(amount) / 1000)}k`;
+    const compactNt = (amount: string) => `${formatInt(Math.floor(Number(amount) / 1000))}k`;
     const range = value.match(/^(\d+)-(\d+)$/);
     const bound = value.match(/^(<=|>=|<|>)?(\d+)$/);
-    if (range) value = `${compactNt(range[1])}-${compactNt(range[2])}`;
-    else if (bound) value = `${bound[1] ?? ""}${compactNt(bound[2])}`;
+    if (range) value = `NT$${compactNt(range[1])}-${compactNt(range[2])}`;
+    else if (bound) value = `${bound[1] ? `${bound[1]} ` : ""}NT$${compactNt(bound[2])}`;
     else return conditionText(condition);
-  } else if (unit === "%" && !value.endsWith("%")) value += "%";
+    return `Credit limit ${value}`;
+  } else if (attribute === "AVG_UTILIZATION" || attribute === "PAY_RATIO") {
+    if (!value.endsWith("%")) value += "%";
+    if (attribute === "AVG_UTILIZATION") return value === "<=0%"
+      ? "No balance (utilization <= 0%)" : `Utilization ${value}`;
+    return `Pays ${value.replace(/^>=/, ">= ")} of bills`;
+  } else if (["SEX", "EDUCATION", "MARRIAGE"].includes(attribute) && operator === "=") {
+    return friendlyRuleValue(value, attribute);
+  } else if (attribute === "AGE") return `Age ${value}`;
+  else if (unit === "%" && !value.endsWith("%")) value += "%";
   else if (operator === "!=" || (operator === "in" && !interval)) return conditionText(condition);
   return `${label}: ${value}`;
 }
 
-export function ruleFamily(rule: NameableRule): string {
-  if (rule.familyId?.trim()) return rule.familyId.trim();
-  const first = orderedConditions(rule)[0];
-  // Raw IDs keep distinct status codes apart even when both display as 3+ months.
-  return first
-    ? JSON.stringify([
-        first.attribute,
-        first.operator ?? "=",
-        String(first.value).replace(/^[\'"]|[\'"]$/g, ""),
-      ])
-    : "unspecified";
+/** Intent: rank supported bases and compare real condition levels only.
+ * Status: complete. Next: retain sample coverage. Blockers: none.
+ * Confidence: API order, support boundary and synthetic exclusion are tested.
+ */
+export function strongestDefaultFamily(families: RuleFamily[]): RuleFamily | undefined {
+  return families
+    .filter((family) => family.baseRule && family.baseRule.support >= 0.02)
+    .sort((a, b) => b.baseRule!.lift - a.baseRule!.lift)[0];
 }
 
-export function ruleFamilyLabel(rule: NameableRule): string {
-  const first = orderedConditions(rule)[0];
-  return (
-    rule.familyLabel?.trim() || (first ? compactConditionText(first) : "Unspecified conditions")
+export function filterRuleFamilies(families: RuleFamily[], minLift: number): RuleFamily[] {
+  return families.filter((family) =>
+    family.baseRule ? family.baseRule.lift >= minLift : minLift === 1,
   );
 }
 
-export interface RuleFamilyGroup {
-  id: string;
-  label: string;
-  rules: Rule[];
-}
-
-export function groupRuleFamilies(rules: Rule[], minLift = 0): RuleFamilyGroup[] {
-  const groups = new Map<string, RuleFamilyGroup>();
-  const expanded = rules.flatMap((rule) => [rule, ...(rule.familyMembers ?? [])]);
-  for (const rule of expanded.filter((rule) => rule.lift >= minLift)) {
-    // Different outcomes need different confidence baselines, even for the same condition.
-    const id = JSON.stringify([rule.category, ruleFamily(rule)]);
-    const group = groups.get(id) ?? { id, label: ruleFamilyLabel(rule), rules: [] };
-    if (!group.rules.some((member) => member.ruleId === rule.ruleId)) group.rules.push(rule);
-    groups.set(id, group);
-  }
-  for (const group of groups.values()) {
-    group.rules.sort(
-      (a, b) =>
-        ruleConditions(a).length - ruleConditions(b).length ||
-        b.lift - a.lift ||
-        b.confidence - a.confidence ||
-        a.ruleId - b.ruleId,
+export function ruleLadders(families: RuleFamily[], groups: RuleFamiliesResponse["groups"]) {
+  const conditionValue = (family: RuleFamily) => {
+    const value = String(
+      family.baseRule!.conditions?.find((condition) => condition.attribute === family.attribute)
+        ?.value ?? "",
     );
-  }
-  return [...groups.values()].sort((a, b) => b.rules[0].lift - a.rules[0].lift);
+    return Number(value.match(/-?\d+(?:\.\d+)?/)?.[0] ?? 0);
+  };
+  return groups
+    .map((group) => ({
+      ...group,
+      families: families
+        .filter((family) => family.baseRule && group.familyIds.includes(family.familyId))
+        .sort((a, b) => conditionValue(a) - conditionValue(b)),
+    }))
+    .filter((group) => group.families.length >= 2);
 }

@@ -1,7 +1,9 @@
 package com.creditminer.service;
 
 import com.creditminer.dto.response.RuleResponse;
+import com.creditminer.dto.response.RuleFamilyResponse;
 import com.creditminer.entity.Rule;
+import com.creditminer.exception.BusinessException;
 import com.creditminer.repository.RuleRepository;
 import com.creditminer.repository.CustomerRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -9,13 +11,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,103 @@ public class RuleService {
     @Value("${creditminer.models.rules-json:models/rules.json}")
     private String rulesPath;
 
+    /* Intent: compare each modifier to its actual singleton in the same artifact cohort.
+       Status: read-only view; absent singletons have combined-only families and null uplift.
+       Next: consume families in the dashboard. Blockers: none; confidence: artifact-backed tests. */
+    public RuleFamilyResponse families(String category) {
+        String artifactCategory = switch (category) {
+            case "default" -> "default";
+            case "nonDefault" -> "non-default";
+            default -> throw new BusinessException("VALIDATION_ERROR", HttpStatus.BAD_REQUEST,
+                    "Category must be default or nonDefault");
+        };
+        File file = new File(rulesPath);
+        if (!file.isFile()) throw new BusinessException("NOT_FOUND", HttpStatus.NOT_FOUND,
+                "Rule artifact not found at " + rulesPath);
+        JsonNode artifact;
+        Baseline baseline;
+        try {
+            artifact = mapper.readTree(file);
+            baseline = baseline(artifact);
+        } catch (IOException | IllegalArgumentException | IllegalStateException e) {
+            throw new BusinessException("MODEL_NOT_LOADED", HttpStatus.SERVICE_UNAVAILABLE,
+                    "Rule artifact cannot be read with a valid baseline");
+        }
+        Map<String, RuleResponse> rules = new LinkedHashMap<>();
+        for (String section : List.of("rules", "familyMembers")) {
+            for (JsonNode node : artifact.path(section)) {
+                if (artifactCategory.equals(node.path("category").asText())) {
+                    RuleResponse rule = artifactResponse(node, baseline);
+                    rules.putIfAbsent(rule.getLhs(), rule);
+                }
+            }
+        }
+        Map<String, RuleResponse> bases = new LinkedHashMap<>();
+        rules.values().stream().filter(rule -> rule.getConditions().size() == 1)
+                .forEach(rule -> bases.putIfAbsent(rule.getFamilyId(), rule));
+        List<RuleFamilyResponse.Family> families = new ArrayList<>();
+        for (RuleResponse base : bases.values()) {
+            RuleNaming.Condition condition = base.getConditions().get(0);
+            List<RuleFamilyResponse.Modifier> modifiers = rules.values().stream()
+                    .filter(rule -> rule.getConditions().size() > 1 && rule.getFamilyId().equals(base.getFamilyId()))
+                    .map(rule -> modifier(rule, base)).sorted(Comparator.comparingDouble(
+                            RuleFamilyResponse.Modifier::getConfidence).reversed()
+                            .thenComparingLong(RuleFamilyResponse.Modifier::getRuleId)).toList();
+            families.add(RuleFamilyResponse.Family.builder().familyId(base.getFamilyId()).label(base.getFamilyLabel())
+                    .attribute(condition.attribute()).attributeLabel(condition.label()).baseRule(base)
+                    .memberCount(modifiers.size() + 1).modifiers(modifiers).build());
+        }
+        families.sort(Comparator.comparingDouble((RuleFamilyResponse.Family family) ->
+                artifactCategory.equals("default") ? family.getBaseRule().getLift() : family.getBaseRule().getSupport())
+                .reversed().thenComparing(RuleFamilyResponse.Family::getFamilyId));
+        List<RuleResponse> ungroupedRules = rules.values().stream()
+                .filter(rule -> !bases.containsKey(rule.getFamilyId())).toList();
+        Map<String, List<RuleResponse>> combinedFamilies = ungroupedRules.stream().collect(Collectors.groupingBy(
+                RuleResponse::getFamilyId, LinkedHashMap::new, Collectors.toList()));
+        for (var entry : combinedFamilies.entrySet()) {
+            RuleResponse representative = entry.getValue().get(0);
+            RuleNaming.Condition condition = representative.getConditions().get(0);
+            List<RuleFamilyResponse.Modifier> modifiers = entry.getValue().stream()
+                    .map(rule -> modifier(rule, null)).sorted(Comparator.comparingDouble(
+                            RuleFamilyResponse.Modifier::getConfidence).reversed()
+                            .thenComparingLong(RuleFamilyResponse.Modifier::getRuleId)).toList();
+            families.add(RuleFamilyResponse.Family.builder().familyId(entry.getKey())
+                    .label(representative.getFamilyLabel() + " (combined conditions only)")
+                    .attribute(condition.attribute()).attributeLabel(condition.label()).baseRule(null)
+                    .memberCount(modifiers.size()).modifiers(modifiers).build());
+        }
+        Map<String, List<RuleFamilyResponse.Family>> grouped = families.stream().collect(Collectors.groupingBy(
+                RuleFamilyResponse.Family::getAttribute, LinkedHashMap::new, Collectors.toList()));
+        List<RuleFamilyResponse.Group> groups = grouped.entrySet().stream().map(entry ->
+                RuleFamilyResponse.Group.builder().attribute(entry.getKey())
+                        .attributeLabel(entry.getValue().get(0).getAttributeLabel())
+                        .familyIds(entry.getValue().stream().map(RuleFamilyResponse.Family::getFamilyId).toList())
+                        .build()).toList();
+        return RuleFamilyResponse.builder().baseline(baseline).families(families).groups(groups)
+                .ungroupedRules(ungroupedRules)
+                .build();
+    }
+
+    private RuleFamilyResponse.Modifier modifier(RuleResponse rule, RuleResponse base) {
+        String text = rule.getConditions().stream().skip(1).map(RuleNaming.Condition::text)
+                .collect(Collectors.joining("; "));
+        return RuleFamilyResponse.Modifier.builder().ruleId(rule.getRuleId()).label(text).conditionText(text)
+                .confidence(rule.getConfidence()).lift(rule.getLift()).support(rule.getSupport())
+                .jointCount(rule.getJointCount()).lhsCount(rule.getLhsCount())
+                .upliftPp(base == null ? null : Math.round((rule.getConfidence() - base.getConfidence()) * 1000) / 10.0)
+                .build();
+    }
+
+    private RuleResponse artifactResponse(JsonNode node, Baseline baseline) {
+        return RuleNaming.enrich(RuleResponse.builder()
+                .ruleId(node.path("ruleId").asLong()).lhs(node.path("lhs").asText()).rhs(node.path("rhs").asText())
+                .support(node.path("support").asDouble()).confidence(node.path("confidence").asDouble())
+                .lift(node.path("lift").asDouble()).category(node.path("category").asText())
+                .lhsCount(node.path("lhsCount").isNumber() ? node.path("lhsCount").asLong() : null)
+                .jointCount(node.path("jointCount").isNumber() ? node.path("jointCount").asLong() : null)
+                .build(), baseline.totalRows(), baseline.defaultRate());
+    }
+
     public List<RuleResponse> list(double minLift, String category) {
         List<Rule> rows = category == null || category.isBlank()
                 ? repository.findByMinLift(BigDecimal.valueOf(minLift))
@@ -35,6 +137,13 @@ public class RuleService {
         Map<String, List<RuleResponse>> families = loadFamilyMembers(baseline, minLift);
         return rows.stream().map(row -> {
             RuleResponse response = response(row, baseline);
+            RuleResponse exact = families.getOrDefault(response.getCategory() + ":" + response.getFamilyId(), List.of())
+                    .stream().filter(member -> member.getLhs().equals(response.getLhs())
+                            && member.getRhs().equals(response.getRhs())).findFirst().orElse(null);
+            if (exact != null) {
+                response.setLhsCount(exact.getLhsCount());
+                response.setJointCount(exact.getJointCount());
+            }
             response.setFamilyMembers(families.getOrDefault(response.getCategory() + ":" + response.getFamilyId(), List.of())
                     .stream().filter(member -> !member.getLhs().equals(response.getLhs())).toList());
             return response;
@@ -49,17 +158,13 @@ public class RuleService {
         try {
             JsonNode artifact = mapper.readTree(new File(rulesPath));
             if (artifact == null || !artifact.isObject()) return families;
-            for (JsonNode member : artifact.path("familyMembers")) {
+            for (String section : List.of("rules", "familyMembers")) {
+            for (JsonNode member : artifact.path(section)) {
                 if (member.path("lift").asDouble() < minLift) continue;
-                RuleResponse response = RuleNaming.enrich(RuleResponse.builder()
-                        .ruleId(member.path("ruleId").asLong()).lhs(member.path("lhs").asText())
-                        .rhs(member.path("rhs").asText()).support(member.path("support").asDouble())
-                        .confidence(member.path("confidence").asDouble()).lift(member.path("lift").asDouble())
-                        .category(member.path("category").asText())
-                        .jointCount(member.path("jointCount").isNumber() ? member.path("jointCount").asLong() : null)
-                        .build(), baseline.totalRows(), baseline.defaultRate());
+                RuleResponse response = artifactResponse(member, baseline);
                 families.computeIfAbsent(response.getCategory() + ":" + response.getFamilyId(), key -> new ArrayList<>())
                         .add(response);
+            }
             }
         } catch (IOException | IllegalArgumentException e) {
             // Legacy or unavailable artifacts retain the existing representative-only response.

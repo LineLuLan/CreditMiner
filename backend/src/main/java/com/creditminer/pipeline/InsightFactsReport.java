@@ -65,8 +65,11 @@ public class InsightFactsReport {
                 INPUT_ARFF, PCA_JSON, CLUSTERS_JSON, FEATURE_IMPORTANCE_JSON, RULES_JSON));
         report.put("overall", overall(data.numInstances(), defaults));
         report.put("defaultByBucket", defaultByBucket);
-        report.put("byCluster", buildClusterFacts(
-                data, classAttribute, defaults, baseDefaultRate, mapper, warnings));
+        report.put("repaymentFacts", buildRepaymentFacts(defaultByBucket.get("PAY_1")));
+        List<Map<String, Object>> clusterFacts = buildClusterFacts(
+                data, classAttribute, defaults, baseDefaultRate, mapper, warnings);
+        report.put("byCluster", clusterFacts);
+        report.put("personaFacts", buildPersonaFacts(clusterFacts, data.numInstances(), defaults));
         report.put("pointBiserial", buildPointBiserial(data, classAttribute));
         report.put("classMeans", buildClassMeans(data, classAttribute));
         report.put("featureImportance", buildFeatureImportance(mapper));
@@ -81,6 +84,22 @@ public class InsightFactsReport {
         log.info("Wrote {}", OUTPUT_JSON);
     }
 
+    // Intent: persist the latest 2+ cohort using exact counts, not averaged bucket rates.
+    // Status: complete. Next: regenerate with source data. Blockers: none. Confidence: count tests.
+    static List<Map<String, Object>> buildRepaymentFacts(List<Map<String, Object>> buckets) {
+        int n = 0;
+        int defaults = 0;
+        for (var bucket : buckets) {
+            if (Integer.parseInt(bucket.get("bucket").toString()) < 2) continue;
+            n += ((Number) bucket.get("count")).intValue();
+            defaults += ((Number) bucket.get("defaults")).intValue();
+        }
+        return List.of(
+                Map.of("factId", "default-rate-pay1-late2plus", "value", rate(defaults, n),
+                        "successes", defaults, "n", n),
+                Map.of("factId", "count-pay1-late2plus", "value", n, "n", n));
+    }
+
     static Map<String, Object> overall(int rows, int defaults) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("rows", rows);
@@ -88,6 +107,25 @@ public class InsightFactsReport {
         result.put("nonDefaults", Math.max(0, rows - defaults));
         result.put("defaultRate", round(rate(defaults, rows)));
         return result;
+    }
+
+    /* Intent: persist the same combined-persona evidence served by FactService.
+     * Status: exact count aggregation. Next: regenerate with each cluster run.
+     * Blockers: none. Confidence: count-based regression; no rounded-rate summation.
+     */
+    static List<Map<String, Object>> buildPersonaFacts(List<Map<String, Object>> clusters, int rows, int defaults) {
+        int delayingDefaults = 0;
+        int delayingClients = 0;
+        for (var cluster : clusters) {
+            if (!cluster.get("personaName").toString().contains("delayers")) continue;
+            delayingDefaults += ((Number) cluster.get("defaults")).intValue();
+            delayingClients += ((Number) cluster.get("size")).intValue();
+        }
+        return List.of(
+                Map.of("factId", "share-of-defaults-delayers", "label", "Delaying personas: share of defaults",
+                        "value", rate(delayingDefaults, defaults), "successes", delayingDefaults, "n", defaults),
+                Map.of("factId", "share-of-clients-delayers", "label", "Delaying personas: share of clients",
+                        "value", rate(delayingClients, rows), "successes", delayingClients, "n", rows));
     }
 
     static Map<String, List<Map<String, Object>>> buildDefaultByBucket(
@@ -347,6 +385,10 @@ public class InsightFactsReport {
             row.put("clusterId", entry.getKey());
             row.put("personaName", personaByCluster.getOrDefault(
                     entry.getKey(), "Cluster " + entry.getKey()));
+            String persona = (String) row.get("personaName");
+            row.put("defaultRateLabel", persona + ": default rate");
+            row.put("shareOfClientsLabel", persona + ": share of clients");
+            row.put("shareOfDefaultsLabel", persona + ": share of defaults");
             row.put("size", value.size);
             row.put("defaults", value.defaults);
             row.put("defaultRate", round(defaultRate));
@@ -496,6 +538,8 @@ public class InsightFactsReport {
                 row -> present(row, payRatio) && row.value(payRatio) < 0.1));
         result.add(combo(data, classAttribute, baseDefaultRate, "PAY_1 >= 2",
                 row -> present(row, recentStatus) && row.value(recentStatus) >= 2));
+        result.add(combo(data, classAttribute, baseDefaultRate, "PAY_1 >= 3",
+                row -> present(row, recentStatus) && row.value(recentStatus) >= 3));
         result.add(combo(data, classAttribute, baseDefaultRate, "RISK_TIER == High",
                 row -> present(row, riskTier) && "High".equals(row.stringValue(riskTier))));
         result.add(combo(data, classAttribute, baseDefaultRate,

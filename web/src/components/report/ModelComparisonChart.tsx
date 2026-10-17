@@ -4,7 +4,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -22,6 +21,7 @@ import { formatPct } from "@/lib/utils";
 import type { EvaluationVariant } from "@/types/api.types";
 import type { ComparisonRow } from "./ClassificationSection";
 import { ReportFigure } from "./ReportPrimitives";
+import { modelLabel } from "./model-labels";
 
 export function ModelComparisonChart({
   rows,
@@ -31,7 +31,7 @@ export function ModelComparisonChart({
   best?: EvaluationVariant;
 }) {
   const data = rows.map((row) => ({
-    label: `${row.model} (${row.variant})`,
+    label: modelLabel(row.model, row.variant),
     f1: row.testF1,
     prAuc: row.testPrAuc,
     isBest: row.model === best?.algo && row.variant === best?.variant,
@@ -39,7 +39,7 @@ export function ModelComparisonChart({
   return (
     <ReportFigure
       id="model-comparison-chart"
-      caption="Held-out F1 and PR-AUC by model variant. The strongest color marks the best variant."
+      caption="Held-out F1 and PR-AUC by model variant. The bold label marks the best variant."
     >
       <Card className="break-inside-avoid">
         <CardContent className="p-3">
@@ -65,38 +65,25 @@ export function ModelComparisonChart({
                   type="category"
                   dataKey="label"
                   width={148}
-                  tick={{ ...CHART_AXIS_TICK, fontSize: 10 }}
-                  tickFormatter={(value: string, index: number) =>
-                    `${data[index]?.isBest ? "Best: " : ""}${value}`
-                  }
+                  interval={0}
+                  tick={({ x, y, payload }) => {
+                    const isBest = data.find((row) => row.label === payload.value)?.isBest;
+                    return <text x={x} y={y} dy={3} textAnchor="end" {...CHART_AXIS_TICK} fontSize={10} fontWeight={isBest ? 700 : 400}>{isBest ? "Best: " : ""}{payload.value}</text>;
+                  }}
                 />
                 <Tooltip
                   {...CHART_TOOLTIP_PROPS}
                   formatter={(value: number, name: string) => [formatPct(value), name]}
                 />
                 <Legend wrapperStyle={CHART_LEGEND_STYLE} />
-                <Bar dataKey="f1" name="Test F1" fill={CHART_SEMANTIC.primary} radius={[0, 3, 3, 0]} isAnimationActive={false}>
-                  {data.map((row) => (
-                    <Cell
-                      key={`f1-${row.label}`}
-                      fill={row.isBest ? CHART_SEMANTIC.primary : CHART_SEMANTIC.neutral}
-                    />
-                  ))}
-                </Bar>
+                <Bar dataKey="f1" name="Test F1" fill={CHART_SEMANTIC.primary} radius={[0, 3, 3, 0]} isAnimationActive={false} />
                 <Bar
                   dataKey="prAuc"
                   name="Test PR-AUC"
                   fill={CHART_SEMANTIC.success}
                   radius={[0, 3, 3, 0]}
                   isAnimationActive={false}
-                >
-                  {data.map((row) => (
-                    <Cell
-                      key={`pr-${row.label}`}
-                      fill={row.isBest ? CHART_SEMANTIC.success : CHART_SEMANTIC.neutral}
-                    />
-                  ))}
-                </Bar>
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>

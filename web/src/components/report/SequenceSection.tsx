@@ -1,10 +1,14 @@
 "use client";
 
+import { modelLabel } from "./model-labels";
+
 import { useSequences } from "@/hooks/useSequences";
 import { SequenceSupportChart } from "@/components/charts/SequenceSupportChart";
+import { ItemLegend } from "@/components/sequences/ItemLegend";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatInt, formatPct } from "@/lib/utils";
-import { humanisePattern, selectSequenceStories } from "@/lib/sequence-format";
+import { formatCvF1Change } from "@/lib/format";
+import { humanisePattern, selectSequenceStories, SEQUENCE_ITEMS } from "@/lib/sequence-format";
 import { EmptyEvidence, ReportFigure, ReportTable, Takeaway } from "./ReportPrimitives";
 import {
   parseSequenceArtifact,
@@ -29,8 +33,8 @@ const REPORT_IDS: SequenceCaptionIds = {
 export function SequenceSection({ value }: { value: unknown }) {
   const artifact = parseSequenceArtifact(value);
   return (
-    <div id="section-5-3" className="scroll-mt-20 space-y-5">
-      <h3 className="report-heading text-xl font-semibold">5.3 Sequence mining</h3>
+    <div id="section-5-4" className="scroll-mt-20 space-y-5">
+      <h3 className="report-heading text-xl font-semibold">5.4 Sequence mining</h3>
       <p className="text-sm leading-6 text-muted-foreground">
         Generalized Sequential Patterns (GSP) finds ordered subsequences that meet a support
         threshold [9]. The pipeline mines defaulters and non-defaulters separately, then measures
@@ -67,7 +71,7 @@ export function SequenceEvidence({
     <div className="space-y-5">
       <Takeaway>{sequenceRemark(artifact)}</Takeaway>
       {defaults[0] ? <p className="break-words text-sm leading-6">
-        Leading default story: {humanisePattern(defaults[0]).text}. Support is {formatPct(defaults[0].supportDefault)} among defaulters and {formatPct(defaults[0].supportNonDefault)} among non-defaulters; prevalence ratio {(defaults[0].groupPrevalenceRatio ?? defaults[0].ratio).toFixed(2)}x.
+        Leading default story: {defaults[0].familyStory || humanisePattern(defaults[0]).text}. Support is {formatPct(defaults[0].supportDefault)} among defaulters and {formatPct(defaults[0].supportNonDefault)} among non-defaulters; prevalence ratio {(defaults[0].groupPrevalenceRatio ?? defaults[0].ratio).toFixed(2)}x.
       </p> : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Metric label="Default sequences" value={formatInt(artifact.groups.default.sequences)} />
@@ -87,14 +91,14 @@ export function SequenceEvidence({
       <p className="text-sm text-muted-foreground">
         The requested support is {formatPct(artifact.minSupport)}. The used support is{" "}
         {formatPct(artifact.groups.default.minSupportUsed)} for defaulters and{" "}
-        {formatPct(artifact.groups.nonDefault.minSupportUsed)} for non-defaulters. The order is{" "}
-        {artifact.itemMapping.order}.
+        {formatPct(artifact.groups.nonDefault.minSupportUsed)} for non-defaulters. The order runs
+        from the April 2005 statement to the September 2005 statement.
       </p>
       {artifact.itemMapping.oldestMonthReference ? (
         <p className="break-words text-sm text-muted-foreground">
-          {artifact.itemMapping.oldestMonthReference}.{" "}
+          April has no payment item because March&apos;s bill is unobserved.{" "}
           {artifact.itemMapping.payment.NO_BALANCE
-            ? "NO_BALANCE means the reference bill was non-positive; COVERED means a payment covered a positive reference bill."
+            ? "'Nothing due' marks months whose reference bill was not positive; 'Payment covers the bill' marks a payment at least equal to a positive reference bill."
             : null}
         </p>
       ) : null}
@@ -117,13 +121,14 @@ export function SequenceEvidence({
             {mappingRows(artifact).map(([type, item, definition]) => (
               <tr key={`${type}-${item}`} className="border-b last:border-0">
                 <td className="p-3 font-medium">{type}</td>
-                <td className="p-3 font-mono">{item}</td>
+                <td className="p-3">{item === "NO_BALANCE" ? "Nothing due" : item === "COVERED" ? "Payment covers the bill" : SEQUENCE_ITEMS[item] ?? item}</td>
                 <td className="p-3">{definition}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </ReportTable>
+      <ItemLegend mapping={artifact.itemMapping} />
       <ReportFigure
         id={ids.supportFigure}
         caption={`Support in each group for the top ${defaults.length} default-associated patterns.`}
@@ -176,7 +181,7 @@ export function SequenceFeatureExperimentTable({
         <tbody>
           {artifact.featureExperiment.results.map((row) => (
             <tr key={`${row.algo}-${row.features}`} className="border-b last:border-0">
-              <td className="p-3 font-semibold">{row.algo}</td>
+              <td className="p-3 font-semibold">{modelLabel(row.algo)}</td>
               <td className="p-3">{row.features}</td>
               <td className="p-3 text-right tabular-nums">{formatPct(row.cv.f1, 2)}</td>
               <td className="p-3 text-right tabular-nums">{formatPct(row.cv.rocAuc, 2)}</td>
@@ -234,10 +239,10 @@ function PatternTable({ patterns }: { patterns: SequencePattern[] }) {
 function mappingRows(artifact: SequenceArtifactView): Array<[string, string, string]> {
   return [
     ...Object.entries(artifact.itemMapping.status).map(
-      ([item, definition]) => ["Status", item, definition] as [string, string, string],
+      ([item, definition]) => ["Status", item, definition.replaceAll("PAY_k", "Repayment status")] as [string, string, string],
     ),
     ...Object.entries(artifact.itemMapping.payment).map(
-      ([item, definition]) => ["Payment", item, definition] as [string, string, string],
+      ([item, definition]) => ["Payment", item, definition.replaceAll("PAY_AMT_k", "Payment")] as [string, string, string],
     ),
   ];
 }
@@ -251,7 +256,7 @@ function sequenceRemark(artifact: SequenceArtifactView): string {
   const augmented = rows.find((row) => row.algo === algorithm && row.features === "base+seq");
   if (!algorithm || !base || !augmented) return "The sequence-feature comparison is unavailable.";
   const change = augmented.cv.f1 - base.cv.f1;
-  return `The pattern features change CV F1 by ${formatSigned(change, 4)} for ${algorithm}.`;
+  return formatCvF1Change(change, modelLabel(algorithm));
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

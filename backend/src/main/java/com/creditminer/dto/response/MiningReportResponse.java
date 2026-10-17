@@ -21,6 +21,7 @@ public class MiningReportResponse {
     private ClassificationEvidence classification;
     private ClusteringEvidence clustering;
     private RulesEvidence rules;
+    private ExecutiveSummary summary;
     private AnomalyEvidence anomalies;
     private JsonNode sequences;
     private Methodology methodology;
@@ -64,6 +65,20 @@ public class MiningReportResponse {
         private int totalClusters;
         private List<ClusterResponse> clusters;
         private List<ElbowPoint> elbowScores;
+        private JsonNode selection;
+    }
+
+    @Data
+    @Builder
+    public static class ExecutiveSummary {
+        private long ruleCount;
+        private long familyCount;
+        private double topRuleLift;
+        private String label;
+        private long defaultRuleCount;
+        private long defaultFamilyCount;
+        private long nonDefaultRuleCount;
+        private long nonDefaultFamilyCount;
     }
 
     @Data
@@ -225,7 +240,10 @@ public class MiningReportResponse {
         private int kMax;
         private int bestK;
         private String strategy;
-        private int seed;
+        private Integer seed;
+        private Integer restarts;
+        private String initialization;
+        private Double finalSilhouette;
         private int maxIterations;
         private String normalization;
         private List<String> featuresUsed;

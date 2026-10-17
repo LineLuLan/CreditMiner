@@ -10,7 +10,7 @@ export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "CreditMiner";
 export const DATASET_SOURCE =
   "UCI Machine Learning Repository, dataset 350 (Yeh & Lien, 2009), 30,000 clients, Taiwan, April-September 2005";
 
-/** Display order for the Phase 6 k=2 personas. */
+/** Display order for the Phase 6 personas. */
 export const PERSONA_ORDER = [
   "High-Default Persistent Delayers",
   "Lower-Default Current Payers",
@@ -48,6 +48,44 @@ export const EDA_NUMERIC_COLS = [
   "BILL_TREND",
 ] as const;
 
+/** Product labels for model features; unknown features retain their source code. */
+export const FEATURE_LABELS: Record<string, string> = {
+  PAY_1: "Latest statement status (Sep)",
+  PAY_2: "Status, Aug",
+  PAY_3: "Status, Jul",
+  PAY_4: "Status, Jun",
+  PAY_5: "Status, May",
+  PAY_6: "Status, Apr",
+  LIMIT_BAL: "Credit limit",
+  AGE: "Age",
+  SEX: "Sex",
+  EDUCATION: "Education",
+  MARRIAGE: "Marital status",
+  BILL_AMT1: "Bill, Sep",
+  BILL_AMT2: "Bill, Aug",
+  BILL_AMT3: "Bill, Jul",
+  BILL_AMT4: "Bill, Jun",
+  BILL_AMT5: "Bill, May",
+  BILL_AMT6: "Bill, Apr",
+  PAY_AMT1: "Payment, Sep",
+  PAY_AMT2: "Payment, Aug",
+  PAY_AMT3: "Payment, Jul",
+  PAY_AMT4: "Payment, Jun",
+  PAY_AMT5: "Payment, May",
+  PAY_AMT6: "Payment, Apr",
+  UTILIZATION_1: "Utilization, Sep",
+  AVG_UTILIZATION: "Average utilization",
+  PAY_RATIO: "Payment ratio",
+  MONTHS_DELAYED: "Late months (of 6)",
+  MAX_DELAY: "Longest delay",
+  BILL_TREND: "Bill trend",
+  RISK_TIER: "Risk tier",
+};
+
+export function featureLabel(code: string): string {
+  return FEATURE_LABELS[code] ?? code;
+}
+
 /** Labels for every raw and engineered dataset column. */
 export const EDA_FIELD_LABELS: Record<string, string> = {
   ID: "Client ID",
@@ -75,13 +113,14 @@ export const EDA_FIELD_LABELS: Record<string, string> = {
   PAY_AMT5: "Payment amount, May 2005",
   PAY_AMT6: "Payment amount, April 2005",
   Default: "Default payment next month",
-  UTILIZATION_1: "September utilization",
+  UTILIZATION_1: FEATURE_LABELS.UTILIZATION_1,
   AVG_UTILIZATION: "Average utilization",
   PAY_RATIO: "Payment ratio",
-  MONTHS_DELAYED: "Months delayed",
-  MAX_DELAY: "Maximum repayment delay",
+  MONTHS_DELAYED: FEATURE_LABELS.MONTHS_DELAYED,
+  MAX_DELAY: FEATURE_LABELS.MAX_DELAY,
   BILL_TREND: "Bill trend",
   RISK_TIER: "Risk tier",
+  ...FEATURE_LABELS,
 };
 
 export const COLUMN_LABELS = EDA_FIELD_LABELS;
@@ -89,11 +128,11 @@ export const COLUMN_LABELS = EDA_FIELD_LABELS;
 /** Compact labels for dense chart axes. */
 export const EDA_FIELD_SHORT_LABELS: Record<string, string> = {
   ID: "Client ID",
-  LIMIT_BAL: "Limit",
+  LIMIT_BAL: FEATURE_LABELS.LIMIT_BAL,
   SEX: "Sex",
   EDUCATION: "Education",
   MARRIAGE: "Marriage",
-  AGE: "Age",
+  AGE: FEATURE_LABELS.AGE,
   PAY_1: "Status Sep",
   PAY_2: "Status Aug",
   PAY_3: "Status Jul",
@@ -113,12 +152,12 @@ export const EDA_FIELD_SHORT_LABELS: Record<string, string> = {
   PAY_AMT5: "Paid May",
   PAY_AMT6: "Paid Apr",
   Default: "Default",
-  UTILIZATION_1: "Utilization Sep",
-  AVG_UTILIZATION: "Avg utilization",
-  PAY_RATIO: "Pay ratio",
-  MONTHS_DELAYED: "Months delayed",
-  MAX_DELAY: "Max delay",
-  BILL_TREND: "Bill trend",
+  UTILIZATION_1: FEATURE_LABELS.UTILIZATION_1,
+  AVG_UTILIZATION: FEATURE_LABELS.AVG_UTILIZATION,
+  PAY_RATIO: FEATURE_LABELS.PAY_RATIO,
+  MONTHS_DELAYED: FEATURE_LABELS.MONTHS_DELAYED,
+  MAX_DELAY: FEATURE_LABELS.MAX_DELAY,
+  BILL_TREND: FEATURE_LABELS.BILL_TREND,
   RISK_TIER: "Risk tier",
 };
 
@@ -193,15 +232,36 @@ export const PAY_STATUS_LABELS: Readonly<Record<number, string>> = Object.fromEn
   PAY_STATUS_OPTIONS.map(({ value, label }) => [value, label]),
 );
 
+export const EDUCATION_LABELS: Record<string, string> = {
+  Graduate: "Graduate school", University: "University", HighSchool: "High school", Other: "Other",
+};
+export const EDUCATION_VALUES = ["Graduate", "University", "HighSchool", "Other"] as const;
+export const MARRIAGE_LABELS: Record<string, string> = { Married: "Married", Single: "Single", Other: "Other" };
+
+/** Keep current API traits verbatim, translating only legacy feature prefixes. */
+export function formatPersonaTrait(trait: string): string {
+  if (Object.values(FEATURE_LABELS).some((label) => trait.startsWith(`${label}:`))) return trait;
+  const labels: Record<string, string> = {
+    "late months": "MONTHS_DELAYED", "months delayed": "MONTHS_DELAYED",
+    "maximum delay": "MAX_DELAY", "maximum repayment delay": "MAX_DELAY",
+    "latest utilization": "UTILIZATION_1", "september utilization": "UTILIZATION_1",
+    "avg utilization": "AVG_UTILIZATION", "pay ratio": "PAY_RATIO",
+    "limit": "LIMIT_BAL",
+  };
+  const months = trait.match(/^([\d.]+) late months(.*)$/i);
+  if (months) return `${featureLabel("MONTHS_DELAYED")}: ${months[1]}${months[2]}`;
+  for (const [prefix, code] of Object.entries(labels)) {
+    if (trait.toLowerCase().startsWith(`${prefix}:`) || trait.toLowerCase().startsWith(`${prefix} `)) {
+      return `${featureLabel(code)}${trait.slice(prefix.length)}`;
+    }
+  }
+  return trait;
+}
+
 export const CATEGORY_LABELS = {
   SEX: { Male: "Male", Female: "Female" },
-  EDUCATION: {
-    Graduate: "Graduate",
-    University: "University",
-    HighSchool: "High school",
-    Other: "Other",
-  },
-  MARRIAGE: { Married: "Married", Single: "Single", Other: "Other" },
+  EDUCATION: EDUCATION_LABELS,
+  MARRIAGE: MARRIAGE_LABELS,
   Default: { No: "Non-default", Yes: "Default" },
   RISK_TIER: { Low: "Low", Medium: "Medium", High: "High" },
 } as const;
@@ -219,15 +279,15 @@ export const INSIGHT_CATEGORY_LABELS = {
 
 export const NAV_ITEMS = [
   { href: "/", label: "Overview", icon: "LayoutDashboard" },
+  { href: "/insights", label: "Insights", icon: "Lightbulb" },
   { href: "/eda", label: "EDA", icon: "BarChart3" },
   { href: "/customers", label: "Customers", icon: "Users" },
-  { href: "/clusters", label: "Clusters", icon: "Network" },
+  { href: "/clusters", label: "Personas", icon: "Network" },
   { href: "/rules", label: "Rules", icon: "Filter" },
   { href: "/sequences", label: "Sequences", icon: "GitBranch" },
+  { href: "/predict", label: "Predict", icon: "Sparkles" },
   { href: "/mining-report", label: "Mining Report", icon: "FileText" },
   { href: "/pipeline", label: "Methodology", icon: "GitBranch" },
-  { href: "/predict", label: "Predict", icon: "Sparkles" },
-  { href: "/insights", label: "Insights", icon: "Lightbulb" },
 ] as const;
 
 export { CHART_SEMANTIC, CLUSTER_COLORS, clusterColor } from "./chart-theme";

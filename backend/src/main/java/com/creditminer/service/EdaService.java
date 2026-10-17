@@ -18,6 +18,8 @@ import weka.core.Instance;
 import weka.core.Instances;
 
 import java.io.File;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -47,19 +49,24 @@ public class EdaService {
     private volatile CorrelationResponse cachedCorrelation;
     private volatile List<PcaPointResponse> cachedPca;
     private volatile PcaMetaResponse cachedPcaMeta;
+    private List<Double> pcaTotalVariance;
 
     public PcaMetaResponse pcaMeta() {
         PcaMetaResponse local = cachedPcaMeta;
         if (local != null) return local;
         synchronized (this) {
-            if (cachedPcaMeta == null) cachedPcaMeta = computePcaMeta(pca2d());
+            if (cachedPcaMeta == null) {
+                var meta = computePcaMeta(pca2d());
+                meta.setExplainedVarianceOfTotal(pcaTotalVariance);
+                cachedPcaMeta = meta;
+            }
             return cachedPcaMeta;
         }
     }
 
     /* Intent: describe only the exported projection, never imply original-space variance.
-     * Status: cached with points. Next: original eigenvalues if exported in a future phase.
-     * Blocker: original eigenvalues absent. Confidence: percentile and variance unit tests.
+     * Status: cached with points; total shares come from the offline eigenvalues. Next: none.
+     * Blockers: legacy artifacts leave total shares null. Confidence: percentile and variance unit tests.
      */
     static PcaMetaResponse computePcaMeta(List<PcaPointResponse> points) {
         var builder = PcaMetaResponse.builder().pointCount(points.size())
@@ -97,6 +104,7 @@ public class EdaService {
     public synchronized void invalidatePca() {
         cachedPca = null;
         cachedPcaMeta = null;
+        pcaTotalVariance = null;
     }
 
     private List<PcaPointResponse> loadPca() {
@@ -105,7 +113,21 @@ public class EdaService {
             throw unavailable("PCA file missing at " + pcaJsonPath + ". Run Phase 6 first.");
         }
         try {
-            JsonNode points = mapper.readTree(file).path("points");
+            JsonNode artifact = mapper.readTree(file);
+            JsonNode shares = artifact.path("meta").path("explainedVarianceOfTotal");
+            List<Double> totalShares = null;
+            if (!shares.isMissingNode() && !shares.isNull()) {
+                if (!shares.isArray() || shares.size() != 2)
+                    throw unavailable("PCA total variance must contain two shares");
+                for (JsonNode share : shares) {
+                    if (!share.isNumber() || !Double.isFinite(share.asDouble()) || share.asDouble() < 0 || share.asDouble() > 1)
+                        throw unavailable("Invalid PCA total variance share");
+                }
+                if (shares.get(0).asDouble() + shares.get(1).asDouble() > 1 + 1e-12)
+                    throw unavailable("PCA total variance shares exceed one");
+                totalShares = List.of(shares.get(0).asDouble(), shares.get(1).asDouble());
+            }
+            JsonNode points = artifact.path("points");
             if (!points.isArray()) throw unavailable("PCA artifact has no points array");
             List<PcaPointResponse> result = new ArrayList<>(points.size());
             for (JsonNode point : points) {
@@ -113,6 +135,7 @@ public class EdaService {
                         point.path("clusterId").asInt(), point.path("x").asDouble(),
                         point.path("y").asDouble()));
             }
+            pcaTotalVariance = totalShares;
             return result;
         } catch (BusinessException ex) {
             throw ex;
@@ -126,6 +149,14 @@ public class EdaService {
     }
 
     public DistributionResponse distribution(String column, Integer bins, String split) {
+        return distribution(column, bins, split, null);
+    }
+
+    public DistributionResponse distribution(String column, Integer bins, String split, String binning) {
+        String mode = binning == null ? "equal-width" : binning;
+        if (!Set.of("equal-width", "quantile").contains(mode)) {
+            throw invalid("binning must be equal-width or quantile, got '" + binning + "'");
+        }
         Instances data = dataCache.get();
         Attribute value = requireAttribute(data, column);
         Attribute splitAttribute = null;
@@ -137,36 +168,77 @@ public class EdaService {
         }
         if (value.isNumeric()) {
             int binCount = Math.max(5, Math.min(50, bins == null ? DEFAULT_BINS : bins));
-            return numericDistribution(data, value, splitAttribute, binCount);
+            return numericDistribution(data, value, splitAttribute, binCount, mode);
         }
         if (value.isNominal()) return nominalDistribution(data, value, splitAttribute);
         throw invalid("Column '" + column + "' is neither numeric nor nominal");
     }
 
     private DistributionResponse numericDistribution(
-            Instances data, Attribute value, Attribute split, int bins) {
+            Instances data, Attribute value, Attribute split, int bins, String binning) {
         double[] values = data.attributeToDoubleArray(value.index());
         double[] present = Arrays.stream(values).filter(Double::isFinite).sorted().toArray();
         if (present.length == 0) {
             return DistributionResponse.builder().column(value.name()).type("numeric")
+                    .binning(binning).notes(List.of("No finite values available."))
                     .binEdges(List.of()).counts(List.of()).stats(stats(present))
                     .series(splitNumeric(data, value, split, List.of())).build();
         }
-        double min = present[0];
-        double max = present[present.length - 1];
-        List<Double> edges = new ArrayList<>();
-        if (min == max) {
-            edges.add(min);
-            edges.add(min + 1e-9);
-        } else {
-            double step = (max - min) / bins;
-            for (int i = 0; i <= bins; i++) edges.add(round(min + i * step, 6));
+        List<Double> edges = "quantile".equals(binning)
+                ? quantileEdges(present, bins) : niceEdges(present[0], present[present.length - 1], bins);
+        List<String> notes = new ArrayList<>();
+        notes.add("quantile".equals(binning) ? "Quantile edges use linear interpolation of raw values."
+                : "Equal-width edges use a 1, 2 or 5 times power-of-ten step.");
+        if (edges.stream().distinct().count() < edges.size()) {
+            notes.add("Repeated quantile edges are retained; tied values stay together.");
         }
+        notes.add("Sparse right-tail bins below 0.1% may be merged for display.");
         int[] counts = new int[edges.size() - 1];
         for (double item : present) counts[histogramIndex(item, edges)]++;
         return DistributionResponse.builder().column(value.name()).type("numeric")
+                .binning(binning).notes(notes)
                 .binEdges(edges).counts(toList(counts)).stats(stats(present))
                 .series(splitNumeric(data, value, split, edges)).build();
+    }
+
+    /* Intent: readable widths and exact quantiles without discarding observations.
+     * Status: raw-data edges; display tail merging remains in the frontend.
+     * Next: retain source edges for comparisons. Blockers: none.
+     * Confidence: signed, tiny, constant, repeated and split-count tests.
+     */
+    private static List<Double> niceEdges(double min, double max, int bins) {
+        if (min == max) return List.of(Math.floor(min), Math.floor(min) + 1);
+        int exponent = (int) Math.floor(Math.log10((max - min) / bins));
+        BigDecimal bestStep = BigDecimal.ONE;
+        BigDecimal bestFirst = BigDecimal.ZERO;
+        int bestCount = 1;
+        int bestDifference = Integer.MAX_VALUE;
+        for (int power = exponent - 2; power <= exponent + 2; power++) {
+            for (int multiplier : new int[]{1, 2, 5}) {
+                BigDecimal step = BigDecimal.valueOf(multiplier).scaleByPowerOfTen(power);
+                BigDecimal first = BigDecimal.valueOf(min).divide(step, 0, RoundingMode.FLOOR);
+                BigDecimal last = BigDecimal.valueOf(max).divide(step, 0, RoundingMode.CEILING);
+                int count = last.subtract(first).intValueExact();
+                int difference = Math.abs(count - bins);
+                if (difference < bestDifference) {
+                    bestDifference = difference;
+                    bestStep = step;
+                    bestFirst = first;
+                    bestCount = count;
+                }
+            }
+        }
+        List<Double> edges = new ArrayList<>();
+        for (int i = 0; i <= bestCount; i++) {
+            edges.add(bestFirst.add(BigDecimal.valueOf(i)).multiply(bestStep).doubleValue());
+        }
+        return edges;
+    }
+
+    private static List<Double> quantileEdges(double[] sorted, int bins) {
+        List<Double> edges = new ArrayList<>();
+        for (int i = 0; i <= bins; i++) edges.add(percentile(sorted, (double) i / bins));
+        return edges;
     }
 
     private DistributionResponse nominalDistribution(
@@ -175,6 +247,7 @@ public class EdaService {
         List<String> categories = new ArrayList<>();
         for (int i = 0; i < value.numValues(); i++) categories.add(value.value(i));
         return DistributionResponse.builder().column(value.name()).type("nominal")
+                .notes(List.of())
                 .categories(categories).counts(toList(counts)).stats(null)
                 .series(splitNominal(data, value, split)).build();
     }
@@ -190,6 +263,7 @@ public class EdaService {
                 if (row.isMissing(split) || row.isMissing(value)
                         || (int) row.value(split) != splitIndex) continue;
                 double item = row.value(value);
+                if (!Double.isFinite(item)) continue;
                 selected.add(item);
                 if (counts.length > 0) counts[histogramIndex(item, edges)]++;
             }
@@ -263,7 +337,7 @@ public class EdaService {
         for (Instance row : data) {
             if (row.isMissing(dim)) continue;
             String key = age ? ageBand(row.value(dim))
-                    : integer ? Long.toString(integerValue(row.value(dim), dimension))
+                    : integer ? numericGroupLabel(integerValue(row.value(dim), dimension), dimension)
                     : dim.value((int) row.value(dim));
             int[] counts = groups.computeIfAbsent(key, ignored -> new int[2]);
             counts[0]++;
@@ -291,8 +365,12 @@ public class EdaService {
             }
         }
         Map<String, int[]> result = new LinkedHashMap<>();
-        sorted.forEach((value, counts) -> result.put(Long.toString(value), counts));
+        sorted.forEach((value, counts) -> result.putIfAbsent(numericGroupLabel(value, dimension.name()), counts));
         return result;
+    }
+
+    private static String numericGroupLabel(long value, String dimension) {
+        return dimension.startsWith("PAY_") && value >= 3 ? "3+ months late" : Long.toString(value);
     }
 
     private static Map<String, int[]> ageGroups() {
@@ -369,9 +447,14 @@ public class EdaService {
 
     private static int histogramIndex(double value, List<Double> edges) {
         int bins = edges.size() - 1;
-        int index = (int) Math.floor((value - edges.get(0))
-                / Math.max(1e-12, edges.get(edges.size() - 1) - edges.get(0)) * bins);
-        return Math.max(0, Math.min(index, bins - 1));
+        int low = 0;
+        int high = edges.size();
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            if (edges.get(middle) <= value) low = middle + 1;
+            else high = middle;
+        }
+        return Math.max(0, Math.min(low - 1, bins - 1));
     }
 
     private static List<Integer> toList(int[] values) {

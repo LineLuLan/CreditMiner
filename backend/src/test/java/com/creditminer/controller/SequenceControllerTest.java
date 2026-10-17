@@ -56,7 +56,7 @@ class SequenceControllerTest {
                 .andExpect(jsonPath("$.topDefaultPatterns[0].pattern").value("<{PARTIAL}{LATE_2}>"))
                 .andExpect(jsonPath("$.topDefaultPatterns[0].displayText").value("Partial payment, then 2 months late"))
                 .andExpect(jsonPath("$.topDefaultPatterns[0].steps[1].items[0]").value("2 months late"))
-                .andExpect(jsonPath("$.topDefaultPatterns[0].familyId").value("partial payment, then 2 months late"))
+                .andExpect(jsonPath("$.topDefaultPatterns[0].familyId").value("LATE_2|PARTIAL"))
                 .andExpect(jsonPath("$.topDefaultPatterns[0].ci95.supportDefault.low").isNumber())
                 .andExpect(jsonPath("$.topDefaultPatterns[0].ci95.supportNonDefault.high").isNumber())
                 .andExpect(jsonPath("$.stories.defaultStories[0].groupPrevalenceRatio").value(4))

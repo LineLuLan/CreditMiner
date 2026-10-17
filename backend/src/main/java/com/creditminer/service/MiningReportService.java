@@ -63,6 +63,7 @@ public class MiningReportService {
     private final AnomalyService anomalyService;
     private final InsightService insightService;
     private final ObjectMapper mapper;
+    private final ClusterService clusterService;
 
     @Value("${creditminer.data.phase5-feature-importance-json:data/processed/phase5_feature_importance.json}")
     private String featureImportancePath;
@@ -107,12 +108,14 @@ public class MiningReportService {
         List<String> warnings = new ArrayList<>();
         MiningReportResponse.ClassificationEvidence classification = classification(warnings);
         MiningReportResponse.AnomalyEvidence anomalies = anomalies(warnings);
+        List<RuleResponse> ruleRows = loadReportRules(warnings);
         return MiningReportResponse.builder()
                 .generatedAt(Instant.now())
                 .dataset(dataset(warnings))
                 .classification(classification)
                 .clustering(clustering(warnings))
-                .rules(rules(warnings))
+                .rules(rules(ruleRows))
+                .summary(ruleSummary(ruleRows))
                 .anomalies(anomalies)
                 .sequences(sequences(warnings))
                 .methodology(methodology(classification.getEvaluation(), anomalies, warnings))
@@ -354,6 +357,14 @@ public class MiningReportService {
 
     private MiningReportResponse.ClusteringEvidence clustering(List<String> warnings) {
         List<ClusterResponse> clusters = clusters(warnings);
+        // Intent: reuse API profile enrichment for DB and artifact rows without duplicating persona rules.
+        // Status: read-only; incomplete aggregate evidence leaves the report available with a warning.
+        // Next: consume selection in the report view. Blockers: none; confidence: real-artifact tests.
+        try {
+            clusters = clusterService.enrich(clusters);
+        } catch (RuntimeException ex) {
+            warnings.add("Cluster profile enrichment unavailable: " + ex.getMessage());
+        }
         ElbowData elbow = elbow(warnings);
         return MiningReportResponse.ClusteringEvidence.builder()
                 .bestK(elbow.bestK())
@@ -361,6 +372,7 @@ public class MiningReportService {
                 .totalClusters(clusters.size())
                 .clusters(clusters)
                 .elbowScores(elbow.scores())
+                .selection(elbow.selection())
                 .build();
     }
 
@@ -414,6 +426,9 @@ public class MiningReportService {
                 out.add(ClusterResponse.builder()
                         .clusterId(n.path("clusterId").asInt())
                         .personaName(n.path("personaName").asText("Cluster " + n.path("clusterId").asInt()))
+                        .displayName(n.path("displayName").asText(null))
+                        .tagline(n.path("tagline").asText(null))
+                        .generatedAt(n.path("generatedAt").asText(null))
                         .size(n.path("size").asInt())
                         .centroid(mapper.convertValue(n.path("centroid"), CENTROID_TYPE))
                         .avgRisk(n.path("avgRisk").asDouble())
@@ -434,7 +449,7 @@ public class MiningReportService {
         File f = new File(elbowPath);
         if (!f.exists()) {
             warnings.add("Elbow/silhouette JSON missing at " + elbowPath);
-            return new ElbowData(0, "not available", List.of());
+            return new ElbowData(0, "not available", List.of(), null);
         }
         try {
             JsonNode root = mapper.readTree(f);
@@ -446,26 +461,37 @@ public class MiningReportService {
                         .silhouette(score.path("silhouette").asDouble())
                         .build());
             }
-            return new ElbowData(root.path("bestK").asInt(), root.path("strategy").asText(), scores);
+            return new ElbowData(root.path("bestK").asInt(), root.path("strategy").asText(), scores,
+                    clusterSelection(root));
         } catch (Exception ex) {
             warnings.add("Failed to read elbow/silhouette JSON: " + ex.getMessage());
-            return new ElbowData(0, "not available", List.of());
+            return new ElbowData(0, "not available", List.of(), null);
         }
     }
 
-    private MiningReportResponse.RulesEvidence rules(List<String> warnings) {
-        List<RuleResponse> rules;
-        try {
-            rules = ruleRepository.findAll().stream()
-                    .map(this::ruleResponse)
-                    .toList();
-            if (rules.isEmpty()) {
-                warnings.add("Rules DB table empty; using models/rules.json fallback.");
-                rules = ruleArtifactFallback(warnings);
+    private JsonNode clusterSelection(JsonNode root) {
+        ObjectNode selection = mapper.createObjectNode();
+        for (String field : List.of("bestKBySilhouette", "chosenK", "chosenReason", "initialization",
+                "restarts", "chosenSeed", "chosenWcss", "finalSilhouette", "sweepInitialization")) {
+            if (root.has(field)) selection.set(field, root.get(field).deepCopy());
+            else selection.putNull(field);
+        }
+        return selection;
+    }
+
+    /* Intent: summarize one complete, deduplicated artifact cohort in both report sections.
+     * Status: includes representatives and family members. Next: none. Blockers: missing
+     * artifacts explicitly warn before DB fallback. Confidence: real-artifact and overlap tests.
+     */
+    private List<RuleResponse> loadReportRules(List<String> warnings) {
+        List<RuleResponse> rules = ruleArtifactFallback(warnings);
+        if (rules.isEmpty()) {
+            warnings.add("Complete rule artifact unavailable; report counts cover persisted rules only.");
+            try {
+                rules = ruleRepository.findAll().stream().map(this::ruleResponse).toList();
+            } catch (Exception ex) {
+                warnings.add("Rules unavailable: " + ex.getMessage());
             }
-        } catch (Exception ex) {
-            warnings.add("Rules unavailable: " + ex.getMessage());
-            rules = ruleArtifactFallback(warnings);
         }
 
         if (!rules.isEmpty()) {
@@ -473,7 +499,26 @@ public class MiningReportService {
             rules.forEach(r -> RuleNaming.enrich(r, baseline.totalRows(), baseline.defaultRate()));
             if (baseline.totalRows() == null) warnings.add("Rule row counts unavailable; jointCount is null.");
         }
+        return rules;
+    }
 
+    private MiningReportResponse.ExecutiveSummary ruleSummary(List<RuleResponse> rules) {
+        long defaultRules = rules.stream().filter(r -> "default".equals(r.getCategory())).count();
+        long nonDefaultRules = rules.stream().filter(r -> "non-default".equals(r.getCategory())).count();
+        long defaultFamilies = rules.stream().filter(r -> "default".equals(r.getCategory()))
+                .map(RuleResponse::getFamilyId).distinct().count();
+        long nonDefaultFamilies = rules.stream().filter(r -> "non-default".equals(r.getCategory()))
+                .map(RuleResponse::getFamilyId).distinct().count();
+        long families = defaultFamilies + nonDefaultFamilies;
+        return MiningReportResponse.ExecutiveSummary.builder()
+                .ruleCount(rules.size()).familyCount(families)
+                .topRuleLift(round(rules.stream().mapToDouble(RuleResponse::getLift).max().orElse(0), 2))
+                .label(rules.size() + " rules in " + families + " families")
+                .defaultRuleCount(defaultRules).defaultFamilyCount(defaultFamilies)
+                .nonDefaultRuleCount(nonDefaultRules).nonDefaultFamilyCount(nonDefaultFamilies).build();
+    }
+
+    private MiningReportResponse.RulesEvidence rules(List<RuleResponse> rules) {
         double support = 0;
         double confidence = 0;
         double lift = 0;
@@ -530,22 +575,27 @@ public class MiningReportService {
             return List.of();
         }
         try {
-            JsonNode arr = mapper.readTree(f).path("rules");
-            List<RuleResponse> out = new ArrayList<>();
+            JsonNode artifact = mapper.readTree(f);
+            if (!artifact.path("rules").isArray()) throw new IllegalArgumentException("Missing rules array");
+            Map<List<String>, RuleResponse> out = new LinkedHashMap<>();
             long id = 1;
-            for (JsonNode n : arr) {
-                out.add(RuleResponse.builder()
+            for (String section : List.of("rules", "familyMembers")) {
+                for (JsonNode n : artifact.path(section)) {
+                    RuleResponse rule = RuleResponse.builder()
                         .ruleId(n.path("ruleId").asLong(id++))
                         .jointCount(n.has("jointCount") ? n.path("jointCount").asLong() : null)
+                        .lhsCount(n.has("lhsCount") ? n.path("lhsCount").asLong() : null)
                         .lhs(n.path("lhs").asText())
                         .rhs(n.path("rhs").asText())
                         .support(n.path("support").asDouble())
                         .confidence(n.path("confidence").asDouble())
                         .lift(n.path("lift").asDouble())
                         .category(n.path("category").asText())
-                        .build());
+                        .build();
+                    out.putIfAbsent(List.of(rule.getCategory(), rule.getLhs(), rule.getRhs()), rule);
+                }
             }
-            return out;
+            return List.copyOf(out.values());
         } catch (Exception ex) {
             warnings.add("Failed to read rules artifact: " + ex.getMessage());
             return List.of();
@@ -734,7 +784,13 @@ public class MiningReportService {
                 .kMax(elbow == null ? 0 : elbow.path("kMax").asInt())
                 .bestK(elbow == null ? 0 : elbow.path("bestK").asInt())
                 .strategy(elbow == null ? "not available" : elbow.path("strategy").asText())
-                .seed(42)
+                .seed(elbow != null && elbow.path("chosenSeed").isIntegralNumber()
+                        ? elbow.path("chosenSeed").intValue() : null)
+                .restarts(elbow != null && elbow.path("restarts").isIntegralNumber()
+                        ? elbow.path("restarts").intValue() : null)
+                .initialization(elbow != null && elbow.path("initialization").isTextual()
+                        ? elbow.path("initialization").textValue() : null)
+                .finalSilhouette(numberOrNull(elbow, "finalSilhouette"))
                 .maxIterations(500)
                 .normalization("min-max")
                 .featuresUsed(kmeansFeatures(warnings))
@@ -785,10 +841,11 @@ public class MiningReportService {
 
     private MiningReportResponse.AssociationPass associationPass(JsonNode config) {
         if (config == null || config.isMissingNode()) return null;
+        Double finalSupport = numberOrNull(config, "finalSupport");
         return MiningReportResponse.AssociationPass.builder()
                 .minSupport(numberOrNull(config, "minSupport"))
                 .attemptedSupports(doubleList(config.path("attemptedSupports")))
-                .finalSupport(numberOrNull(config, "finalSupport"))
+                .finalSupport(finalSupport == null ? numberOrNull(config, "minSupport") : finalSupport)
                 .minConfidence(numberOrNull(config, "minConfidence"))
                 .minLift(numberOrNull(config, "minLift"))
                 .numRules(config.has("numRules") ? config.path("numRules").asInt() : null)
@@ -947,5 +1004,5 @@ public class MiningReportService {
     }
 
     private record ElbowData(int bestK, String strategy,
-                             List<MiningReportResponse.ElbowPoint> scores) { }
+                             List<MiningReportResponse.ElbowPoint> scores, JsonNode selection) { }
 }

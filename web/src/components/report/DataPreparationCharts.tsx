@@ -17,6 +17,7 @@ import {
 } from "@/components/charts/chart-theme";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatInt } from "@/lib/utils";
+import { featureLabel } from "@/lib/constants";
 import { ReportFigure } from "./ReportPrimitives";
 
 interface OutlierCounts {
@@ -76,11 +77,13 @@ function CompactBarChart({
   dataKey: string;
   color: string;
 }) {
+  // Preserve every category in screen and print layouts, including the 25-bar outlier chart.
+  const chartHeight = Math.max(256, data.length * 24);
   return (
     <Card className="break-inside-avoid">
       <CardContent className="p-3">
-        <div className="report-chart h-64 w-full" role="img" aria-label={ariaLabel}>
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full" style={{ height: chartHeight }} role="img" aria-label={ariaLabel}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={chartHeight}>
             <BarChart
               data={data}
               layout="vertical"
@@ -91,8 +94,9 @@ function CompactBarChart({
               <YAxis
                 type="category"
                 dataKey="name"
-                width={112}
-                tick={{ ...CHART_AXIS_TICK, fontSize: 11 }}
+                width={190}
+                interval={0}
+                tick={{ ...CHART_AXIS_TICK, fontSize: 9 }}
               />
               <Tooltip {...CHART_TOOLTIP_PROPS} formatter={(value: number) => formatInt(value)} />
               <Bar
@@ -119,5 +123,5 @@ function CompactBarChart({
 }
 
 function shortName(value: string): string {
-  return value.replaceAll("_", " ").slice(0, 22);
+  return featureLabel(value);
 }

@@ -12,11 +12,11 @@ import java.util.regex.Pattern;
 public final class RuleNaming {
     private RuleNaming() { }
     private static final Map<String, String> LABELS = Map.ofEntries(
-            Map.entry("PAY_1", "Sep status"), Map.entry("PAY_2", "Aug status"), Map.entry("PAY_3", "Jul status"),
+            Map.entry("PAY_1", "Latest statement (Sep 2005)"), Map.entry("PAY_2", "Aug status"), Map.entry("PAY_3", "Jul status"),
             Map.entry("PAY_4", "Jun status"), Map.entry("PAY_5", "May status"), Map.entry("PAY_6", "Apr status"),
-            Map.entry("LIMIT_BAL", "Limit"), Map.entry("AGE", "Age"), Map.entry("AVG_UTILIZATION", "Mean use"),
+            Map.entry("LIMIT_BAL", "Credit limit"), Map.entry("AGE", "Age"), Map.entry("AVG_UTILIZATION", "Average utilization"),
             Map.entry("UTILIZATION_1", "Sep use"), Map.entry("PAY_RATIO", "Payment ratio"),
-            Map.entry("MAX_DELAY", "Worst delay"), Map.entry("MONTHS_DELAYED", "Late months"),
+            Map.entry("MAX_DELAY", "Longest delay (6 months)"), Map.entry("MONTHS_DELAYED", "Late months (of 6)"),
             Map.entry("BILL_AMT1", "Sep bill"), Map.entry("PAY_AMT1", "Sep payment"),
             Map.entry("BILL_TREND", "Balance change"), Map.entry("SEX", "Sex"),
             Map.entry("EDUCATION", "Education"), Map.entry("MARRIAGE", "Marital status"),
@@ -24,7 +24,7 @@ public final class RuleNaming {
     private static final Pattern INTERVAL = Pattern.compile("^[\\[(](-?inf|-?\\d+(?:\\.\\d+)?(?:[Ee][+-]?\\d+)?)-(-?inf|-?\\d+(?:\\.\\d+)?(?:[Ee][+-]?\\d+)?)[\\])]$");
     private static final Pattern RANGE = Pattern.compile("^-?\\d+(?:\\.\\d+)?--?\\d+(?:\\.\\d+)?%?$");
 
-    public record Condition(String attribute, String label, String operator, String value, String unit) { }
+    public record Condition(String attribute, String label, String operator, String value, String unit, String text) { }
     public record NamedRule(List<Condition> conditions, String shortName, String familyId, String familyLabel) { }
     private record Item(String attribute, String raw) { }
 
@@ -39,6 +39,8 @@ public final class RuleNaming {
         if (items.isEmpty()) return new NamedRule(conditions, lhs, "unknown", "Unknown condition");
         Item family = items.get(0);
         String name = items.stream().limit(2).map(RuleNaming::fragment).collect(java.util.stream.Collectors.joining("; "));
+        if (name.length() > 48) name = compact(name);
+        if (name.length() > 48) name = name.substring(0, 45) + "...";
         return new NamedRule(conditions, name, family.attribute() + "=" + family.raw(), fragment(family));
     }
 
@@ -98,22 +100,59 @@ public final class RuleNaming {
             String right = item.attribute().equals("PAY_RATIO") && raw.equals("50-100%") ? ")" : "]";
             value = left + bounds[0] + ", " + bounds[1] + right;
         } else value = raw.replace("%", "");
-        return new Condition(item.attribute(), LABELS.getOrDefault(item.attribute(), item.attribute()), op, value, unit);
+        return new Condition(item.attribute(), LABELS.getOrDefault(item.attribute(), item.attribute()), op, value, unit, text(item));
     }
 
     private static String fragment(Item item) {
-        String label = LABELS.getOrDefault(item.attribute(), item.attribute());
-        if (item.attribute().matches("PAY_[1-6]")) label = label.replace(" status", "");
-        return label + ": " + display(item);
+        if (item.attribute().equals("PAY_1")) return "Latest statement: " + display(item);
+        if (item.attribute().matches("PAY_[2-6]"))
+            return LABELS.get(item.attribute()).replace(" status", "") + ": " + display(item);
+        return text(item);
+    }
+
+    private static String compact(String name) {
+        String compact = name.replace("Latest statement:", "Latest:");
+        if (compact.length() > 48) compact = compact.replace("Credit limit ", "Limit ");
+        if (compact.length() > 48) compact = compact.replace(" months", " mo").replace(" month", " mo");
+        if (compact.length() > 48) compact = compact.replace(" of bills", "");
+        return compact;
+    }
+
+    private static String text(Item item) {
+        String attr = item.attribute(), raw = item.raw();
+        if (attr.equals("PAY_1")) {
+            String description = display(item);
+            return Character.toUpperCase(description.charAt(0)) + description.substring(1)
+                    + " on the latest statement";
+        }
+        if (attr.equals("MAX_DELAY")) return "Longest delay: " + display(item);
+        if (attr.equals("MONTHS_DELAYED")) return raw.equals("0") ? "Never late" : "Late in " + raw + " of 6 months";
+        if (attr.equals("LIMIT_BAL")) return "Credit limit " + display(item)
+                .replace("-NT$", "-").replaceFirst("^(<=|>)", "$1 ");
+        if (attr.equals("AVG_UTILIZATION"))
+            return raw.equals("<=0%") || raw.equals("<=0") || raw.equals("(-inf-0]")
+                    ? "No balance (utilization <= 0%)"
+                    : "Utilization " + display(item).replaceFirst("^>", "> ");
+        if (attr.equals("PAY_RATIO")) return "Pays " + display(item).replaceFirst("^>=", ">= ") + " of bills";
+        if (attr.equals("AGE")) return "Age " + display(item);
+        if (attr.equals("EDUCATION")) return switch (raw) {
+            case "Graduate" -> "Graduate school";
+            case "HighSchool" -> "High school";
+            case "Other" -> "Other education";
+            default -> raw;
+        };
+        if (attr.equals("MARRIAGE")) return raw.equals("Other") ? "Other marital status" : raw;
+        if (attr.equals("SEX")) return raw;
+        return LABELS.getOrDefault(attr, attr) + ": " + display(item);
     }
 
     private static String display(Item item) {
         String attr = item.attribute(), raw = item.raw();
         if (attr.matches("PAY_[1-6]")) return switch (raw) {
             case "-2" -> "no use"; case "-1" -> "paid in full"; case "0" -> "revolving";
-            default -> raw + " mo late";
+            default -> raw + (raw.equals("1") ? " month late" : " months late");
         };
-        if (attr.equals("MAX_DELAY")) return raw.equals("<=0") ? "no delay" : raw + " mo late";
+        if (attr.equals("MAX_DELAY")) return raw.equals("<=0") ? "no delay" : raw + (raw.equals("1") ? " month" : " months");
         if (attr.equals("MONTHS_DELAYED")) return raw + " mo";
         var interval = INTERVAL.matcher(raw);
         if (interval.matches()) {

@@ -13,13 +13,16 @@ import {
   finiteNumber,
   riskAboveBaseline,
   safeRatio,
+  sortPersonas,
+  personaMultiplier,
+  lowestRiskPersonaId,
 } from "@/components/clusters/clusters-view";
 import { useClusters } from "@/hooks/useClusters";
+import { useMiningReport } from "@/hooks/useMiningReport";
 import { useOverview } from "@/hooks/useOverview";
-import { useFacts } from "@/hooks/useFacts";
-import { EDA_FIELD_LABELS, EDA_FIELD_UNITS } from "@/lib/constants";
-import { CHART_SEMANTIC, clusterColor } from "@/lib/chart-theme";
-import { formatNt, formatDecimal, formatInt, formatPct, formatMultiplier } from "@/lib/format";
+import { featureLabel, formatPersonaTrait, EDA_FIELD_UNITS } from "@/lib/constants";
+import { CHART_SEMANTIC, personaColor, personaIdentityColor } from "@/lib/chart-theme";
+import { formatNt, formatDecimal, formatInt, formatPct, formatMultiplier, formatDelayMonths } from "@/lib/format";
 import { FactsProvider, FactValue } from "@/components/charts/FactValue";
 import type { Cluster, OverviewResponse } from "@/types/api.types";
 
@@ -32,22 +35,28 @@ const DEFINING_TRAITS = ["LIMIT_BAL", "AVG_UTILIZATION", "MONTHS_DELAYED"];
 export default function ClustersPage() {
   const { data, isLoading, error } = useClusters();
   const { data: overview } = useOverview();
-  const { getFact } = useFacts({ clusters: data, overview });
+  const { data: report } = useMiningReport();
   const [openId, setOpenId] = React.useState<number | null>(null);
   const selected = data?.find((cluster) => cluster.clusterId === openId);
-  const insight = data ? clusterInsight(data, overview?.totalCustomers) : null;
   const totalClients =
     overview?.totalCustomers ?? data?.reduce((sum, cluster) => sum + cluster.size, 0);
   const baselineRate = data?.[0]?.baseline?.defaultRate ?? overview?.defaultRate;
+  const personas = sortPersonas(data ?? [], baselineRate);
+  const lowestId = lowestRiskPersonaId(personas, baselineRate);
+  const insight = clusterInsight(personas, baselineRate);
+  const evidence = personas.find((cluster) => cluster.evidence)?.evidence;
+  const selection = report?.clustering.selection;
+  const alternative = report?.clustering.elbowScores.find((row) => row.k === selection?.bestKBySilhouette);
+  const mergedShare = selection?.chosenReason.match(/merges ([\d.]+% of clients)/i)?.[1];
 
   return (
     <FactsProvider sources={{ clusters: data, overview }}>
       <div className="flex min-w-0 flex-col">
-        <Header title="Client Segments" />
+        <Header title="Personas" />
         <div className="min-w-0 flex-1 space-y-6 p-4 xl:p-5">
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2">
-              {Array.from({ length: 2 }).map((_, i) => (
+              {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-72" />
               ))}
             </div>
@@ -65,66 +74,41 @@ export default function ClustersPage() {
                 <Card
                   className="border-l-4"
                   style={{
-                    borderLeftColor: riskAboveBaseline(insight.cluster.defaultRate, baselineRate)
-                      ? CHART_SEMANTIC.danger
-                      : CHART_SEMANTIC.neutral,
+                    borderLeftColor: personaColor(personaMultiplier(insight.clusters[0], baselineRate)),
                   }}
                 >
                   <CardHeader>
                     <p className="eyebrow">Where defaults concentrate</p>
                     <CardTitle className="max-w-4xl text-2xl leading-snug">
-                      {insight.cluster.displayName ?? insight.cluster.personaName}:{" "}
-                      {formatPct(
-                        getFact(`share-of-clients-cluster-${insight.cluster.clusterId}`).value ??
-                          insight.clientShare,
-                      )}{" "}
-                      of clients account for{" "}
-                      {formatPct(
-                        getFact(`share-of-defaults-cluster-${insight.cluster.clusterId}`).value ??
-                          insight.defaultShare,
-                      )}{" "}
-                      of defaults
+                      {insight.names} ({formatPct(insight.clientShare)} of clients) hold{" "}
+                      {formatPct(insight.defaultShare)} of defaults
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      <span
-                        className={
-                          riskAboveBaseline(insight.cluster.defaultRate, baselineRate)
-                            ? "font-semibold text-danger"
-                            : "font-semibold text-foreground"
-                        }
-                      >
-                        <FactValue id={`cluster-c${insight.cluster.clusterId}-default-rate`} />{" "}
-                        default rate
-                      </span>{" "}
-                      vs <FactValue id="default-rate" /> portfolio baseline {"\u00b7"}{" "}
-                      {formatMultiplier(
-                        insight.cluster.defaultRateMultiplier ??
-                          safeRatio(insight.cluster.defaultRate, baselineRate),
-                      )}
-                      .
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Shares use published portfolio facts and cluster metadata when available.
-                      Legacy responses fall back to segment size and reported default rate.
+                      These personas have default rates above the {formatPct(baselineRate)} portfolio baseline.
                     </p>
                   </CardContent>
                 </Card>
               ) : null}
+              {evidence || selection ? <p className="text-xs text-muted-foreground">
+                k = {formatInt(selection?.chosenK ?? evidence?.k)} personas; silhouette {formatDecimal(selection?.finalSilhouette ?? evidence?.silhouette)} - weak structure, k chosen for interpretability
+                {alternative && mergedShare ? ` (k = ${formatInt(alternative.k)} scores ${formatDecimal(alternative.silhouette)} but merges ${mergedShare})` : ""}.
+              </p> : null}
               <div className="grid items-stretch gap-4 md:grid-cols-2">
-                {data.map((cluster) => (
+                {personas.map((cluster) => (
                   <PersonaCard
                     key={cluster.clusterId}
                     cluster={cluster}
+                    lowest={cluster.clusterId === lowestId}
                     totalClients={totalClients}
                     baselineRate={baselineRate}
                     onClick={() => setOpenId(cluster.clusterId)}
                   />
                 ))}
               </div>
-              <ClusterComparison clusters={data} overview={overview} />
-              <PcaScatterCard clusters={data} baselineRate={baselineRate} />
+              <ClusterComparison clusters={personas} overview={overview} />
+              <PcaScatterCard clusters={personas} baselineRate={baselineRate} />
             </>
           ) : (
             <Card>
@@ -140,6 +124,7 @@ export default function ClustersPage() {
           defaultRate={selected?.defaultRate}
           defaultRateMultiplier={selected?.defaultRateMultiplier ?? undefined}
           baselineRate={baselineRate}
+          lowest={selected?.clusterId === lowestId}
           onClose={() => setOpenId(null)}
         />
       </div>
@@ -149,31 +134,33 @@ export default function ClustersPage() {
 
 function PersonaCard({
   cluster,
+  lowest,
   totalClients,
   baselineRate,
   onClick,
 }: {
   cluster: Cluster;
+  lowest: boolean;
   totalClients?: number;
   baselineRate?: number;
   onClick: () => void;
 }) {
-  const aboveBaseline = riskAboveBaseline(cluster.defaultRate, baselineRate);
-  const color = aboveBaseline
-    ? clusterColor(cluster.defaultRate, baselineRate)
-    : CHART_SEMANTIC.neutral;
+  const multiplier = personaMultiplier(cluster, baselineRate);
+  const color = personaColor(multiplier, lowest);
+  const variant = color === CHART_SEMANTIC.danger ? "danger" : color === CHART_SEMANTIC.warning ? "warning" : "secondary";
   const name = cluster.displayName ?? cluster.personaName;
   return (
     <Card className="flex h-full min-w-0 flex-col overflow-hidden">
-      <div className="h-1.5" style={{ backgroundColor: color }} />
+      <div className="h-1.5" style={{ backgroundColor: personaIdentityColor(name, multiplier) }} />
       <CardHeader className="space-y-3">
         <CardTitle className="text-lg">{name}</CardTitle>
+        {cluster.tagline ? <p className="text-sm text-muted-foreground">{cluster.tagline}</p> : null}
         <p className="text-sm text-muted-foreground">
-          {formatInt(cluster.size)} clients {"\u00b7"}{" "}
+          {formatInt(cluster.size)} clients -{" "}
           {formatPct(cluster.shareOfClients ?? safeRatio(cluster.size, totalClients))} of portfolio
         </p>
-        <Badge variant={aboveBaseline ? "danger" : "secondary"} className="w-fit">
-          <FactValue id={`cluster-c${cluster.clusterId}-default-rate`} /> default {"\u00b7"}{" "}
+        <Badge variant={variant} className={variant === "warning" ? "w-fit bg-warning/15 text-foreground hover:bg-warning/15" : "w-fit"}>
+          <FactValue id={`cluster-c${cluster.clusterId}-default-rate`} />{"\u00a0"}default -{" "}
           {formatMultiplier(
             cluster.defaultRateMultiplier ?? safeRatio(cluster.defaultRate, baselineRate),
           )}
@@ -183,26 +170,20 @@ function PersonaCard({
         {cluster.traits?.length ? (
           <ul className="list-disc space-y-2 border-t pl-4 pt-4 text-sm">
             {cluster.traits.slice(0, 3).map((trait) => (
-              <li key={trait}>{trait}</li>
+              <li key={trait}>{formatPersonaTrait(trait)}</li>
             ))}
           </ul>
         ) : (
           <dl className="space-y-3 border-t pt-4 text-sm">
             {DEFINING_TRAITS.map((key) => (
               <div key={key} className="flex items-baseline justify-between gap-4">
-                <dt className="text-muted-foreground">{EDA_FIELD_LABELS[key]}</dt>
+                <dt className="text-muted-foreground">{featureLabel(key)}</dt>
                 <dd className="font-medium tabular-nums">
                   {formatFeature(key, cluster.centroid[key])}
                 </dd>
               </div>
             ))}
           </dl>
-        )}
-        {cluster.evidence && (
-          <p className="text-xs text-muted-foreground">
-            k = {formatInt(cluster.evidence.k)} chosen by silhouette{" "}
-            {formatDecimal(cluster.evidence.silhouette)}
-          </p>
         )}
         <Button
           variant="outline"
@@ -222,8 +203,8 @@ function formatFeature(key: string, value: number | null | undefined) {
   const unit = EDA_FIELD_UNITS[key];
   if (unit === "NT$") return formatNt(value);
   if (unit === "ratio" || key === "DEFAULT_RATE") return formatPct(value);
-  if (unit === "months") return `${formatDecimal(value)} months`;
-  if (unit === "years") return `${formatDecimal(value)} years`;
+  if (unit === "months") return formatDelayMonths(value);
+  if (unit === "years") return `${formatInt(value)} years`;
   return formatDecimal(value);
 }
 
@@ -243,13 +224,14 @@ function ClusterComparison({
     AVG_UTILIZATION: overview?.avgUtilization,
     PAY_RATIO: overview?.avgPayRatio,
     ...clusters[0]?.baseline?.centroid,
+    MAX_DELAY: clusters[0]?.baseline?.longestDelayMonths ?? clusters[0]?.baseline?.centroid.MAX_DELAY,
   };
   return (
     <Card className="min-w-0">
       <CardHeader>
         <CardTitle>Persona comparison</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Segment averages against the portfolio. Delta chips show differences in the feature
+          Persona averages against the portfolio. Delta chips show differences in the feature
           units; rates use percentage points.
         </p>
       </CardHeader>
@@ -275,14 +257,14 @@ function ClusterComparison({
             {keys.map((key) => (
               <tr key={key} className="border-b last:border-b-0">
                 <th scope="row" className="py-3 pr-4 text-left font-medium">
-                  {key === "DEFAULT_RATE" ? "Default rate" : (EDA_FIELD_LABELS[key] ?? key)}
+                  {key === "DEFAULT_RATE" ? "Default rate" : key === "BILL_TREND" ? "Bill trend (% of limit)" : featureLabel(key)}
                 </th>
                 {clusters.map((cluster) => {
                   const value =
-                    key === "DEFAULT_RATE" ? cluster.defaultRate : cluster.centroid[key];
+                    key === "DEFAULT_RATE" ? cluster.defaultRate : key === "MAX_DELAY" ? (cluster.longestDelayMonths ?? cluster.centroid[key]) : cluster.centroid[key];
                   const baseline = baselines[key];
                   const delta =
-                    (key === "DEFAULT_RATE" ? undefined : cluster.centroidDelta?.[key]) ??
+                    (key === "DEFAULT_RATE" || key === "MAX_DELAY" ? undefined : cluster.centroidDelta?.[key]) ??
                     (finiteNumber(value) && finiteNumber(baseline) ? value - baseline : null);
                   const isRate = key === "DEFAULT_RATE" || EDA_FIELD_UNITS[key] === "ratio";
                   return (
@@ -301,7 +283,8 @@ function ClusterComparison({
                             {delta > 0 ? "+" : ""}
                             {isRate
                               ? `${formatDecimal(delta * 100, 1)} pp`
-                              : formatFeature(key, delta)}
+                              : EDA_FIELD_UNITS[key] === "months" ? `${formatDecimal(delta, 1)} months`
+                              : key === "AGE" ? `${formatDecimal(delta, 1)} years` : formatFeature(key, delta)}
                           </Badge>
                         ) : null}
                       </div>
@@ -315,6 +298,12 @@ function ClusterComparison({
             ))}
           </tbody>
         </table>
+        {clusters.some((cluster) => cluster.longestDelayMonths == null) || clusters[0]?.baseline?.longestDelayMonths == null ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Longest delay falls back to a mean repayment status code where duration is unavailable;
+            negative codes represent paid in full or no use, so this mean is not a delay duration.
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

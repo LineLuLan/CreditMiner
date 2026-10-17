@@ -38,11 +38,13 @@ const INSIGHT_FACTS: Record<string, string> = {
   "Small payments signal default": "default-rate-payment-amount-q1",
   "Paying a larger share of the bill lowers risk": "default-rate-payment-ratio-q1",
   "Age matters only at the edges": "default-rate-age-60-plus",
-  "Demographic default rates differ": "education-default-spread",
+  "Demographic default rates differ": "default-rate-education-highschool",
   "The risk tier rule separates clients well": "default-rate-risk-tier-high",
   "Two months late now predicts default": "late2-sep-default-rate",
+  "Two or more months late now predicts default": "late2-sep-default-rate",
   "Each late month adds risk": "late3plus-6m-default-rate",
   "One cluster holds almost half of all defaults": "cluster-c0-default-rate",
+  "Delaying personas hold most defaults": "share-of-defaults-delayers",
 };
 
 export function evidenceFactIds(evidence: string): string[] {
@@ -55,12 +57,18 @@ export function insightFactId(insight: Pick<Insight, "title" | "insightId"> & Pa
 }
 
 export const OVERVIEW_SIGNAL_IDS = [
-  "late2-sep-default-rate", "late3plus-6m-default-rate", "cluster-c0-default-rate",
+  "late2-sep-default-rate", "late3plus-6m-default-rate", "share-of-defaults-delayers",
 ] as const;
+
+export const OVERVIEW_SIGNAL_LABELS: Record<(typeof OVERVIEW_SIGNAL_IDS)[number], string> = {
+  "late2-sep-default-rate": "default rate when 2+ months late on the latest statement",
+  "late3plus-6m-default-rate": "default rate when late in 3+ of the last 6 months",
+  "share-of-defaults-delayers": "share of defaults held by the delaying personas",
+};
 
 const CATALOGUE_IDS: Record<string, string> = {
   "default-rate": "default-rate-overall",
-  "late2-sep-default-rate": "default-rate-pay1-late2",
+  "late2-sep-default-rate": "default-rate-pay1-late2plus",
   "late3plus-6m-default-rate": "default-rate-months-delayed-ge3",
   "cluster-c0-default-rate": "default-rate-cluster-0",
   "cluster-c0-share-of-defaults": "share-of-defaults-cluster-0",
@@ -92,7 +100,10 @@ export function getFact(id: string, sources: FactSources = {}): Fact {
     };
   }
   const apiId = CATALOGUE_IDS[id] ?? id.replace(/^cluster-c(\d+)-default-rate$/, "default-rate-cluster-$1");
-  const entry = sources.catalogue?.facts.find((fact) => fact.factId === apiId);
+  const entry = sources.catalogue?.facts.find((fact) => fact.factId === apiId)
+    ?? (apiId === "default-rate-pay1-late2plus"
+      ? sources.catalogue?.facts.find((fact) => fact.factId === "default-rate-pay1-late2")
+      : undefined);
   if (entry) return {
     id, label: entry.label, value: finite(entry.value),
     unit: entry.unit === "count" ? "count" : entry.unit === "score" ? "score" : "ratio",
@@ -189,7 +200,10 @@ function visualFact(id: string, visual: InsightVisual): Fact {
   const lift = visual.lift?.trim().match(/^(\d+(?:\.\d+)?)x$/);
   let cohort = visual.bars.filter((bar) => bar.highlight);
   if (id === "late2-sep-default-rate")
-    cohort = visual.bars.filter((bar) => bar.label === "2 months late");
+    cohort = visual.bars.filter((bar) => bar.label === "2 months late" ||
+      (visual.headline.factId === "default-rate-pay1-late2plus" && bar.label === "3+ months late"));
+  if (id === "late3plus-6m-default-rate")
+    cohort = visual.bars.filter((bar) => bar.label === "3+ late months");
   // These three cohorts are represented exactly by the matching bars; other headlines
   // (e.g. utilization >=80%) cannot infer n from a differently bucketed chart.
   const hasExactCohort = [

@@ -20,6 +20,7 @@ import {
 } from "@/components/charts/chart-theme";
 import { formatPct } from "@/lib/utils";
 import type { EvaluationVariant } from "@/types/api.types";
+import { modelLabel } from "@/components/report/model-labels";
 
 export function PrCurveChart({
   variants,
@@ -71,7 +72,7 @@ export function PrCurveChart({
                 (point) => point.recall != null && point.precision != null,
               )}
               dataKey="precision"
-              name={`${variant.algo} (${variant.variant})`}
+              name={modelLabel(variant.algo, variant.variant)}
               stroke={CHART_COLORS[index % CHART_COLORS.length]}
               fill={CHART_COLORS[index % CHART_COLORS.length]}
               strokeWidth={2}
