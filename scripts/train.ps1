@@ -26,6 +26,9 @@ $mainClasses = @(
   "com.creditminer.pipeline.Phase10Pipeline"
 )
 
+# k=4 was chosen for interpretability (see docs/PIPELINE.md); the pipeline otherwise picks k by silhouette (k=2).
+if (-not $env:CM_CLUSTER_K) { $env:CM_CLUSTER_K = "4" }
+
 Push-Location $backend
 try {
   foreach ($mainClass in $mainClasses) {

@@ -33,6 +33,9 @@ MAIN_CLASSES=(
   com.creditminer.pipeline.Phase10Pipeline
 )
 
+# k=4 was chosen for interpretability (see docs/PIPELINE.md); the pipeline otherwise picks k by silhouette (k=2).
+export CM_CLUSTER_K="${CM_CLUSTER_K:-4}"
+
 cd "$BACKEND"
 for main_class in "${MAIN_CLASSES[@]}"; do
   echo "==> Running $main_class"

@@ -52,6 +52,8 @@ backend/data/raw/*.zip
 backend/data/processed/*.arff
 backend/data/processed/*.csv
 !backend/data/raw/.gitkeep
+# The UCI dataset CSV (2.9 MB, CC BY 4.0) is tracked so a fresh clone can train without the XLS conversion.
+!backend/data/raw/default_credit_card_clients.csv
 !backend/data/processed/.gitkeep
 
 # ----- Node / Next.js (web/) -----
