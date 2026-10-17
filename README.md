@@ -130,6 +130,15 @@ See [Architecture.md](Architecture.md) for component boundaries, artifact contra
 
 ## Quick start
 
+### Demo on one machine
+
+Double-click `run.bat` in the repository root to start the built demo, then open `http://localhost:3001`.
+The API is available at `http://localhost:8091/api`.
+The first start may take several minutes to build missing artifacts and seed the in-memory database.
+Run `run.bat --check` to inspect tool paths and commands without starting servers.
+Run `run.bat --no-browser` to start without opening a browser.
+Double-click `stop.bat` to stop listeners on the demo ports.
+
 ### Prerequisites
 
 Install Java 17, Maven, Node.js 20 or later, and Corepack. The generated artifacts in `backend/data/processed` and `backend/models` must be present for the complete demo.
